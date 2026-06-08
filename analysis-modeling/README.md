@@ -12,7 +12,9 @@
 
 `outputs/`에는 README, `.gitkeep`, 설명 문서 같은 보조 파일을 넣지 않습니다. 결과 파일이 없으면 GitHub에서는 빈 폴더가 보이지 않을 수 있습니다.
 
-현재 `01_data_preprocessing`, `02_benchmark_selection`, `03_lag_analysis`, `04_fair_price_model`, `05_policy_application`, `06_external_data_collection`은 원본 Colab 셀을 분리해 실행 가능한 형태로 정리했습니다. 나머지 단계는 다음 작업에서 순차적으로 채울 예정입니다.
+현재 `01_data_preprocessing`부터 `08_prediction_model_design`까지 원본 Colab 셀을 단계별로 분리해 실행 가능한 형태로 정리했습니다.
+
+06~08 단계는 산출물 파일이 커서 결과 문서 보완에 필요한 최소 정보가 따로 있습니다. 정리 표는 `RESULT_INFO_REQUESTS_06_08.md`에 작성했습니다.
 
 ## Steps
 
