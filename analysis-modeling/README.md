@@ -8,16 +8,16 @@
 - `README.md`: 목적, 입력 데이터, 주요 처리, 산출물 설명
 - `outputs/`: 실행 결과물 또는 사용자가 직접 추가할 산출물
 
-현재 `code.ipynb` 파일들은 자리표시자입니다. 다음 작업에서 원본 Colab 노트북의 셀을 단계별로 분리해 채울 예정입니다.
+각 `code.ipynb`는 Colab에서 파일 하나만 열어도 실행될 수 있도록 자체 설정 셀을 포함합니다. 별도 환경 설정 단계는 두지 않습니다.
+
+현재 `01_data_preprocessing`은 원본 Colab 전처리 셀을 분리해 실행 가능한 형태로 정리했습니다. 나머지 단계는 다음 작업에서 순차적으로 채울 예정입니다.
 
 ## Steps
 
-1. `00_environment_setup`: Colab 환경, 경로, 패키지, 한글 폰트 설정
-2. `01_data_preprocessing`: 원천 데이터 로딩, 통합 일별 데이터 생성
-3. `02_benchmark_selection`: 국제 원유/제품 benchmark 후보 비교
-4. `03_lag_analysis`: 국내 가격 반영 시차 분석
-5. `04_fair_price_model`: 전국 단위 적정 유가 및 가격대 산정
-6. `05_policy_application`: 유류세 인하, 최고가격제 등 국내 정책 반영
-7. `06_grid_data_build`: 500m 격자, 주유소/시설/공시지가 feature 생성
-8. `07_prediction_model_build`: 격자 단위 적정가격 예측 모델 학습 및 산출물 생성
-
+1. `01_data_preprocessing`: 원천 데이터 로딩, 통합 일별 데이터 생성
+2. `02_benchmark_selection`: 국제 원유/제품 benchmark 후보 비교
+3. `03_lag_analysis`: 국내 가격 반영 시차 분석
+4. `04_fair_price_model`: 전국 단위 적정 유가 및 가격대 산정
+5. `05_policy_application`: 유류세 인하, 최고가격제 등 국내 정책 반영
+6. `06_grid_data_build`: 500m 격자, 주유소/시설/공시지가 feature 생성
+7. `07_prediction_model_build`: 격자 단위 적정가격 예측 모델 학습 및 산출물 생성
