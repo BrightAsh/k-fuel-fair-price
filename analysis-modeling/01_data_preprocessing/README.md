@@ -4,8 +4,7 @@
 
 ## 실행 파일
 
-- `code.ipynb`: Colab에서 단독 실행 가능한 전처리 노트북
-- `outputs/`: 전처리 실행 결과물을 수동으로 보관할 공간
+- `01_data_preprocessing.ipynb`: Colab에서 단독 실행 가능한 전처리 노트북
 
 노트북에는 Colab 실행을 위한 패키지 확인, Google Drive mount, 경로 설정 셀이 포함되어 있습니다. 별도의 환경 설정 노트북은 사용하지 않습니다.
 
@@ -93,7 +92,21 @@ KRW/L = USD/bbl price * USDKRW / 158.987294928
 {PROCESSED_PATH}/분석용_일별_통합데이터.csv
 ```
 
-저장 인코딩은 `utf-8-sig`입니다. 원본 노트북 출력에는 다음 로그만 남아 있었고, 행 수나 컬럼 수 출력은 없었습니다.
+저장 인코딩은 `utf-8-sig`입니다.
+
+## `outputs/`에 넣을 파일
+
+이 단계의 `outputs/` 폴더에는 결과 파일만 넣습니다. 현재 코드 기준으로 넣어야 하는 파일은 다음 1개입니다.
+
+| 파일명 | 필수 여부 | 생성 코드 | 용도 |
+| --- | --- | --- | --- |
+| `분석용_일별_통합데이터.csv` | 필수 | `main()` 내부 `save_csv(processed_daily, output_file)` | benchmark 선정, 시차 분석, 적정가격 모델링 단계의 공통 입력 데이터 |
+
+노트북은 기본적으로 Google Drive의 `PROCESSED_PATH`에 파일을 저장합니다. 레포에 결과물을 보관할 때는 실행 후 생성된 `분석용_일별_통합데이터.csv`를 이 단계의 `outputs/` 폴더에 넣으면 됩니다.
+
+## 출력셀 기반 결과 정리
+
+원본 Colab 노트북의 전처리 실행 출력셀에는 다음 로그만 남아 있었습니다.
 
 ```text
 [로그] CSV 저장 완료: .../preprocessed_data/분석용_일별_통합데이터.csv
@@ -101,7 +114,23 @@ KRW/L = USD/bbl price * USDKRW / 158.987294928
 [로그] 출력 파일: .../preprocessed_data/분석용_일별_통합데이터.csv
 ```
 
-이번 분리본에서는 실행 후 행/열 수와 날짜 범위를 추가로 출력하도록 정리했습니다.
+따라서 출력셀만 기준으로 확정 가능한 결과는 다음과 같습니다.
+
+- 전처리 함수 `main()`이 실행되었습니다.
+- `분석용_일별_통합데이터.csv`가 `PROCESSED_PATH` 아래에 저장되었습니다.
+- 저장 경로는 원본 기준 `/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/preprocessed_data/`입니다.
+
+출력셀만으로는 다음 내용은 정리할 수 없습니다.
+
+- 최종 데이터의 행 수와 컬럼 수
+- 최종 데이터의 날짜 범위
+- 실제 생성된 전체 컬럼 목록
+- 컬럼별 결측치 수
+- 원천 파일별 병합 후 남은 관측치 수
+
+이 값들은 원본 출력셀에 표시되지 않았습니다. 결과 파일 `분석용_일별_통합데이터.csv`를 받으면 이 항목들을 README에 추가로 정리할 수 있습니다.
+
+이번 분리본은 재실행 시 행/열 수와 날짜 범위를 추가로 출력하도록 정리했습니다.
 
 ## 검증 상태
 

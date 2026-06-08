@@ -7,4 +7,4 @@
 - `analysis-modeling/`: 데이터 전처리, benchmark 비교, 시차 분석, 정책 적용, 예측 모델 제작 과정을 단계별 Colab 노트북으로 정리합니다.
 - 레포 최상단: 추후 GitHub Pages와 GitHub Actions 기반 자동 추론 웹사이트 코드를 둡니다.
 
-원본 Colab 노트북은 그대로 보관하지 않고, 단계별 폴더의 `code.ipynb`로 나누어 정리합니다. 각 노트북은 별도 환경 설정 폴더에 의존하지 않고, Colab에서 단독 실행할 수 있도록 필요한 mount, package, path 설정을 자체 포함합니다.
+원본 Colab 노트북은 그대로 보관하지 않고, 단계별 폴더의 `{단계 폴더명}.ipynb`로 나누어 정리합니다. 각 노트북은 별도 환경 설정 폴더에 의존하지 않고, Colab에서 단독 실행할 수 있도록 필요한 mount, package, path 설정을 자체 포함합니다.
