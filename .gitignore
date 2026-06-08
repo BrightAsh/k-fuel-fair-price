@@ -1,0 +1,9 @@
+*.env
+.env
+.github-token
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
