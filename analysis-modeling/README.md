@@ -12,7 +12,7 @@
 
 `outputs/`에는 README, `.gitkeep`, 설명 문서 같은 보조 파일을 넣지 않습니다. 결과 파일이 없으면 GitHub에서는 빈 폴더가 보이지 않을 수 있습니다.
 
-현재 `01_data_preprocessing`, `02_benchmark_selection`, `03_lag_analysis`, `04_fair_price_model`, `05_policy_application`은 원본 Colab 셀을 분리해 실행 가능한 형태로 정리했습니다. 나머지 단계는 다음 작업에서 순차적으로 채울 예정입니다.
+현재 `01_data_preprocessing`, `02_benchmark_selection`, `03_lag_analysis`, `04_fair_price_model`, `05_policy_application`, `06_external_data_collection`은 원본 Colab 셀을 분리해 실행 가능한 형태로 정리했습니다. 나머지 단계는 다음 작업에서 순차적으로 채울 예정입니다.
 
 ## Steps
 
@@ -21,5 +21,6 @@
 3. `03_lag_analysis`: 국내 가격 반영 시차 분석
 4. `04_fair_price_model`: 전국 단위 적정 유가 및 가격대 산정
 5. `05_policy_application`: 유류세 인하, 최고가격제 등 국내 정책 반영
-6. `06_grid_data_build`: 500m 격자, 주유소/시설/공시지가 feature 생성
-7. `07_prediction_model_build`: 격자 단위 적정가격 예측 모델 학습 및 산출물 생성
+6. `06_external_data_collection`: 시설 위치, 전국 개별 주유소 등 외부 데이터 수집 및 전처리
+7. `07_spatial_grid_build`: 500m 격자, 주유소/시설/공시지가 feature 생성
+8. `08_prediction_model_design`: 격자 단위 적정가격 예측 모델 설계 및 산출물 생성
