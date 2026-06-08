@@ -1,0 +1,4 @@
+﻿model_name,clean_n,clean_mae,clean_median_ae,clean_bias,clean_abs_bias,clean_resid_acf1,clean_resid_acf7,x_cols,status
+gasoline_retail_direct_huber,3936,11.970272320003884,9.155829952931299,0.062073572591003996,0.062073572591003996,0.9856676095804466,0.8833278689567454,intl_irf|intl_irf_up|intl_irf_down|intl_irf_diff_1|intl_irf_diff_7|intl_irf_vol_7|intl_irf_vol_14|intl_irf_ma_7|intl_irf_ma_30|trend|wd_1|wd_2|wd_3|wd_4|wd_5|wd_6|m_2|m_3|m_4|m_5|m_6|m_7|m_8|m_9|m_10|m_11|m_12,
+gasoline_selected_direct,3936,11.970272320003884,9.155829952931299,0.062073572591003996,0.062073572591003996,0.9856676095804466,0.8833278689567454,,
+gasoline_refinery_weekly_huber,514,20.436220616307516,17.647567461248173,3.1502126121602987,3.1502126121602987,0.6531346743535587,0.1846051604191159,intl_w_irf|intl_w_irf_up|intl_w_irf_down|intl_w_diff|intl_w_up|intl_w_down|intl_w_vol4|intl_w_vol8|trend|m_2|m_3|m_4|m_5|m_6|m_7|m_8|m_9|m_10|m_11|m_12,ok

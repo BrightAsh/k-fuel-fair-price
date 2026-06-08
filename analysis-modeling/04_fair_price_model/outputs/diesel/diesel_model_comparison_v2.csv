@@ -1,0 +1,4 @@
+﻿model_name,clean_n,clean_mae,clean_median_ae,clean_bias,clean_abs_bias,clean_resid_acf1,clean_resid_acf7,x_cols,status
+diesel_retail_direct_huber,2659,11.239825333845111,7.798647912070464,-0.9746365356779735,0.9746365356779735,0.9885666532457501,0.8975693927301291,intl_irf|intl_irf_up|intl_irf_down|intl_irf_diff_1|intl_irf_diff_7|intl_irf_vol_7|intl_irf_vol_14|intl_irf_ma_7|intl_irf_ma_30|trend|wd_1|wd_2|wd_3|wd_4|wd_5|wd_6|m_2|m_3|m_4|m_5|m_6|m_7|m_8|m_9|m_10|m_11|m_12,
+diesel_selected_direct,2659,11.239825333845111,7.798647912070464,-0.9746365356779735,0.9746365356779735,0.9885666532457501,0.8975693927301291,,
+diesel_refinery_weekly_huber,331,29.74068237056158,21.408276468290865,4.427323779095821,4.427323779095821,0.8215653600530742,0.5403793996098704,intl_w_irf|intl_w_irf_up|intl_w_irf_down|intl_w_diff|intl_w_up|intl_w_down|intl_w_vol4|intl_w_vol8|trend|m_2|m_3|m_4|m_5|m_6|m_7|m_8|m_9|m_10|m_11|m_12,ok
