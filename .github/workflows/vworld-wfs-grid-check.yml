@@ -1,0 +1,144 @@
+name: VWorld WFS Grid Check
+
+on:
+  push:
+    branches:
+      - codex/vworld-wfs-grid-check-20260614
+
+jobs:
+  check-vworld-wfs-grid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install geospatial smoke-test dependencies
+        run: python -m pip install --upgrade shapely pyproj
+
+      - name: Download VWorld WFS data and aggregate to 500m grid
+        run: |
+          python - <<'PY'
+          import json
+          import math
+          import re
+          import urllib.parse
+          import urllib.request
+          from collections import defaultdict
+
+          from pyproj import Transformer
+          from shapely.geometry import box, shape
+          from shapely.validation import make_valid
+
+          DOC_URL = "https://www.vworld.kr/dtna/dtna_apiSvcFc_s001.do?apiNum=24"
+          WFS_URL = "https://api.vworld.kr/ned/wfs/getIndvdLandPriceWFS"
+          USER_AGENT = "Mozilla/5.0 GitHubActions VWorld WFS smoke test"
+          CELL_SIZE = 500
+          SNAPSHOT_DATE = "20260526"
+
+          def fetch_text(url):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": USER_AGENT,
+                      "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  return response.read().decode("utf-8", errors="replace")
+
+          doc_html = fetch_text(DOC_URL)
+          match = re.search(r'name\s*:\s*"key"\s*,\s*value\s*:\s*"([^"]+)"', doc_html)
+          if not match:
+              raise RuntimeError("Could not find VWorld preview key in API docs")
+          key = match.group(1)
+
+          # VWorld WFS sample bbox from official docs. EPSG:4326 order is ymin,xmin,ymax,xmax.
+          ymin, xmin, ymax, xmax = (
+              37.5666502857805,
+              127.31259030366,
+              37.5689495688305,
+              127.316674702516,
+          )
+          transformer = Transformer.from_crs("EPSG:4326", "EPSG:5179", always_xy=True)
+          x1, y1 = transformer.transform(xmin, ymin)
+          x2, y2 = transformer.transform(xmax, ymax)
+          bbox_5179 = f"{min(x1, x2)},{min(y1, y2)},{max(x1, x2)},{max(y1, y2)},EPSG:5179"
+
+          params = {
+              "typename": "dt_d150",
+              "bbox": bbox_5179,
+              "maxFeatures": "1000",
+              "resultType": "results",
+              "srsName": "EPSG:5179",
+              "output": "json",
+              "key": key,
+              "domain": "api.vworld.kr",
+          }
+          query = urllib.parse.urlencode(params, safe="$,:-/")
+          req = urllib.request.Request(
+              f"{WFS_URL}?{query}",
+              headers={
+                  "User-Agent": USER_AGENT,
+                  "Accept": "application/json",
+                  "Referer": DOC_URL,
+              },
+          )
+          with urllib.request.urlopen(req, timeout=90) as response:
+              body = response.read().decode("utf-8", errors="replace")
+          data = json.loads(body)
+          features = data.get("features") or []
+          print("feature_rows=", len(features))
+          print("totalFeatures=", data.get("totalFeatures"))
+          print("crs=", data.get("crs"))
+          if not features:
+              raise RuntimeError("VWorld WFS returned no features")
+
+          weighted_price_sum = defaultdict(float)
+          area_sum = defaultdict(float)
+
+          def cell_floor(value):
+              return int(math.floor(value / CELL_SIZE) * CELL_SIZE)
+
+          for feature in features:
+              price = (feature.get("properties") or {}).get("pblntf_pclnd")
+              if price is None:
+                  continue
+              geom = make_valid(shape(feature["geometry"]))
+              if geom.is_empty:
+                  continue
+              minx, miny, maxx, maxy = geom.bounds
+              for cell_x in range(cell_floor(minx), cell_floor(maxx) + CELL_SIZE, CELL_SIZE):
+                  for cell_y in range(cell_floor(miny), cell_floor(maxy) + CELL_SIZE, CELL_SIZE):
+                      grid = box(cell_x, cell_y, cell_x + CELL_SIZE, cell_y + CELL_SIZE)
+                      overlap_area = geom.intersection(grid).area
+                      if overlap_area <= 0:
+                          continue
+                      cell = (cell_x, cell_y)
+                      weighted_price_sum[cell] += float(price) * overlap_area
+                      area_sum[cell] += overlap_area
+
+          price_col = f"p_{SNAPSHOT_DATE}"
+          rows = []
+          for (cell_x, cell_y), area in sorted(area_sum.items()):
+              rows.append(
+                  {
+                      "grid_id": f"G500_{cell_x // CELL_SIZE}_{cell_y // CELL_SIZE}",
+                      "cell_x": cell_x,
+                      "cell_y": cell_y,
+                      price_col: round(weighted_price_sum[(cell_x, cell_y)] / area, 2),
+                  }
+              )
+
+          if not rows:
+              raise RuntimeError("No grid rows were produced")
+          if any((row["cell_x"], row["cell_y"]) != key for row, key in zip(rows, sorted(area_sum))):
+              raise RuntimeError("Grid row ordering check failed")
+
+          print("grid_rows=", len(rows))
+          print("columns=", list(rows[0]))
+          print("first_row=", rows[0])
+          PY
