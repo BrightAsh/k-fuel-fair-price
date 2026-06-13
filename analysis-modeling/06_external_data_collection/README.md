@@ -209,11 +209,18 @@ set VWORLD_KEY=...
 python official_land_price_wfs_grid.py --no-doc-preview-key --snapshot-date 20260526 --bbox5179-file tiles_5179.csv --output 공시지가.csv
 ```
 
+기존 `공시지가.csv`에 새 스냅샷 컬럼을 붙일 때는 `--base-csv`를 사용합니다.
+
+```bash
+python official_land_price_wfs_grid.py --no-doc-preview-key --snapshot-date 20260526 --bbox5179-file tiles_5179.csv --base-csv 공시지가.csv --output 공시지가_updated.csv
+```
+
 확인된 환경 제약은 다음과 같습니다.
 
 - 로컬/PyCharm 환경에서는 WFS 데이터 다운로드와 500m 격자 전처리가 가능합니다.
 - Colab과 GitHub-hosted Actions에서는 VWorld 목록 페이지 또는 WFS API가 `RemoteDisconnected`, `502 Bad Gateway`로 실패할 수 있습니다.
 - GitHub 자동화가 필요하면 GitHub-hosted runner보다 로컬 PC 또는 self-hosted runner 사용을 권장합니다.
+- WFS API 현재 레이어는 최신 데이터 조회용입니다. 과거 스냅샷을 기존 파일과 동일하게 재현하려면 해당 기준일의 VWorld SHP 원자료가 필요합니다.
 
 API 가능 여부는 별도로 확인했습니다.
 

@@ -238,7 +238,7 @@ def aggregate_features_to_grid(features: list[dict], snapshot_date: str) -> list
                 "grid_id": f"G500_{cell_x // CELL_SIZE_M}_{cell_y // CELL_SIZE_M}",
                 "cell_x": cell_x,
                 "cell_y": cell_y,
-                price_col: round(weighted_price_sum[(cell_x, cell_y)] / total_area, 2),
+                price_col: weighted_price_sum[(cell_x, cell_y)] / total_area,
             }
         )
     return rows
@@ -275,6 +275,52 @@ def write_grid_csv(path: Path, rows: list[dict]) -> None:
         writer.writerows(rows)
 
 
+def append_rows_to_base_csv(base_csv: Path, new_rows: list[dict], output_csv: Path) -> None:
+    if not new_rows:
+        raise RuntimeError("No new rows to append.")
+
+    price_cols = [c for c in new_rows[0] if c.startswith("p_")]
+    if len(price_cols) != 1:
+        raise RuntimeError(f"Expected exactly one p_ column in new rows: {price_cols}")
+    price_col = price_cols[0]
+
+    price_by_cell = {
+        (int(row["cell_x"]), int(row["cell_y"])): row[price_col]
+        for row in new_rows
+    }
+
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    with base_csv.open("r", newline="", encoding="utf-8-sig") as src:
+        reader = csv.DictReader(src)
+        if not reader.fieldnames:
+            raise RuntimeError(f"Base CSV has no header: {base_csv}")
+        if "cell_x" not in reader.fieldnames or "cell_y" not in reader.fieldnames:
+            raise RuntimeError("Base CSV must contain cell_x and cell_y columns.")
+        if price_col in reader.fieldnames:
+            raise RuntimeError(f"Base CSV already has column: {price_col}")
+
+        fieldnames = list(reader.fieldnames) + [price_col]
+        with output_csv.open("w", newline="", encoding="utf-8-sig") as dst:
+            writer = csv.DictWriter(dst, fieldnames=fieldnames)
+            writer.writeheader()
+            matched = 0
+            total = 0
+            for row in reader:
+                total += 1
+                key = (int(float(row["cell_x"])), int(float(row["cell_y"])))
+                value = price_by_cell.get(key)
+                row[price_col] = "" if value is None else value
+                if value is not None:
+                    matched += 1
+                writer.writerow(row)
+
+    print(
+        f"[append csv] base_rows={total} matched_new_rows={matched} "
+        f"unmatched_new_rows={len(price_by_cell) - matched}",
+        flush=True,
+    )
+
+
 def parse_bbox_4326(value: str) -> tuple[float, float, float, float]:
     parts = [float(p.strip()) for p in value.split(",") if p.strip()]
     if len(parts) != 4:
@@ -298,6 +344,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--output",
         default=f"official_land_price_wfs_grid_{DEFAULT_SNAPSHOT_DATE}.csv",
         help="Output CSV path.",
+    )
+    parser.add_argument(
+        "--base-csv",
+        default=None,
+        help=(
+            "Optional existing project 공시지가.csv. When supplied, the new p_YYYYMMDD "
+            "column is left-joined by cell_x/cell_y and written to --output."
+        ),
     )
     parser.add_argument(
         "--bbox4326",
@@ -353,9 +407,13 @@ def main() -> int:
 
     rows = aggregate_features_to_grid(features, snapshot_date=snapshot_date)
     validate_grid_rows(rows, snapshot_date=snapshot_date)
-    write_grid_csv(Path(args.output), rows)
+    output_path = Path(args.output)
+    if args.base_csv:
+        append_rows_to_base_csv(Path(args.base_csv), rows, output_path)
+    else:
+        write_grid_csv(output_path, rows)
 
-    print(f"[grid csv] path={Path(args.output).resolve()}", flush=True)
+    print(f"[grid csv] path={output_path.resolve()}", flush=True)
     print(f"[grid csv] rows={len(rows)} columns={list(rows[0])}", flush=True)
     print("[preview]")
     for row in rows[:10]:
