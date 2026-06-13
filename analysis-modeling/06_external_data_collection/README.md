@@ -184,13 +184,36 @@ PROCESSED_PATH/additional_data/gas_station_prices_by_region/{지역}/metadata__l
 
 ## Public Land Price
 
-원본 노트북에는 다음 메모만 있습니다.
+개별공시지가는 노트북 셀에서 직접 실행하지 않고 별도 스크립트로 분리했습니다.
 
 ```text
-개별공시지가 (원본데이터: 브이월드) > 로컬로 진행
+official_land_price_wfs_grid.py
 ```
 
-따라서 이 단계에서는 개별공시지가 원본 수집 및 전처리 코드를 생성하지 않았습니다. 실제 프로젝트에서는 로컬 외부 프로그램으로 처리된 결과 파일을 이후 격자화 단계에서 입력으로 사용한 것으로 보는 것이 맞습니다.
+이 스크립트는 VWorld `개별공시지가WFS조회`에서 필지 geometry와 `pblntf_pclnd` 가격을 내려받고, EPSG:5179 기준 500m 격자에 면적가중 평균으로 집계합니다. 출력 CSV는 이후 `07_spatial_grid_build`에서 사용하는 형식과 맞춘 다음 컬럼을 가집니다.
+
+```text
+grid_id, cell_x, cell_y, p_YYYYMMDD
+```
+
+로컬/PyCharm 환경에서 smoke test를 통과했습니다.
+
+```bash
+python official_land_price_wfs_grid.py --snapshot-date 20260526 --output official_land_price_wfs_grid_20260526.csv
+```
+
+운영 실행에서는 VWorld 인증키를 환경변수로 지정하는 것을 권장합니다.
+
+```bash
+set VWORLD_KEY=...
+python official_land_price_wfs_grid.py --no-doc-preview-key --snapshot-date 20260526 --bbox5179-file tiles_5179.csv --output 공시지가.csv
+```
+
+확인된 환경 제약은 다음과 같습니다.
+
+- 로컬/PyCharm 환경에서는 WFS 데이터 다운로드와 500m 격자 전처리가 가능합니다.
+- Colab과 GitHub-hosted Actions에서는 VWorld 목록 페이지 또는 WFS API가 `RemoteDisconnected`, `502 Bad Gateway`로 실패할 수 있습니다.
+- GitHub 자동화가 필요하면 GitHub-hosted runner보다 로컬 PC 또는 self-hosted runner 사용을 권장합니다.
 
 API 가능 여부는 별도로 확인했습니다.
 
@@ -198,7 +221,7 @@ API 가능 여부는 별도로 확인했습니다.
 - 같은 페이지에서 API 유형은 `LINK`, 데이터포맷은 `JSON+XML`, 제공기관은 국토교통부, 공간범위는 대한민국 전체, 비용은 무료로 표시됩니다.
 - VWorld API 목록에는 개별공시지가에 대해 `WMS`, `WFS`, `속성조회`가 각각 제공되는 것으로 표시됩니다.
 
-즉, 개별공시지가를 API로 조회하는 것은 가능합니다. 다만 이 프로젝트처럼 전국 격자 단위 feature를 만들려면 필지 단위 API를 대량 반복 호출하는 방식은 비효율적이고 호출량 제한, 속도, 장애 복구 측면에서 불안정합니다.
+즉, 개별공시지가를 API로 조회하는 것은 가능합니다. 다만 이 프로젝트처럼 전국 격자 단위 feature를 만들려면 필지 단위 API를 대량 반복 호출해야 하므로 호출량 제한, 속도, 장애 복구를 고려해 bbox 타일을 작게 나누고 체크포인트를 남기는 방식이 필요합니다.
 
 실무적으로 권장되는 방식은 다음과 같습니다.
 
@@ -207,7 +230,7 @@ API 가능 여부는 별도로 확인했습니다.
 - 필지 폴리곤 또는 대표점을 격자와 공간 조인
 - 격자별 평균, 중앙값, 면적가중 평균 등으로 요약
 
-따라서 현재 README에는 "API 수집 가능성은 있으나, 전국 격자 구축에는 API 반복 호출보다 벌크 데이터와 GIS 전처리가 적합하다"라고 정리합니다.
+전국 전체 수집은 `--bbox5179-file`에 작은 EPSG:5179 타일 목록을 넣어 반복 실행하는 방식으로 확장할 수 있습니다. 단일 bbox에서 `totalFeatures`가 `maxFeatures`보다 크면 스크립트가 중단되며, 해당 bbox를 더 작게 분할해야 합니다.
 
 ## Outputs Folder
 
