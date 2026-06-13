@@ -1,0 +1,103 @@
+name: VWorld Network Check
+
+on:
+  push:
+    branches:
+      - "codex/vworld-network-check*"
+  workflow_dispatch:
+
+jobs:
+  check-vworld:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Query VWorld official land price list
+        run: |
+          python - <<'PY'
+          import re
+          import sys
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          base_url = "https://www.vworld.kr/dtmk/dtmk_ntads_s002.do"
+          params = {
+              "svcCde": "NA",
+              "dsId": "6",
+              "dataSetSeq": "6",
+              "datIde": "",
+              "startDate": "2026-05-26",
+              "endDate": "2026-05-26",
+              "sidoCd": "",
+              "sigunguCd": "",
+              "fileGbnCd": "AL",
+              "dsNm": "",
+              "formatSelect": "",
+              "pageIndex": "1",
+              "pageSize": "100",
+              "pageUnit": "100",
+              "datPageIndex": "1",
+              "datPageSize": "100",
+          }
+          headers = {
+              "User-Agent": (
+                  "Mozilla/5.0 (X11; Linux x86_64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/125.0.0.0 Safari/537.36"
+              ),
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+              "Accept-Encoding": "identity",
+              "Cache-Control": "no-cache",
+              "Pragma": "no-cache",
+              "Connection": "close",
+              "Referer": "https://www.vworld.kr/dtmk/dtmk_ntads_s002.do?svcCde=NA&dsId=6",
+          }
+          k_total = "\ucd1d"
+          k_cases = "\uac74"
+          k_base_date = "\uae30\uc900\uc77c"
+          k_update_date = "\uac31\uc2e0\uc77c"
+
+          url = base_url + "?" + urlencode(params)
+          print("url=", url)
+          try:
+              req = Request(url, headers=headers)
+              with urlopen(req, timeout=45) as resp:
+                  raw = resp.read()
+                  status = getattr(resp, "status", 200)
+          except Exception as exc:
+              print("exception=", type(exc).__name__, str(exc))
+              sys.exit(1)
+
+          html = raw.decode("utf-8", errors="replace")
+          total_match = re.search(
+              k_total + r"\s*<b>\s*([0-9,]+)\s*</b>\s*" + k_cases,
+              html,
+              flags=re.S,
+          )
+          total = total_match.group(1) if total_match else "UNKNOWN"
+          rows = len(re.findall(r'name="dsFileSq"', html))
+          base_dates = sorted(set(re.findall(
+              k_base_date + r"<em[^>]*>\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*</em>",
+              html,
+          )))
+          update_dates = sorted(set(re.findall(
+              k_update_date + r"<em[^>]*>\s*([0-9]{4}-[0-9]{2}-[0-9]{2})\s*</em>",
+              html,
+          )))
+          print("status=", status)
+          print("bytes=", len(raw))
+          print("reported_total=", total)
+          print("parsed_rows=", rows)
+          print("base_dates=", base_dates)
+          print("update_dates=", update_dates)
+
+          if status != 200:
+              sys.exit(2)
+          if "Bad Gateway" in html[:500]:
+              print("bad_gateway_body=true")
+              sys.exit(3)
+          if rows <= 0:
+              print("no_vworld_rows=true")
+              print("html_head=", html[:500].replace("\n", " "))
+              sys.exit(4)
+          PY
