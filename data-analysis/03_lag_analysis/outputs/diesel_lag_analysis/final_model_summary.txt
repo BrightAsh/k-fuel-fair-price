@@ -3,8 +3,8 @@
 Dep. Variable:                dom_chg   R-squared:                       0.919
 Model:                            OLS   Adj. R-squared:                  0.917
 Method:                 Least Squares   F-statistic:                     277.0
-Date:                Wed, 22 Apr 2026   Prob (F-statistic):               0.00
-Time:                        05:09:51   Log-Likelihood:                 5616.5
+Date:                Mon, 15 Jun 2026   Prob (F-statistic):               0.00
+Time:                        13:12:37   Log-Likelihood:                 5616.5
 No. Observations:                2897   AIC:                        -1.109e+04
 Df Residuals:                    2824   BIC:                        -1.065e+04
 Df Model:                          72                                         
