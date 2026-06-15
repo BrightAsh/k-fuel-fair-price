@@ -1,0 +1,2 @@
+﻿group,candidate,p,q,bic,train_lb_p,full_lb_p,train_block_p,full_block_p,train_stable,full_stable,oos_rmse_chg,oos_mae_chg,oos_rmse_level,oos_mae_level,oos_mape_level_pct,n_oos,ok
+product,gasoil_0001_krw_l,6,5,831.3258654058525,0.5648015719750676,0.0016205416889258307,9.420849065110626e-20,6.762722316590228e-97,False,False,2.6590927420295114,1.9973523489482474,18.22274122967514,13.89179088953793,1.9930098047868952,458,False

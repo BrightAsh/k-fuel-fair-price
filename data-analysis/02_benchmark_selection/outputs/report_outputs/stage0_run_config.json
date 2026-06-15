@@ -1,0 +1,40 @@
+{
+  "integrated_path": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/preprocessed_data/분석용_일별_통합데이터.csv",
+  "benchmark_output_path": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/",
+  "report_output_path": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/",
+  "analysis_start": "2008-05-01",
+  "analysis_end": "2025-12-31",
+  "max_p": 8,
+  "max_q": 12,
+  "min_train": 156,
+  "lb_lag": 8,
+  "add_month_dummies": false,
+  "refinery_gasoline_column": "정유소_세전_보통휘발유",
+  "refinery_diesel_column": "정유소_세전_자동차용경유",
+  "gasoline_product_candidates": [
+    "mogas92_krw_l"
+  ],
+  "diesel_product_candidates": [
+    "gasoil_0001_krw_l"
+  ],
+  "crude_candidates": [
+    "dubai_krw_l",
+    "brent_krw_l",
+    "wti_krw_l"
+  ],
+  "report_paths": {
+    "input_profile": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/input_profile.csv",
+    "daily_benchmark_candidates": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/daily_benchmark_candidates.csv",
+    "weekly_refinery_targets": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/weekly_refinery_targets.csv",
+    "daily_numeric_summary": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/daily_numeric_summary.csv",
+    "weekly_refinery_numeric_summary": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/weekly_refinery_numeric_summary.csv",
+    "candidate_grid_all_fuels": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/tables/stage0_candidate_grid_all_fuels.csv",
+    "best_each_all_fuels": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/tables/stage0_best_each_all_fuels.csv",
+    "candidate_rankings": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/tables/stage0_candidate_rankings.csv",
+    "top20_by_fuel": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/tables/stage0_top20_by_fuel.csv",
+    "candidate_summary": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/tables/stage0_candidate_summary.csv",
+    "winner_details": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/tables/stage0_winner_details.csv",
+    "gasoline_weekly_common_sample": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/gasoline_weekly_common_sample.csv",
+    "diesel_weekly_common_sample": "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/benchmark_selection/report_outputs/diagnostics/diesel_weekly_common_sample.csv"
+  }
+}

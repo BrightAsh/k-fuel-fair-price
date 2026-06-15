@@ -1,129 +1,51 @@
 # 01. 데이터 전처리
 
-이 단계는 원본 Colab 노트북의 `데이터 전처리` 구간을 분리한 것입니다. 국제 원유 가격, 국제 석유제품 가격, 원/달러 환율, 국내 주유소 평균 가격, 브랜드별 가격, 유류세 추이, 정유사 주간 공급가격을 읽어서 후속 분석에서 공통으로 사용할 일별 통합 데이터셋을 생성합니다.
+이 단계는 국제 원유/석유제품 가격, 환율, 국내 평균 소매가, 브랜드별 가격, 유류세 추이, 정유사 주간 공급가격을 하나의 일별 분석용 통합 데이터로 만듭니다.
 
-## 실행 파일
+현재 구조에서는 03 시차 분석, 04 적정 가격 분석, 05 정책 적용이 이 통합 데이터를 공통 입력으로 사용하므로 01번 전처리 단계가 필요합니다.
 
-- `01_data_preprocessing.ipynb`: Colab에서 단독 실행 가능한 전처리 노트북
-
-노트북에는 Colab 실행을 위한 패키지 확인, Google Drive mount, 경로 설정 셀이 포함되어 있습니다. 별도의 환경 설정 노트북은 사용하지 않습니다.
-
-## 기본 경로
-
-노트북의 첫 설정 셀은 현재 작업자가 사용한 경로를 그대로 기본값으로 둡니다.
+## 기본 루트
 
 ```python
-ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
-DATA_PATH = ROOT_PATH + "data/"
+DATA_COLLECTION_PATH = ROOT_PATH + "data collection/"
 PROCESSED_PATH = ROOT_PATH + "preprocessed_data/"
 ```
 
-다른 사용자는 `ROOT_PATH`만 본인의 Google Drive 폴더 위치로 수정하면 됩니다. 원천 데이터 파일들은 `DATA_PATH` 아래에 같은 파일명으로 있어야 하고, 산출물은 `PROCESSED_PATH` 아래에 저장됩니다.
+01번은 `DATA_COLLECTION_PATH/{dataset}/final/` 아래 최신 수집 산출물을 직접 읽습니다. `ROOT_PATH/data/` 표준 복사본은 만들거나 읽지 않습니다.
 
-## 입력 파일
+## 입력 데이터
 
-`DATA_PATH` 아래에 다음 파일이 필요합니다.
-
-| 파일명 | 용도 | 주요 필수 컬럼 |
+| 입력 | 실제 읽는 위치 | 주요 컬럼 |
 | --- | --- | --- |
-| `crude.csv` | Dubai, Brent, WTI 원유 가격 | `기간`, `Dubai`, `Brent`, `WTI` |
-| `retail_avg.csv` | 전국 평균 소매가격 | `구분`, `보통휘발유`, `자동차용경유` |
-| `brand_gasoline.csv` | 휘발유 브랜드별 가격 | `구분`, 브랜드 가격 컬럼들 |
-| `brand_diesel.csv` | 경유 브랜드별 가격 | `구분`, 브랜드 가격 컬럼들 |
-| `fx_usdkrw.csv` | 원/달러 환율 | `변환`, `원자료` |
-| `intl_products.zip` | 국제 석유제품 가격 묶음 | ZIP 내부 CSV의 `일`, `휘발유[92RON]`, `경유[0.05%]` 등 |
-| `intl_product_diesel(0.001).csv` | 저유황 경유 국제제품가 보완 데이터 | `기간`, `경유(0.001%)` |
-| `gasoline_tax_trend.xls` | 휘발유 유류세 변동 추이 | 첫 데이터 행의 header, `변동일자` |
-| `diesel_tax_trend.xls` | 경유 유류세 변동 추이 | 첫 데이터 행의 header, `변동일자` |
-| `refinery_weekly_supply_prices_by_product.csv` | 정유사 주간 세전 공급가격 | `구분`, `보통휘발유`, `자동차용경유` |
+| 원유 가격 | `data collection/crude/final/crude_*.csv` | `기간`, `Dubai`, `Brent`, `WTI` |
+| 국내 평균 소매가 | `data collection/retail_avg/final/retail_avg_*.csv` | `구분`, `보통휘발유`, `자동차용경유` |
+| 휘발유 브랜드 가격 | `data collection/brand_price/final/brand_gasoline_*.csv` | `구분`, `정유사평균`, `SK에너지`, `GS칼텍스`, `HD현대오일뱅크`, `S-OIL`, `알뜰주유소`, `(알뜰-자영)`, `자가상표` |
+| 경유 브랜드 가격 | `data collection/brand_price/final/brand_diesel_*.csv` | `구분`, `정유사평균`, `SK에너지`, `GS칼텍스`, `HD현대오일뱅크`, `S-OIL`, `알뜰주유소`, `(알뜰-자영)`, `자가상표` |
+| 원/달러 환율 | `data collection/fx_usdkrw/final/fx_usdkrw_*.csv` | `변환`, `원자료` |
+| 국제 석유제품 가격 | `data collection/intl_products/final/intl_products_*.csv` | `기간`, `휘발유(95RON)`, `휘발유(92RON)`, `등유`, `경유(0.001%)`, `경유(0.05%)`, `고유황중유(180cst/3.5%)`, `나프타` |
+| 초저유황 경유 보완 | `data collection/intl_products/final/intl_product_diesel(0.001)_*.csv` | `기간`, `경유(0.001%)` |
+| 휘발유 유류세 추이 | `data collection/fuel_tax_trend/final/gasoline_tax_trend_*.xls` | `변동일자`, `개별소비세`, `교통에너지환경세`, `교육세`, `주행세`, `합계`, `판매부과금` |
+| 경유 유류세 추이 | `data collection/fuel_tax_trend/final/diesel_tax_trend_*.xls` | `변동일자`, `개별소비세`, `교통에너지환경세`, `교육세`, `주행세`, `합계`, `판매부과금` |
+| 정유사 주간 공급가격 | `data collection/refinery_weekly_supply/final/refinery_weekly_supply_prices_by_product_*.csv` | `구분`, `보통휘발유`, `자동차용경유` |
 
-입력 파일명은 코드에서 고정으로 참조합니다. 데이터 제공자가 파일명을 바꾸려면 노트북의 `입력 파일 경로 설정` 셀에서 각 path 상수를 수정해야 합니다.
+## 처리 내용
 
-## 날짜 처리
+1. 날짜 컬럼을 `date`로 통일합니다.
+2. 국제 원유/제품 가격과 환율을 일별 calendar에 맞추고 비영업일 구간은 forward fill합니다.
+3. 국제 가격의 `USD/bbl` 값을 `KRW/L`로 환산합니다.
+4. 국내 평균가, 브랜드가, 유류세, 정유사 주간 공급가격을 일별 기준으로 결합합니다.
+5. 최종 통합 데이터를 `PROCESSED_PATH`에 저장합니다.
 
-날짜 문자열은 `parse_kor_date()` 함수에서 처리합니다.
-
-- `YYYY년M월D일`, `YY년M월D일` 형식은 `Timestamp`로 변환합니다.
-- `YYYY/M/D` 형식도 처리합니다.
-- 두 자리 연도는 `50` 미만이면 2000년대, 그 외에는 1900년대로 해석합니다.
-- 정유사 주간 공급가격의 `08년05월1주` 같은 값은 해당 월 주차의 마지막 날짜로 변환합니다.
-
-## 주요 전처리
-
-1. 원천 CSV는 `utf-8-sig`, `cp949`, `euc-kr`, `utf-8` 순서로 읽기를 시도합니다.
-2. Excel 또는 HTML 성격의 `.xls` 파일은 `xlrd`, `openpyxl`, `read_html` 순서로 읽기를 시도합니다.
-3. 국내 평균가격 컬럼은 `보통휘발유_평균`, `자동차용경유_평균`으로 표준화합니다.
-4. 브랜드별 가격은 유종 접두어를 붙여 충돌을 방지합니다. 예: `보통휘발유_SK에너지`, `자동차용경유_GS칼텍스`
-5. 유류세 추이는 변동일자를 기준으로 일별 calendar를 만들고, 다음 변동 전까지 이전 값을 forward fill합니다.
-6. 국제 석유제품 ZIP은 파일명 안의 `(YYYYMMDD)` 날짜와 내부 `일` 컬럼을 이용해 일자를 복원합니다.
-7. 국제 원유/제품 가격과 환율은 국내 데이터 날짜 범위에 맞춘 일별 calendar에 결합합니다.
-8. 비영업일 또는 결측 구간의 국제 가격과 환율은 forward fill합니다.
-9. 국제 가격은 `USD/bbl` 기준 값을 `KRW/L`로 환산합니다.
-
-환산식은 다음과 같습니다.
+환산식은 아래와 같습니다.
 
 ```text
 KRW/L = USD/bbl price * USDKRW / 158.987294928
 ```
 
-## 생성 컬럼
-
-최종 통합 데이터에는 크게 다음 계열의 컬럼이 포함됩니다.
-
-| 계열 | 예시 컬럼 | 설명 |
-| --- | --- | --- |
-| 날짜 | `date` | 일별 기준일 |
-| 국제 원유 가격 | `두바이`, `브렌트`, `WTI` | 원자료 단위 가격 |
-| 국제 제품 가격 | `휘발유92RON`, `경유0.05`, `경유0.001` | 국제 석유제품 가격 |
-| 환율 | `usdkrw` | 원/달러 환율 |
-| 환산 가격 | `두바이_원리터`, `휘발유92RON_원리터`, `경유0.001_원리터` 등 | 국제 가격을 원/L로 환산한 값 |
-| 국내 평균 소매가 | `보통휘발유_평균`, `자동차용경유_평균` | 전국 평균 주유소 가격 |
-| 브랜드별 가격 | `보통휘발유_*`, `자동차용경유_*` | 브랜드별 주유소 가격 |
-| 유류세 | `보통휘발유_*`, `자동차용경유_*` | 세목별 유류세 추이 |
-| 정유사 공급가격 | `정유소_세전_보통휘발유`, `정유소_세전_자동차용경유` | 주간 공급가격을 날짜 기준으로 결합 |
-
-브랜드별 가격과 유류세는 같은 유종 접두어를 사용하므로, 실제 컬럼 목록은 입력 파일의 세부 컬럼 구성에 따라 달라질 수 있습니다.
-
 ## 산출물
-
-실행하면 다음 파일이 저장됩니다.
 
 ```text
 {PROCESSED_PATH}/분석용_일별_통합데이터.csv
 ```
 
-저장 인코딩은 `utf-8-sig`입니다.
-
-## 출력셀 기반 결과 정리
-
-원본 Colab 노트북의 전처리 실행 출력셀에는 다음 로그만 남아 있었습니다.
-
-```text
-[로그] CSV 저장 완료: .../preprocessed_data/분석용_일별_통합데이터.csv
-[로그] 전처리 완료
-[로그] 출력 파일: .../preprocessed_data/분석용_일별_통합데이터.csv
-```
-
-따라서 출력셀만 기준으로 확정 가능한 결과는 다음과 같습니다.
-
-- 전처리 함수 `main()`이 실행되었습니다.
-- `분석용_일별_통합데이터.csv`가 `PROCESSED_PATH` 아래에 저장되었습니다.
-- 저장 경로는 원본 기준 `/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/preprocessed_data/`입니다.
-
-출력셀만으로는 다음 내용은 정리할 수 없습니다.
-
-- 최종 데이터의 행 수와 컬럼 수
-- 최종 데이터의 날짜 범위
-- 실제 생성된 전체 컬럼 목록
-- 컬럼별 결측치 수
-- 원천 파일별 병합 후 남은 관측치 수
-
-이 값들은 원본 출력셀에 표시되지 않았습니다. 결과 파일 `분석용_일별_통합데이터.csv`를 받으면 이 항목들을 README에 추가로 정리할 수 있습니다.
-
-이번 분리본은 재실행 시 행/열 수와 날짜 범위를 추가로 출력하도록 정리했습니다.
-
-## 검증 상태
-
-현재 레포에는 원천 데이터 파일을 포함하지 않습니다. 따라서 이 작업에서는 원본 노트북의 전처리 코드와 저장 로그를 기준으로 노트북을 분리했고, 실제 데이터 재실행 검증은 수행하지 않았습니다.
-
-실행 검증을 하려면 위 입력 파일 10개를 `DATA_PATH`에 맞춰 제공해야 합니다. 파일이 없으면 노트북은 누락된 파일명을 모두 출력하고 실행을 중단합니다.
+인코딩은 `utf-8-sig`입니다.

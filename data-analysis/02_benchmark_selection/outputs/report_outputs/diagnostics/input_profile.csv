@@ -1,0 +1,4 @@
+﻿name,path,rows,columns,date_min,date_max
+integrated_df,/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/preprocessed_data/분석용_일별_통합데이터.csv,6630,44,2008-04-15,2026-06-09
+daily_benchmark_df,created_in_notebook,6630,6,2008-04-15,2026-06-09
+weekly_refinery_df,created_in_notebook,868,3,2008-05-10,2026-05-30

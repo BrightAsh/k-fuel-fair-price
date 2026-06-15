@@ -1,0 +1,2 @@
+﻿group,candidate,p,q,bic,train_lb_p,full_lb_p,train_block_p,full_block_p,train_stable,full_stable,oos_rmse_chg,oos_mae_chg,oos_rmse_level,oos_mae_level,oos_mape_level_pct,n_oos,ok
+product,mogas92_krw_l,8,8,712.2475619950449,0.929676208915412,0.012321627534950858,4.437832023427178e-34,5.256224440065466e-130,False,False,2.9061302678285847,1.9895048192361589,16.359567418349318,12.587326862376589,1.9843646819280885,678,False
