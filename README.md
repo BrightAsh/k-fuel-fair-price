@@ -1,10 +1,51 @@
 # K-Fuel Fair Price
 
-국제 석유제품 가격, 국내 주유소 가격, 정책 변수, 공간 격자 데이터를 활용해 국내 유가의 적정 가격을 추정하고 시각화하는 프로젝트입니다.
+국제 석유제품 가격, 국내 유가, 정책 변수, 공간 격자 데이터를 이용해 국내 유가의 적정 가격을 분석하고 AI 모델 입력 데이터를 만드는 프로젝트입니다.
 
-현재 레포는 두 축으로 운영합니다.
+레포는 두 흐름으로 분리합니다.
 
-- `analysis-modeling/`: 데이터 전처리, benchmark 비교, 시차 분석, 정책 적용, 예측 모델 제작 과정을 단계별 Colab 노트북으로 정리합니다.
-- 레포 최상단: 추후 GitHub Pages와 GitHub Actions 기반 자동 추론 웹사이트 코드를 둡니다.
+## 1. Data Analysis
 
-원본 Colab 노트북은 그대로 보관하지 않고, 단계별 폴더의 `{단계 폴더명}.ipynb`로 나누어 정리합니다. 각 노트북은 별도 환경 설정 폴더에 의존하지 않고, Colab에서 단독 실행할 수 있도록 필요한 mount, package, path 설정을 자체 포함합니다.
+`data-analysis/`는 기존 1~5번 분석 단계입니다. 벤치마크 선정, 시차 분석, 적정가격 산정, 정책 적용을 위한 데이터 분석 흐름입니다.
+
+```text
+data-analysis/
+  01_data_preprocessing/
+  02_benchmark_selection/
+  03_lag_analysis/
+  04_fair_price_model/
+  05_policy_application/
+```
+
+이 단계의 결과는 이후 AI 모델이나 웹서비스에서 참고할 수 있지만, 일일 자동 수집/격자화 파이프라인 자체는 아닙니다.
+
+## 2. AI Model
+
+`ai-model/`은 기존 6~8번을 새 번호로 다시 정리한 AI 모델용 데이터 파이프라인입니다.
+
+```text
+ai-model/
+  01_data_collection/          # 기존 6번: 데이터 수집 및 1차 전처리
+  02_spatial_grid_build/       # 기존 7번: 500m 격자화 및 feature 생성
+  03_prediction_model_design/  # 기존 8번: 예측 모델 설계 및 학습
+```
+
+AI 모델 흐름에서는 `ROOT_PATH/data collection/`을 자동 수집과 1차 전처리 산출물의 기준 경로로 둡니다. 원문 코드의 `preprocessed_data/additional_data` 경로는 참고용 과거 구조이며, 새 AI 파이프라인의 기준 경로는 아닙니다.
+
+## Colab Path
+
+각 노트북은 Colab에서 단독 실행할 수 있도록 Google Drive mount와 공통 경로 셀을 자체 포함합니다. 기본 기준은 다음과 같습니다.
+
+```python
+ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
+DATA_PATH = ROOT_PATH + "data/"
+PROCESSED_PATH = ROOT_PATH + "preprocessed_data/"
+DATA_COLLECTION_PATH = ROOT_PATH + "data collection/"
+```
+
+## Important
+
+- Data Analysis 1~5번과 AI Model 1~3번을 섞지 않습니다.
+- AI Model 01은 데이터 수집/1차 전처리까지만 담당합니다.
+- 주유소 개수, 주유소 주변 영향력, 시설 개수, 시설 거리 감쇠 영향력은 AI Model 02에서 격자 feature로 생성합니다.
+- AI Model 03은 AI Model 02의 최종 격자 패널을 읽어 모델을 학습하고 예측 산출물을 만듭니다.
