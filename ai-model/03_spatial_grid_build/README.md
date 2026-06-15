@@ -1,24 +1,26 @@
-# AI Model 02 데이터 격자화 및 Feature 생성
+# AI Model 03 데이터 격자화
 
-이 단계는 기존 7번 파일입니다. AI Model 01에서 준비한 주유소/시설/공시지가 데이터를 전국 500m 격자에 결합하고, AI 모델 입력 feature를 생성합니다.
+이 단계는 기존 7번 파일입니다. AI Model 02에서 만든 파생 CSV를 바탕으로 전국 500m 격자 패널과 공간 feature를 생성합니다.
 
 ## Notebook
 
-- `02_spatial_grid_build.ipynb`
+- `03_spatial_grid_build.ipynb`
 
 ## Inputs
 
 새 구조의 기준 입력은 다음입니다.
 
 ```text
-DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/gasoline.csv
-DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/diesel.csv
-DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/metadata__latlon.json
-DATA_COLLECTION_PATH/facility/final/facility_location_data_final.csv
-DATA_COLLECTION_PATH/official_land_price/final/공시지가.csv
+DATA_COLLECTION_PATH/derived_data/station_price_manifest.csv
+DATA_COLLECTION_PATH/derived_data/station_location_history.csv
+DATA_COLLECTION_PATH/derived_data/station_attribute_history.csv
+DATA_COLLECTION_PATH/derived_data/station_latest_profile.csv
+DATA_COLLECTION_PATH/derived_data/facility_location_data_final.csv
+DATA_COLLECTION_PATH/derived_data/facility_points.csv
+DATA_COLLECTION_PATH/derived_data/official_land_price_grid.csv
 ```
 
-원문 코드에는 `PROCESSED_PATH/additional_data/...` 또는 `DATA_PATH/공시지가.csv`를 읽는 부분이 남아 있을 수 있습니다. 실행 전에는 위 `DATA_COLLECTION_PATH` 기준으로 경로를 맞춰야 합니다.
+원문 코드에는 아직 `PROCESSED_PATH/additional_data/...` 또는 `DATA_PATH/공시지가.csv`를 읽는 부분이 남아 있을 수 있습니다. 03번 구현 시 위 `DERIVED_DATA_PATH` 기준으로 맞춥니다.
 
 외부 보조 데이터는 Natural Earth minor islands zip입니다.
 
@@ -55,38 +57,9 @@ facility_agency_count
 storage_influence
 agency_influence
 factory_influence
+official_land_price
+official_price_source_date
 ```
-
-따라서 시설 영향력과 주유소 개수 영향력이 AI Model 01에 없는 것은 정상입니다. AI Model 01의 책임은 이 feature를 만들 수 있는 원천 파일을 준비하는 것입니다.
-
-## Confirmed Output From Original Cells
-
-원문 출력 셀에서 확인된 참고값입니다.
-
-| 항목 | 값 |
-|---|---:|
-| Natural Earth 기반 base land grid | 395,989 |
-| 주유소 위치 patch grid | 12,510 |
-| 시설 위치 patch grid | 739 |
-| station patch only grid | 187 |
-| facility patch only grid | 14 |
-| 최종 land grid | 396,183 |
-
-공시지가 CSV는 396,183개 grid와 9개 snapshot 컬럼을 포함했습니다.
-
-| snapshot | not null | null |
-|---|---:|---:|
-| 2016-09-21 | 393,397 | 2,786 |
-| 2017-11-21 | 393,777 | 2,406 |
-| 2018-11-29 | 393,727 | 2,456 |
-| 2019-08-20 | 393,846 | 2,337 |
-| 2020-08-13 | 393,840 | 2,343 |
-| 2021-11-23 | 393,949 | 2,234 |
-| 2022-08-05 | 393,942 | 2,241 |
-| 2023-12-21 | 393,853 | 2,330 |
-| 2024-08-02 | 393,948 | 2,235 |
-
-원문 최종 패널에서 공시지가가 붙은 행은 33,759,224행, 결측 행은 30,104,508행이었습니다. 공시지가 snapshot이 2016년부터 시작되므로 2008~2016년 이전 구간은 `official_land_price` 결측이 자연스럽습니다.
 
 ## Outputs
 

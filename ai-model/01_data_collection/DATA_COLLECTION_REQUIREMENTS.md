@@ -4,7 +4,7 @@
 
 ## Data Source Summary
 
-| 데이터 | 수집 판단 | AI Model 02 직접 입력 여부 |
+| 데이터 | 수집 판단 | AI Model 02 파생 데이터 입력 여부 |
 |---|---|---|
 | 환율 `fx_usdkrw.csv` | ECOS API 수집 가능 | 간접 사용 |
 | 원유가 `crude.csv` | 오피넷 화면/CSV 다운로드 자동화 | 간접 사용 |
@@ -20,7 +20,7 @@
 
 ## Direct Handoff To AI Model 02
 
-AI Model 02가 격자화에 직접 쓰는 파일은 다음입니다.
+AI Model 02가 격자화 전 파생 CSV를 만들기 위해 읽는 핵심 파일은 다음입니다.
 
 ```text
 DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/gasoline.csv
@@ -28,18 +28,19 @@ DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/diesel.csv
 DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/metadata.json
 DATA_COLLECTION_PATH/gas_station_prices_by_region/final/{region}/metadata__latlon.json
 
+DATA_COLLECTION_PATH/facility/final/facility_data.csv
 DATA_COLLECTION_PATH/facility/final/facility_location_data_final.csv
 
 DATA_COLLECTION_PATH/official_land_price/final/공시지가.csv
 ```
 
-`facility/final/facility_data.csv`는 시설 목록 파일입니다. 이 파일만으로는 시설 영향력 계산이 불가능하므로, 좌표 보강 결과인 `facility_location_data_final.csv`가 있어야 합니다.
+`facility/final/facility_data.csv`는 시설 목록 파일입니다. 이 파일만으로는 시설 영향력 계산이 불가능하므로, AI Model 02에서 좌표를 보강하거나 좌표 보강 결과인 `facility_location_data_final.csv`를 준비해야 합니다.
 
 ## Feature Creation Boundary
 
-AI Model 01은 feature를 만들지 않고 입력 파일을 준비합니다.
+AI Model 01은 feature를 만들지 않고 입력 파일을 준비합니다. AI Model 02는 격자화 전 표준 CSV를 만들고, AI Model 03에서 격자 feature를 생성합니다.
 
-AI Model 02에서 생성하는 feature:
+AI Model 03에서 생성하는 feature:
 
 - 주유소 개수: `station_count_total`, `gasoline_station_count`, `diesel_station_count`
 - 주유소 주변 영향력: `station_neighbor_influence`
