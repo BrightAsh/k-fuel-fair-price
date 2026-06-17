@@ -1,48 +1,32 @@
 {
   "schema_version": "national_today_v1",
   "as_of_date": "2026-06-09",
-  "generated_at": "sample",
-  "freshness": "sample",
+  "generated_at": "2026-06-18T04:55:59+09:00",
+  "freshness": "stale",
   "fuels": {
     "gasoline": {
       "label": "휘발유",
       "actual_price": 2009.98,
-      "actual_delta_1d": 1.2,
-      "fair_price_policy": 1886.91,
-      "band_low_policy": 1873.12,
-      "band_high_policy": 1901.02,
-      "gap_policy": 123.07,
-      "judge_policy": "비쌈",
-      "policy_effect": 123.07
+      "actual_delta_1d": -0.07999999999992724,
+      "fair_price_policy": 2373.073215571967,
+      "band_low_policy": 2363.236746710217,
+      "band_high_policy": 2395.3601084705324,
+      "gap_policy": -363.093215571967,
+      "judge_policy": "저렴",
+      "policy_effect": 0.0
     },
     "diesel": {
       "label": "경유",
       "actual_price": 2004.82,
-      "actual_delta_1d": 0.8,
-      "fair_price_policy": 1859.41,
-      "band_low_policy": 1845.22,
-      "band_high_policy": 1874.11,
-      "gap_policy": 145.41,
-      "judge_policy": "비쌈",
-      "policy_effect": 145.41
+      "actual_delta_1d": 0.0,
+      "fair_price_policy": 2642.0332639849253,
+      "band_low_policy": 2628.858289283853,
+      "band_high_policy": 2662.5317067420665,
+      "gap_policy": -637.2132639849253,
+      "judge_policy": "저렴",
+      "policy_effect": 0.0
     }
   },
-  "policies": [
-    {
-      "title": "유류세 인하 반영",
-      "status": "정책 효과 반영",
-      "period": "분석 산출물 기준",
-      "gasoline_effect": 123.07,
-      "diesel_effect": 145.41,
-      "note": "전국 적정가격 산식에 반영된 정책효과입니다."
-    },
-    {
-      "title": "정유사 최고가격제",
-      "status": "정책 탭 표시 대상",
-      "period": "정책 기간 데이터 연결 전",
-      "gasoline_effect": null,
-      "diesel_effect": null,
-      "note": "정책 기간 원자료가 연결되면 실제 적용 여부를 갱신합니다."
-    }
-  ]
+  "policies": [],
+  "errors": {}
 }

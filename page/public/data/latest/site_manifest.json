@@ -1,8 +1,8 @@
 {
   "schema_version": "page_data_v1",
   "as_of_date": "2026-06-09",
-  "generated_at": "sample",
-  "freshness": "sample",
+  "generated_at": "2026-06-18T04:55:59+09:00",
+  "freshness": "stale",
   "files": [
     "national_today.json",
     "region_today.json",
@@ -11,5 +11,9 @@
   "assets": [
     "korea-provinces.geojson"
   ],
-  "note": "Sample data. GitHub Actions will replace this with generated daily data."
+  "source": {
+    "national": "data-analysis/05_policy_application/outputs",
+    "region": null,
+    "station": null
+  }
 }
