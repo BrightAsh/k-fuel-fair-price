@@ -35,6 +35,7 @@ INTERMEDIATE_DATA_DIR = OUTPUT_ROOT / "intermediate_data"
 CACHE_DATASET_VERSION = "stage03_spread_delta_lstm_v1"
 
 TEST_START = pd.Timestamp("2026-01-01")
+TEST_END = pd.Timestamp("2026-12-31")
 PREDICTION_HORIZON_DAYS = 1
 
 RUN_FUELS = ("gasoline", "diesel")
@@ -1271,6 +1272,7 @@ def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, mode
             "fuel_config": asdict(cfg),
             "policy_exclude_ranges": POLICY_EXCLUDE_RANGES,
             "test_start": str(TEST_START.date()),
+            "test_end": str(TEST_END.date()),
             "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
         },
         model_path,
@@ -1392,6 +1394,7 @@ def get_test_date_range(cfg: FuelConfig) -> Optional[Tuple[pd.Timestamp, pd.Time
             MAX(CAST(date AS DATE)) AS date_max
         FROM {panel_sql()}
         WHERE CAST(date AS DATE) >= {sql_date(TEST_START)}
+          AND CAST(date AS DATE) <= {sql_date(TEST_END)}
           AND {qid(cfg.target_col)} IS NOT NULL
           AND CAST({qid(cfg.station_count_col)} AS DOUBLE) > 0
         """
@@ -1474,10 +1477,12 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
         print(f"[TEST] {cfg.label}: no 2026 rows")
         return pd.DataFrame()
 
-    parts_dir = out_dir / "test_parts"
+    parts_dir = out_dir / "test_predictions_by_month"
     parts_dir.mkdir(parents=True, exist_ok=True)
     parts: List[Path] = []
     metric_rows: List[Dict[str, Any]] = []
+
+    print(f"[TEST] {cfg.label}: full available 2026 range = {test_range[0].date()} ~ {test_range[1].date()}")
 
     for m_start, m_end in month_ranges(*test_range):
         chunk = load_model_frame(
@@ -1490,15 +1495,15 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
             force_pre_2026=False,
             exclude_target_policy=False,
             exclude_history_policy=False,
-            label=f"test_{m_start:%Y_%m}",
+            label=f"test_{m_start:%Y%m}",
         )
         if len(chunk) == 0:
             continue
-        if (chunk["date"] < TEST_START).any():
-            raise AssertionError("test frame contains pre-2026 rows")
+        if (chunk["date"] < TEST_START).any() or (chunk["date"] > TEST_END).any():
+            raise AssertionError("test frame contains rows outside 2026")
 
         pred = prediction_frame(chunk, predict_delta(wrapper, chunk))
-        metric_rows.append(evaluate_prediction_frame(pred, f"test_{m_start:%Y_%m}"))
+        metric_rows.append(evaluate_prediction_frame(pred, f"test_{m_start:%Y%m}"))
 
         save_cols = [
             "date",
@@ -1521,7 +1526,7 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
             "prediction_error_to_actual",
         ]
         save_cols = [c for c in save_cols if c in pred.columns]
-        part_path = parts_dir / f"{cfg.fuel}_test_predictions_2026_{m_start:%Y_%m}.parquet"
+        part_path = parts_dir / f"{m_start:%Y%m}.parquet"
         pred[save_cols].to_parquet(part_path, index=False, compression="zstd")
         parts.append(part_path)
         print(f"[SAVE PART] {part_path} rows={len(pred):,}")
@@ -1591,7 +1596,10 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         f"validation dates={split['valid_eligible_date_min'].date()}~{split['valid_eligible_date_max'].date()}"
     )
     print("[SPLIT] train/validation/final_train exclude target policy dates and policy dates inside 29-day input history")
-    print(f"[SPLIT] final_train target_date < {TEST_START.date()} / test target_date >= {TEST_START.date()}")
+    print(
+        f"[SPLIT] final_train target_date < {TEST_START.date()} / "
+        f"test target_date = {TEST_START.date()} ~ {TEST_END.date()}"
+    )
 
     train_df = load_model_frame(
         cfg=cfg,
@@ -1665,6 +1673,7 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         "output_dir": str(out_dir),
         "model_path": str(model_path),
         "test_start": str(TEST_START.date()),
+        "test_end": str(TEST_END.date()),
         "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
         "target_definition": "spread_delta_target = spread_target - spread_lag_1d",
         "prediction_definition": "pred_spread = spread_lag_1d + predicted_spread_delta; pred_grid_price = national_actual_price + pred_spread",
@@ -1729,6 +1738,7 @@ def main() -> None:
     print(f"GRID_PATH                  = {GRID_PATH}")
     print(f"OUTPUT_ROOT                = {OUTPUT_ROOT}")
     print(f"TEST_START                 = {TEST_START.date()}")
+    print(f"TEST_END                   = {TEST_END.date()}")
     print(f"PREDICTION_HORIZON_DAYS    = {PREDICTION_HORIZON_DAYS}")
     print(f"TARGET_COLUMN              = {TARGET_COLUMN}")
     print(f"RUN_FUELS                  = {', '.join(RUN_FUELS)}")
@@ -1745,7 +1755,14 @@ def main() -> None:
             COUNT(DISTINCT grid_id) AS unique_grid_count,
             MIN(CAST(date AS DATE)) AS date_min,
             MAX(CAST(date AS DATE)) AS date_max,
-            SUM(CASE WHEN CAST(date AS DATE) >= {sql_date(TEST_START)} THEN 1 ELSE 0 END) AS test_2026_rows
+            SUM(
+                CASE
+                    WHEN CAST(date AS DATE) >= {sql_date(TEST_START)}
+                     AND CAST(date AS DATE) <= {sql_date(TEST_END)}
+                    THEN 1
+                    ELSE 0
+                END
+            ) AS test_2026_rows
         FROM {panel_sql()}
         """
     ).df()
