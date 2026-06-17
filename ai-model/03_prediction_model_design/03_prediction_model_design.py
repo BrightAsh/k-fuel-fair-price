@@ -49,28 +49,28 @@ SEQUENCE_REQUIRED_HISTORY_DAYS = SEQUENCE_LENGTH_DAYS + 1
 TARGET_COLUMN = "spread_delta_target"
 MODEL_TARGET_MODE = "spread_delta"
 
-TRAIN_SAMPLE_PER_MILLE = 100
-VALID_SAMPLE_PER_MILLE = 100
-MAX_TRAIN_ROWS_PER_FUEL = 3_000_000
-MAX_VALID_ROWS_PER_FUEL = 1_300_000
-MAX_FINAL_TRAIN_ROWS_PER_FUEL = 4_500_000
+TRAIN_SAMPLE_PER_MILLE = 200
+VALID_SAMPLE_PER_MILLE = 200
+MAX_TRAIN_ROWS_PER_FUEL = 6_000_000
+MAX_VALID_ROWS_PER_FUEL = 2_500_000
+MAX_FINAL_TRAIN_ROWS_PER_FUEL = 8_000_000
 
-SEQUENCE_MAX_TRAIN_ROWS = 3_000_000
-SEQUENCE_MAX_VALID_ROWS = 1_300_000
-SEQUENCE_MAX_FINAL_ROWS = 4_500_000
+SEQUENCE_MAX_TRAIN_ROWS = 6_000_000
+SEQUENCE_MAX_VALID_ROWS = 2_500_000
+SEQUENCE_MAX_FINAL_ROWS = 8_000_000
 
-MODEL_EPOCHS = 1000
+MODEL_EPOCHS = 20
 MODEL_BATCH_SIZE = 8192
 MODEL_LEARNING_RATE = 0.0025
 MODEL_WEIGHT_DECAY = 0.0001
 MODEL_GRAD_CLIP_NORM = 1.0
-EARLY_STOPPING_PATIENCE = 30
+EARLY_STOPPING_PATIENCE = 5
 EARLY_STOPPING_MIN_DELTA = 0.001
-LR_REDUCE_PATIENCE = 8
+LR_REDUCE_PATIENCE = 2
 LR_REDUCE_FACTOR = 0.5
 MIN_LEARNING_RATE = 0.00001
-FINAL_EXTRA_EPOCHS = 5
-FINAL_MAX_EPOCHS = 200
+FINAL_EXTRA_EPOCHS = 0
+FINAL_MAX_EPOCHS = 20
 
 USE_CUDA = torch.cuda.is_available()
 DEVICE = torch.device("cuda" if USE_CUDA else "cpu")
@@ -972,6 +972,64 @@ def prediction_frame(df: pd.DataFrame, pred_delta: np.ndarray) -> pd.DataFrame:
     return out
 
 
+def save_best_checkpoint(
+    model_state: Dict[str, torch.Tensor],
+    prep: Dict[str, Any],
+    cfg: FuelConfig,
+    out_dir: Path,
+    epoch: int,
+    best_wmae: float,
+    metrics: Dict[str, Any],
+    train_rows: int,
+    valid_rows: int,
+    history_row: Dict[str, Any],
+) -> Tuple[str, str]:
+    checkpoint_dir = out_dir / "model" / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    epoch_path = checkpoint_dir / f"{cfg.fuel}_best_epoch_{epoch:04d}_wmae_{best_wmae:.4f}.pt"
+    latest_path = checkpoint_dir / f"{cfg.fuel}_best_latest.pt"
+    payload = {
+        "created_at": pd.Timestamp.now().isoformat(),
+        "model_name": "lstm_spread_delta",
+        "model_class": "SpreadDeltaLstm",
+        "model_state_dict": model_state,
+        "preprocess": prep,
+        "fuel_config": asdict(cfg),
+        "epoch": int(epoch),
+        "best_validation_weighted_mae": float(best_wmae),
+        "metrics": metrics,
+        "history_row": history_row,
+        "train_rows": int(train_rows),
+        "valid_rows": int(valid_rows),
+        "model_config": {
+            "input_size": len(SEQUENCE_CHANNELS),
+            "hidden_size": 128,
+            "num_layers": 2,
+            "dropout": 0.20,
+            "sequence_length_days": SEQUENCE_LENGTH_DAYS,
+            "target_column": TARGET_COLUMN,
+            "target_mode": MODEL_TARGET_MODE,
+            "sequence_channels": SEQUENCE_CHANNELS,
+        },
+        "training_config": {
+            "model_epochs": MODEL_EPOCHS,
+            "batch_size": MODEL_BATCH_SIZE,
+            "learning_rate": MODEL_LEARNING_RATE,
+            "weight_decay": MODEL_WEIGHT_DECAY,
+            "early_stopping_patience": EARLY_STOPPING_PATIENCE,
+            "early_stopping_min_delta": EARLY_STOPPING_MIN_DELTA,
+            "lr_reduce_patience": LR_REDUCE_PATIENCE,
+            "lr_reduce_factor": LR_REDUCE_FACTOR,
+            "min_learning_rate": MIN_LEARNING_RATE,
+        },
+    }
+    torch.save(payload, epoch_path)
+    torch.save(payload, latest_path)
+    print(f"[CHECKPOINT] {cfg.label}: saved best epoch {epoch} -> {latest_path}")
+    return str(epoch_path), str(latest_path)
+
+
 def baseline_scores(train_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
 
@@ -1036,6 +1094,9 @@ def train_with_validation(
     best_epoch = 0
     patience_left = EARLY_STOPPING_PATIENCE
     history: List[Dict[str, Any]] = []
+    history_path = out_dir / f"{cfg.fuel}_training_history.csv"
+    best_checkpoint_epoch_path: Optional[str] = None
+    best_checkpoint_latest_path: Optional[str] = None
 
     for epoch in range(1, MODEL_EPOCHS + 1):
         epoch_start = time.time()
@@ -1088,7 +1149,23 @@ def train_with_validation(
             "best_epoch_so_far": best_epoch,
             **metrics,
         }
+        if improved and best_state is not None:
+            best_checkpoint_epoch_path, best_checkpoint_latest_path = save_best_checkpoint(
+                model_state=best_state,
+                prep=prep,
+                cfg=cfg,
+                out_dir=out_dir,
+                epoch=epoch,
+                best_wmae=best_wmae,
+                metrics=metrics,
+                train_rows=len(train_model_df),
+                valid_rows=len(valid_model_df),
+                history_row=row,
+            )
+        row["checkpoint_epoch_path"] = best_checkpoint_epoch_path if improved else None
+        row["checkpoint_latest_path"] = best_checkpoint_latest_path if improved else None
         history.append(row)
+        pd.DataFrame(history).to_csv(history_path, index=False, encoding="utf-8-sig")
 
         print(
             f"[EPOCH] {cfg.label} {epoch:04d}: "
@@ -1109,7 +1186,6 @@ def train_with_validation(
     valid_full_pred = prediction_frame(valid_df, predict_delta(wrapper, valid_df))
     full_metrics = evaluate_prediction_frame(valid_full_pred, "validation_full_best_model")
     history_df = pd.DataFrame(history)
-    history_path = out_dir / f"{cfg.fuel}_training_history.csv"
     history_df.to_csv(history_path, index=False, encoding="utf-8-sig")
     print(f"[SAVE] {history_path}")
 
@@ -1119,6 +1195,8 @@ def train_with_validation(
                 "model_name": "lstm_spread_delta",
                 "best_epoch": best_epoch,
                 "device": str(DEVICE),
+                "best_checkpoint_epoch_path": best_checkpoint_epoch_path,
+                "best_checkpoint_latest_path": best_checkpoint_latest_path,
                 **full_metrics,
             }
         ]
@@ -1500,9 +1578,13 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         "learning_rate": MODEL_LEARNING_RATE,
         "early_stopping_patience": EARLY_STOPPING_PATIENCE,
         "early_stopping_min_delta": EARLY_STOPPING_MIN_DELTA,
+        "lr_reduce_patience": LR_REDUCE_PATIENCE,
+        "lr_reduce_factor": LR_REDUCE_FACTOR,
         "validation_scores_path": str(validation_scores_path),
         "validation_predictions_path": str(valid_pred_path),
         "training_history_path": str(out_dir / f"{cfg.fuel}_training_history.csv"),
+        "best_checkpoint_epoch_path": model_score_df["best_checkpoint_epoch_path"].iloc[0],
+        "best_checkpoint_latest_path": model_score_df["best_checkpoint_latest_path"].iloc[0],
     }
     metadata_path = out_dir / f"{cfg.fuel}_model_metadata.json"
     save_json(metadata_path, metadata)
