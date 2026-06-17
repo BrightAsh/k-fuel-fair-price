@@ -1,0 +1,31 @@
+{
+  "schema_version": "national_today_v1",
+  "as_of_date": "2026-06-09",
+  "generated_at": "sample",
+  "freshness": "sample",
+  "fuels": {
+    "gasoline": {
+      "label": "휘발유",
+      "actual_price": 2009.98,
+      "actual_delta_1d": 1.2,
+      "fair_price_policy": 1886.91,
+      "band_low_policy": 1873.12,
+      "band_high_policy": 1901.02,
+      "gap_policy": 123.07,
+      "judge_policy": "비쌈",
+      "policy_effect": 123.07
+    },
+    "diesel": {
+      "label": "경유",
+      "actual_price": 2004.82,
+      "actual_delta_1d": 0.8,
+      "fair_price_policy": 1859.41,
+      "band_low_policy": 1845.22,
+      "band_high_policy": 1874.11,
+      "gap_policy": 145.41,
+      "judge_policy": "비쌈",
+      "policy_effect": 145.41
+    }
+  }
+}
+

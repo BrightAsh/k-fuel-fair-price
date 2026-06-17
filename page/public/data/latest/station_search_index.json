@@ -1,0 +1,23 @@
+[
+  {
+    "station_id": "sample-1",
+    "name": "예시 주유소",
+    "brand": "SK에너지",
+    "region": "서울",
+    "address": "서울특별시 예시로 1",
+    "gasoline_price": 2012,
+    "diesel_price": 1998,
+    "judge_policy": "적정"
+  },
+  {
+    "station_id": "sample-2",
+    "name": "데모 셀프주유소",
+    "brand": "GS칼텍스",
+    "region": "경기",
+    "address": "경기도 예시시 샘플로 2",
+    "gasoline_price": 1999,
+    "diesel_price": 1982,
+    "judge_policy": "비쌈"
+  }
+]
+

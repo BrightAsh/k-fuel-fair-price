@@ -2,6 +2,16 @@
 
 국제 유가 대비 국내 유가 적정성을 분석하기 위해 원본 Colab 코드를 단계별 노트북으로 분리한 저장소입니다.
 
+## Web Page
+
+GitHub Pages 대시보드 주소:
+
+```text
+https://brightash.github.io/k-fuel-fair-price/
+```
+
+레포의 `Settings > Pages > Source = GitHub Actions` 설정이 켜져 있고, `page/` 변경분이 `main`에 push된 뒤 접속할 수 있습니다.
+
 ## 폴더 구조
 
 ```text

@@ -1,0 +1,23 @@
+[
+  {
+    "region": "서울",
+    "gasoline": { "actual_price": 2078, "fair_price_policy": 1934, "gap_policy": 144, "judge_policy": "비쌈" },
+    "diesel": { "actual_price": 2059, "fair_price_policy": 1906, "gap_policy": 153, "judge_policy": "비쌈" }
+  },
+  {
+    "region": "경기",
+    "gasoline": { "actual_price": 2010, "fair_price_policy": 1886, "gap_policy": 124, "judge_policy": "비쌈" },
+    "diesel": { "actual_price": 2006, "fair_price_policy": 1857, "gap_policy": 149, "judge_policy": "비쌈" }
+  },
+  {
+    "region": "부산",
+    "gasoline": { "actual_price": 1988, "fair_price_policy": 1880, "gap_policy": 108, "judge_policy": "비쌈" },
+    "diesel": { "actual_price": 1985, "fair_price_policy": 1850, "gap_policy": 135, "judge_policy": "비쌈" }
+  },
+  {
+    "region": "제주",
+    "gasoline": { "actual_price": 1914, "fair_price_policy": 1889, "gap_policy": 25, "judge_policy": "적정" },
+    "diesel": { "actual_price": 1890, "fair_price_policy": 1862, "gap_policy": 28, "judge_policy": "적정" }
+  }
+]
+

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>K-Fuel Fair Price</title>
+    <link rel="stylesheet" href="./assets/css/dashboard.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Daily fair price monitor</p>
+        <h1>국내 유가 적정가격 대시보드</h1>
+      </div>
+      <div class="status-panel">
+        <span id="freshness-dot" class="freshness-dot"></span>
+        <div>
+          <strong id="data-date">데이터 기준일 확인 중</strong>
+          <span id="generated-at">갱신 시각 확인 중</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <section class="control-strip" aria-label="유종 선택">
+        <div class="segmented-control">
+          <button class="fuel-button is-active" type="button" data-fuel="gasoline">휘발유</button>
+          <button class="fuel-button" type="button" data-fuel="diesel">경유</button>
+        </div>
+        <label class="search-box">
+          <span>검색</span>
+          <input id="station-search" type="search" placeholder="지역, 주소, 주유소명" autocomplete="off" />
+        </label>
+      </section>
+
+      <section class="kpi-grid" aria-label="전국 적정가격 요약">
+        <article class="metric-card">
+          <span>실제 전국 평균</span>
+          <strong id="metric-actual">-</strong>
+          <small id="metric-actual-delta">전일 대비 -</small>
+        </article>
+        <article class="metric-card">
+          <span>정책 적용 적정가격</span>
+          <strong id="metric-fair">-</strong>
+          <small id="metric-band">적정 범위 -</small>
+        </article>
+        <article class="metric-card">
+          <span>차이</span>
+          <strong id="metric-gap">-</strong>
+          <small>실제가격 - 적정가격</small>
+        </article>
+        <article class="metric-card judgement-card">
+          <span>오늘 판정</span>
+          <strong id="metric-judge">-</strong>
+          <small id="metric-policy">정책효과 -</small>
+        </article>
+      </section>
+
+      <section class="layout-grid">
+        <article class="map-panel">
+          <div class="section-title">
+            <h2>지역별 현황</h2>
+            <span id="region-count">-</span>
+          </div>
+          <div class="map-stage">
+            <img id="korea-map" src="./public/assets/korea-map.png" alt="대한민국 지역 지도" />
+            <div id="map-fallback" class="map-fallback">
+              <strong>지도 이미지 준비 필요</strong>
+              <span>page/public/assets/korea-map.png 파일을 넣으면 이 영역에 표시됩니다.</span>
+            </div>
+          </div>
+          <div id="region-rank" class="region-rank"></div>
+        </article>
+
+        <article class="table-panel">
+          <div class="section-title">
+            <h2>지역 가격표</h2>
+            <span id="table-caption">정책 적용 기준</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>지역</th>
+                  <th>실제</th>
+                  <th>적정</th>
+                  <th>차이</th>
+                  <th>판정</th>
+                </tr>
+              </thead>
+              <tbody id="region-table"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="search-results-panel">
+        <div class="section-title">
+          <h2>주유소 검색</h2>
+          <span id="search-count">검색어를 입력하세요</span>
+        </div>
+        <div id="station-results" class="station-results"></div>
+      </section>
+    </main>
+
+    <script src="./assets/js/app.js"></script>
+  </body>
+</html>
+

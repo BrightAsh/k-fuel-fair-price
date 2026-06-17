@@ -1,0 +1,58 @@
+name: Refresh Page Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      as_of_date:
+        description: "Optional YYYY-MM-DD data date"
+        required: false
+        type: string
+  schedule:
+    # 03:00 KST daily
+    - cron: "0 18 * * *"
+    # 07:00 KST daily retry for late source uploads
+    - cron: "0 22 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: page-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas
+
+      - name: Build page JSON
+        run: |
+          python page/scripts/build_page_data.py --as-of-date "${{ inputs.as_of_date }}"
+
+      - name: Commit updated page data
+        run: |
+          if git diff --quiet -- page/public/data/latest; then
+            echo "No page data changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add page/public/data/latest/*.json
+          git commit -m "Refresh page data"
+          git push
+

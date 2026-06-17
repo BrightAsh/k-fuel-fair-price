@@ -1,0 +1,180 @@
+# Page Data Contract
+
+`page`는 대용량 원천/모델 파일을 직접 공개하지 않고, 아래 JSON 파일만 읽습니다.
+
+```text
+page/public/data/latest/site_manifest.json
+page/public/data/latest/national_today.json
+page/public/data/latest/region_today.json
+page/public/data/latest/station_search_index.json
+```
+
+## Source Inputs
+
+현재 파악된 파이프라인 기준 핵심 입력은 다음입니다.
+
+### 전국 적정가격/정책 적용
+
+```text
+data-analysis/05_policy_application/outputs/휘발유/일별_정책적용_데이터_휘발유.csv
+data-analysis/05_policy_application/outputs/경유/일별_정책적용_데이터_경유.csv
+```
+
+주요 컬럼:
+
+```text
+date 또는 날짜
+국내유가_원L
+적정가격_미정책_원L
+적정범위_미정책_하한_원L
+적정범위_미정책_상한_원L
+적정가격_정책적용_원L
+적정범위_정책적용_하한_원L
+적정범위_정책적용_상한_원L
+정책효과_원L
+정책적용_inside
+정책적용_above
+정책적용_below
+```
+
+### 지역별 요약
+
+아직 최종 지역별 적정가격 산출물 계약은 확정 전입니다.
+
+임시 입력:
+
+```text
+page/manual_inputs/region_today.csv
+```
+
+필수 컬럼:
+
+```text
+as_of_date,region,fuel,actual_price,fair_price_policy,band_low_policy,band_high_policy,gap_policy,judge_policy
+```
+
+`fuel` 값은 `gasoline`, `diesel`을 사용합니다.
+
+향후 AI 모델 03 결과가 확정되면 아래 중 하나를 기준으로 자동 생성합니다.
+
+```text
+ai-model/03_prediction_model_design/outputs/gasoline/gasoline_test_predictions_2026.parquet
+ai-model/03_prediction_model_design/outputs/diesel/diesel_test_predictions_2026.parquet
+```
+
+또는 모델 학습 완료 후 생성될 지역 집계 CSV:
+
+```text
+ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_region_daily_summary.csv
+```
+
+### 주유소 검색
+
+임시 입력:
+
+```text
+page/manual_inputs/station_search_index.csv
+```
+
+필수 컬럼:
+
+```text
+station_id,name,brand,region,address,lon,lat,gasoline_price,diesel_price,judge_policy
+```
+
+향후에는 아래 AI 01/02 산출물과 AI 03 예측 결과를 결합해 생성합니다.
+
+```text
+data collection/derived_data/station_latest_profile.csv
+data collection/derived_data/station_points.csv
+ROOT_PATH/그리드/grid.parquet
+ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.parquet
+```
+
+## Output JSON
+
+### `site_manifest.json`
+
+```json
+{
+  "schema_version": "page_data_v1",
+  "as_of_date": "2026-06-09",
+  "generated_at": "2026-06-10T03:00:00+09:00",
+  "freshness": "fresh",
+  "files": ["national_today.json", "region_today.json", "station_search_index.json"]
+}
+```
+
+### `national_today.json`
+
+```json
+{
+  "schema_version": "national_today_v1",
+  "as_of_date": "2026-06-09",
+  "generated_at": "2026-06-10T03:00:00+09:00",
+  "freshness": "fresh",
+  "fuels": {
+    "gasoline": {
+      "label": "휘발유",
+      "actual_price": 2009.98,
+      "actual_delta_1d": 1.2,
+      "fair_price_policy": 1886.91,
+      "band_low_policy": 1873.12,
+      "band_high_policy": 1901.02,
+      "gap_policy": 123.07,
+      "judge_policy": "비쌈",
+      "policy_effect": 123.07
+    }
+  }
+}
+```
+
+### `region_today.json`
+
+배열입니다. 각 행은 한 지역이고, fuel별 값을 중첩 객체로 둡니다.
+
+```json
+[
+  {
+    "region": "서울",
+    "gasoline": {
+      "actual_price": 2078.0,
+      "fair_price_policy": 1934.0,
+      "gap_policy": 144.0,
+      "judge_policy": "비쌈"
+    },
+    "diesel": {
+      "actual_price": 2059.0,
+      "fair_price_policy": 1906.0,
+      "gap_policy": 153.0,
+      "judge_policy": "비쌈"
+    }
+  }
+]
+```
+
+### `station_search_index.json`
+
+검색 성능을 위해 너무 크게 만들지 않습니다. 첫 버전은 최신 가격과 위치 정보만 담습니다.
+
+```json
+[
+  {
+    "station_id": "A0000001",
+    "name": "주유소명",
+    "brand": "SK에너지",
+    "region": "서울",
+    "address": "서울 ...",
+    "lon": 127.0,
+    "lat": 37.5,
+    "gasoline_price": 2010.0,
+    "diesel_price": 1980.0,
+    "judge_policy": "적정"
+  }
+]
+```
+
+## Freshness Rule
+
+`as_of_date`가 현재 한국 날짜 기준 어제 또는 오늘이면 `fresh`, 그보다 오래되면 `stale`로 표시합니다.
+
