@@ -6,9 +6,11 @@
 
 GitHub Pages 대시보드 주소:
 
-```text
-https://brightash.github.io/k-fuel-fair-price/
-```
+[https://brightash.github.io/k-fuel-fair-price/](https://brightash.github.io/k-fuel-fair-price/)
+
+Chrome에서 기존 BrightAsh 블로그의 `404: Page not found`가 계속 보이면 아래 캐시 우회 주소로 한 번 접속하세요. 이 페이지가 로드되면 루트 블로그 서비스워커 캐시를 정리합니다.
+
+[https://brightash.github.io/k-fuel-fair-price/?v=refresh](https://brightash.github.io/k-fuel-fair-price/?v=refresh)
 
 레포의 `Settings > Pages > Source = GitHub Actions` 설정이 켜져 있고, `page/` 변경분이 `main`에 push된 뒤 접속할 수 있습니다.
 

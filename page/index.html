@@ -5,6 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>K-Fuel Fair Price</title>
     <link rel="stylesheet" href="./assets/css/dashboard.css" />
+    <script>
+      (() => {
+        const cleanupKey = "kff-pages-sw-cleanup-v1";
+        if (!("serviceWorker" in navigator)) return;
+
+        const unregisterRootServiceWorkers = navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) =>
+            Promise.all(
+              registrations
+                .filter((registration) => registration.scope === `${location.origin}/`)
+                .map((registration) => registration.unregister()),
+            ),
+          );
+
+        const deleteRootSiteCaches = "caches" in window
+          ? caches.keys().then((keys) =>
+              Promise.all(
+                keys
+                  .filter((key) => key.startsWith("chirpy-"))
+                  .map((key) => caches.delete(key)),
+              ),
+            )
+          : Promise.resolve();
+
+        Promise.all([unregisterRootServiceWorkers, deleteRootSiteCaches]).then(() => {
+          if (navigator.serviceWorker.controller && !sessionStorage.getItem(cleanupKey)) {
+            sessionStorage.setItem(cleanupKey, "1");
+            location.reload();
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div class="app-shell">
