@@ -1124,6 +1124,8 @@ def train_with_validation(
         wrapper = {"model": model, "preprocess": prep}
         valid_pred = prediction_frame(valid_model_df, predict_delta(wrapper, valid_model_df))
         metrics = evaluate_prediction_frame(valid_pred, f"validation_epoch_{epoch}")
+        del valid_pred
+        gc.collect()
         valid_wmae = float(metrics["price_weighted_mae"])
         scheduler.step(valid_wmae)
         current_lr = float(optimizer.param_groups[0]["lr"])
@@ -1185,6 +1187,8 @@ def train_with_validation(
     wrapper = {"model": model, "preprocess": prep}
     valid_full_pred = prediction_frame(valid_df, predict_delta(wrapper, valid_df))
     full_metrics = evaluate_prediction_frame(valid_full_pred, "validation_full_best_model")
+    del valid_full_pred
+    gc.collect()
     history_df = pd.DataFrame(history)
     history_df.to_csv(history_path, index=False, encoding="utf-8-sig")
     print(f"[SAVE] {history_path}")
@@ -1267,6 +1271,99 @@ def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, mode
     )
     print(f"[SAVE] {model_path}")
     return wrapper
+
+
+def load_completed_validation_artifacts(cfg: FuelConfig, out_dir: Path) -> Optional[Dict[str, Any]]:
+    validation_scores_path = out_dir / f"{cfg.fuel}_validation_scores.csv"
+    valid_pred_path = out_dir / f"{cfg.fuel}_validation_predictions.parquet"
+    history_path = out_dir / f"{cfg.fuel}_training_history.csv"
+
+    if not validation_scores_path.exists() or not valid_pred_path.exists() or not history_path.exists():
+        return None
+
+    try:
+        validation_scores = pd.read_csv(validation_scores_path)
+    except Exception as exc:
+        print(f"[RESUME MISS] {cfg.label}: validation scores read failed ({type(exc).__name__}: {exc})")
+        return None
+
+    model_score_df = validation_scores.loc[validation_scores["model_name"].astype(str).eq("lstm_spread_delta")].copy()
+    if len(model_score_df) != 1 or "best_epoch" not in model_score_df.columns:
+        return None
+
+    best_epoch = int(pd.to_numeric(model_score_df["best_epoch"], errors="coerce").iloc[0])
+    if best_epoch < 1 or best_epoch > MODEL_EPOCHS:
+        return None
+
+    latest_checkpoint = None
+    if "best_checkpoint_latest_path" in model_score_df.columns:
+        latest_checkpoint = model_score_df["best_checkpoint_latest_path"].iloc[0]
+    if latest_checkpoint is None or pd.isna(latest_checkpoint) or not Path(str(latest_checkpoint)).exists():
+        return None
+
+    print(
+        f"[RESUME] {cfg.label}: reuse completed validation artifacts "
+        f"(best_epoch={best_epoch}, checkpoint={latest_checkpoint})"
+    )
+    print(
+        validation_scores.sort_values("price_weighted_mae")[
+            ["model_name", "price_weighted_mae", "delta_weighted_mae"]
+        ].to_string(index=False)
+    )
+    return {
+        "validation_scores": validation_scores,
+        "model_score_df": model_score_df,
+        "best_epoch": best_epoch,
+        "validation_scores_path": validation_scores_path,
+        "valid_pred_path": valid_pred_path,
+    }
+
+
+def build_final_train_frame(
+    train_df: pd.DataFrame,
+    valid_df: pd.DataFrame,
+    split: Dict[str, Any],
+    cfg: FuelConfig,
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    gap_start = pd.Timestamp(split["train_end"]) + pd.Timedelta(days=1)
+    gap_end = pd.Timestamp(split["valid_start"]) - pd.Timedelta(days=1)
+    frames = [train_df, valid_df]
+    gap_rows = 0
+
+    if gap_start <= gap_end:
+        gap_df = load_model_frame(
+            cfg=cfg,
+            date_start=gap_start,
+            date_end=gap_end,
+            sample_per_mille=TRAIN_SAMPLE_PER_MILLE,
+            sample_salt=f"{cfg.fuel}_final_train_gap",
+            max_rows=MAX_FINAL_TRAIN_ROWS_PER_FUEL,
+            force_pre_2026=True,
+            exclude_target_policy=True,
+            exclude_history_policy=True,
+            label="final_train_gap",
+        )
+        gap_rows = len(gap_df)
+        if gap_rows:
+            frames.append(gap_df)
+
+    rows_before_cap = sum(len(frame) for frame in frames)
+    final_df = pd.concat(frames, ignore_index=True, copy=False)
+    final_df = sample_frame(final_df, SEQUENCE_MAX_FINAL_ROWS, f"{cfg.fuel}_final_model")
+    info = {
+        "source": "loaded_train_validation_samples_plus_gap_sample",
+        "train_rows": int(len(train_df)),
+        "validation_rows": int(len(valid_df)),
+        "gap_rows": int(gap_rows),
+        "rows_before_cap": int(rows_before_cap),
+        "rows_after_cap": int(len(final_df)),
+    }
+    print(
+        f"[FINAL FRAME] {cfg.label}: reuse train={info['train_rows']:,}, "
+        f"validation={info['validation_rows']:,}, gap={info['gap_rows']:,}, "
+        f"rows={info['rows_after_cap']:,}/{info['rows_before_cap']:,}"
+    )
+    return final_df, info
 
 
 # =============================================================================
@@ -1521,34 +1618,43 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
     if len(train_df) == 0 or len(valid_df) == 0:
         raise RuntimeError(f"{cfg.label}: train or validation frame is empty")
 
-    baseline_df = baseline_scores(train_df, valid_df)
-    wrapper, history_df, model_score_df, best_epoch = train_with_validation(train_df, valid_df, cfg, out_dir)
-    validation_scores = pd.concat([baseline_df, model_score_df], ignore_index=True, sort=False)
-    validation_scores_path = out_dir / f"{cfg.fuel}_validation_scores.csv"
-    validation_scores.to_csv(validation_scores_path, index=False, encoding="utf-8-sig")
-    print(f"[SAVE] {validation_scores_path}")
-    print(validation_scores.sort_values("price_weighted_mae")[["model_name", "price_weighted_mae", "delta_weighted_mae"]].to_string(index=False))
+    completed_validation = load_completed_validation_artifacts(cfg, out_dir)
+    validation_reused = completed_validation is not None
+    if completed_validation is not None:
+        model_score_df = completed_validation["model_score_df"]
+        best_epoch = completed_validation["best_epoch"]
+        validation_scores_path = completed_validation["validation_scores_path"]
+        valid_pred_path = completed_validation["valid_pred_path"]
+        del completed_validation
+    else:
+        baseline_df = baseline_scores(train_df, valid_df)
+        wrapper, history_df, model_score_df, best_epoch = train_with_validation(train_df, valid_df, cfg, out_dir)
+        validation_scores = pd.concat([baseline_df, model_score_df], ignore_index=True, sort=False)
+        validation_scores_path = out_dir / f"{cfg.fuel}_validation_scores.csv"
+        validation_scores.to_csv(validation_scores_path, index=False, encoding="utf-8-sig")
+        print(f"[SAVE] {validation_scores_path}")
+        print(
+            validation_scores.sort_values("price_weighted_mae")[
+                ["model_name", "price_weighted_mae", "delta_weighted_mae"]
+            ].to_string(index=False)
+        )
 
-    valid_pred = prediction_frame(valid_df, predict_delta(wrapper, valid_df))
-    valid_pred_path = out_dir / f"{cfg.fuel}_validation_predictions.parquet"
-    valid_pred.to_parquet(valid_pred_path, index=False, compression="zstd")
-    print(f"[SAVE] {valid_pred_path}")
+        valid_pred = prediction_frame(valid_df, predict_delta(wrapper, valid_df))
+        valid_pred_path = out_dir / f"{cfg.fuel}_validation_predictions.parquet"
+        valid_pred.to_parquet(valid_pred_path, index=False, compression="zstd")
+        print(f"[SAVE] {valid_pred_path}")
 
-    del train_df
+        del baseline_df, history_df, validation_scores, valid_pred, wrapper
+        gc.collect()
+        if USE_CUDA:
+            torch.cuda.empty_cache()
+
+    final_df, final_train_info = build_final_train_frame(train_df, valid_df, split, cfg)
+    del train_df, valid_df
     gc.collect()
+    if USE_CUDA:
+        torch.cuda.empty_cache()
 
-    final_df = load_model_frame(
-        cfg=cfg,
-        date_start=None,
-        date_end=TEST_START - pd.Timedelta(days=1),
-        sample_per_mille=TRAIN_SAMPLE_PER_MILLE,
-        sample_salt=f"{cfg.fuel}_final_train",
-        max_rows=MAX_FINAL_TRAIN_ROWS_PER_FUEL,
-        force_pre_2026=True,
-        exclude_target_policy=True,
-        exclude_history_policy=True,
-        label="final_train_pre_2026",
-    )
     model_path = model_dir / f"{cfg.fuel}_spread_delta_lstm.pt"
     final_wrapper = train_final_model(final_df, cfg, best_epoch, model_path)
 
@@ -1580,11 +1686,16 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         "early_stopping_min_delta": EARLY_STOPPING_MIN_DELTA,
         "lr_reduce_patience": LR_REDUCE_PATIENCE,
         "lr_reduce_factor": LR_REDUCE_FACTOR,
+        "validation_stage_reused": validation_reused,
         "validation_scores_path": str(validation_scores_path),
         "validation_predictions_path": str(valid_pred_path),
         "training_history_path": str(out_dir / f"{cfg.fuel}_training_history.csv"),
         "best_checkpoint_epoch_path": model_score_df["best_checkpoint_epoch_path"].iloc[0],
         "best_checkpoint_latest_path": model_score_df["best_checkpoint_latest_path"].iloc[0],
+        "final_train_source": final_train_info["source"],
+        "final_train_rows_before_cap": final_train_info["rows_before_cap"],
+        "final_train_rows_after_cap": final_train_info["rows_after_cap"],
+        "final_train_gap_rows": final_train_info["gap_rows"],
     }
     metadata_path = out_dir / f"{cfg.fuel}_model_metadata.json"
     save_json(metadata_path, metadata)
@@ -1607,7 +1718,7 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         else float("nan"),
     }
 
-    del valid_df, valid_pred, final_df
+    del final_df, final_wrapper
     gc.collect()
     if USE_CUDA:
         torch.cuda.empty_cache()
