@@ -31,6 +31,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STAGE3_DIR = Path(__file__).resolve().parent
 GRID_PATH = REPO_ROOT / "ai-model" / "02_spatial_grid_build" / "outputs" / "grid.parquet"
 OUTPUT_ROOT = STAGE3_DIR / "outputs"
+INTERMEDIATE_DATA_DIR = OUTPUT_ROOT / "intermediate_data"
+CACHE_DATASET_VERSION = "stage03_spread_delta_lstm_v1"
 
 TEST_START = pd.Timestamp("2026-01-01")
 PREDICTION_HORIZON_DAYS = 1
@@ -257,6 +259,7 @@ if not GRID_PATH.exists():
     raise FileNotFoundError(f"grid.parquet not found: {GRID_PATH}")
 
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+INTERMEDIATE_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 con = duckdb.connect(database=":memory:")
 con.execute(f"PRAGMA threads={max(os.cpu_count() or 2, 2)}")
@@ -482,6 +485,188 @@ def estimate_rows(
     return int(con.execute(query).fetchone()[0])
 
 
+def cache_date(value: Optional[pd.Timestamp]) -> Optional[str]:
+    if value is None:
+        return None
+    return pd.Timestamp(value).strftime("%Y-%m-%d")
+
+
+def cache_safe(value: Any) -> str:
+    text = "none" if value is None else str(value)
+    return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in text)
+
+
+def grid_file_signature() -> Dict[str, Any]:
+    stat = GRID_PATH.stat()
+    return {
+        "path": str(GRID_PATH.resolve()),
+        "size": int(stat.st_size),
+        "mtime_ns": int(stat.st_mtime_ns),
+    }
+
+
+def normalized_policy_ranges() -> List[List[str]]:
+    return [[str(start), str(end), str(label)] for start, end, label in POLICY_EXCLUDE_RANGES]
+
+
+def frame_cache_conditions(
+    cfg: FuelConfig,
+    date_start: Optional[pd.Timestamp],
+    date_end: Optional[pd.Timestamp],
+    sample_per_mille: int,
+    sample_salt: str,
+    max_rows: Optional[int],
+    force_pre_2026: bool,
+    exclude_target_policy: bool,
+    exclude_history_policy: bool,
+    label: str,
+) -> Dict[str, Any]:
+    return {
+        "dataset_version": CACHE_DATASET_VERSION,
+        "fuel": cfg.fuel,
+        "target_col": cfg.target_col,
+        "station_count_col": cfg.station_count_col,
+        "label": label,
+        "date_start": cache_date(date_start),
+        "date_end": cache_date(date_end),
+        "sample_per_mille_requested": int(sample_per_mille),
+        "sample_salt": sample_salt,
+        "max_rows": int(max_rows) if max_rows is not None else None,
+        "force_pre_2026": bool(force_pre_2026),
+        "exclude_target_policy": bool(exclude_target_policy),
+        "exclude_history_policy": bool(exclude_history_policy),
+        "test_start": cache_date(TEST_START),
+        "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
+        "train_valid_train_ratio": TRAIN_VALID_TRAIN_RATIO,
+        "gap_days": GAP_DAYS,
+        "sequence_length_days": SEQUENCE_LENGTH_DAYS,
+        "sequence_required_history_days": SEQUENCE_REQUIRED_HISTORY_DAYS,
+        "target_column": TARGET_COLUMN,
+        "model_target_mode": MODEL_TARGET_MODE,
+        "model_input_columns": MODEL_INPUT_COLUMNS,
+        "sequence_channels": SEQUENCE_CHANNELS,
+        "policy_exclude_ranges": normalized_policy_ranges(),
+        "random_seed": RANDOM_SEED,
+        "grid_file": grid_file_signature(),
+    }
+
+
+def frame_cache_metadata(
+    conditions: Dict[str, Any],
+    total_rows: int,
+    actual_per_mille: int,
+    cached_rows: int,
+) -> Dict[str, Any]:
+    return {
+        "conditions": conditions,
+        "stats": {
+            "eligible_total_rows": int(total_rows),
+            "sample_per_mille_actual": int(actual_per_mille),
+            "cached_rows": int(cached_rows),
+            "created_at": pd.Timestamp.now().isoformat(),
+        },
+    }
+
+
+def frame_cache_paths(cfg: FuelConfig, label: str) -> Tuple[Path, Path]:
+    cache_dir = INTERMEDIATE_DATA_DIR / cfg.fuel
+    stem = cache_safe(label)
+    return cache_dir / f"{stem}.parquet", cache_dir / f"{stem}.metadata.json"
+
+
+def load_cached_frame(cache_path: Path, meta_path: Path, expected_conditions: Dict[str, Any]) -> Optional[pd.DataFrame]:
+    if not cache_path.exists() or not meta_path.exists():
+        return None
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            stored_meta = json.load(f)
+    except Exception as exc:
+        print(f"[CACHE MISS] metadata read failed: {meta_path} ({type(exc).__name__}: {exc})")
+        return None
+    if stored_meta.get("conditions") != expected_conditions:
+        print(f"[CACHE MISS] conditions changed: {cache_path}")
+        return None
+
+    start = time.time()
+    df = pd.read_parquet(cache_path)
+    df["date"] = ensure_date(df["date"])
+    df["feature_date"] = ensure_date(df["feature_date"])
+    print(f"[CACHE HIT] {cache_path} rows={len(df):,}, read={seconds_text(time.time() - start)}")
+    return df
+
+
+def save_cached_frame(df: pd.DataFrame, cache_path: Path, meta_path: Path, metadata: Dict[str, Any]) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    start = time.time()
+    df.to_parquet(cache_path, index=False, compression="zstd")
+    save_json(meta_path, metadata)
+    print(f"[CACHE SAVE] {cache_path} rows={len(df):,}, write={seconds_text(time.time() - start)}")
+
+
+def daily_counts_cache_conditions(cfg: FuelConfig) -> Dict[str, Any]:
+    return {
+        "dataset_version": CACHE_DATASET_VERSION,
+        "fuel": cfg.fuel,
+        "target_col": cfg.target_col,
+        "station_count_col": cfg.station_count_col,
+        "test_start": cache_date(TEST_START),
+        "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
+        "sequence_length_days": SEQUENCE_LENGTH_DAYS,
+        "sequence_required_history_days": SEQUENCE_REQUIRED_HISTORY_DAYS,
+        "model_input_columns": MODEL_INPUT_COLUMNS,
+        "sequence_channels": SEQUENCE_CHANNELS,
+        "policy_exclude_ranges": normalized_policy_ranges(),
+        "grid_file": grid_file_signature(),
+    }
+
+
+def daily_counts_cache_paths(cfg: FuelConfig) -> Tuple[Path, Path]:
+    cache_dir = INTERMEDIATE_DATA_DIR / cfg.fuel
+    return cache_dir / "eligible_daily_counts.parquet", cache_dir / "eligible_daily_counts.metadata.json"
+
+
+def load_cached_daily_counts(cfg: FuelConfig, expected_conditions: Dict[str, Any]) -> Optional[pd.DataFrame]:
+    cache_path, meta_path = daily_counts_cache_paths(cfg)
+    if not cache_path.exists() or not meta_path.exists():
+        return None
+    try:
+        with open(meta_path, "r", encoding="utf-8") as f:
+            stored_meta = json.load(f)
+    except Exception as exc:
+        print(f"[CACHE MISS] daily count metadata read failed: {meta_path} ({type(exc).__name__}: {exc})")
+        return None
+    if stored_meta.get("conditions") != expected_conditions:
+        print(f"[CACHE MISS] daily count conditions changed: {cache_path}")
+        return None
+
+    start = time.time()
+    daily = pd.read_parquet(cache_path)
+    daily["date"] = ensure_date(daily["date"])
+    daily["eligible_rows"] = pd.to_numeric(daily["eligible_rows"], errors="coerce").fillna(0).astype("int64")
+    daily["cum_rows"] = daily["eligible_rows"].cumsum()
+    print(f"[CACHE HIT] {cache_path} rows={len(daily):,}, read={seconds_text(time.time() - start)}")
+    return daily
+
+
+def save_cached_daily_counts(cfg: FuelConfig, daily: pd.DataFrame, conditions: Dict[str, Any]) -> None:
+    cache_path, meta_path = daily_counts_cache_paths(cfg)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    start = time.time()
+    daily.to_parquet(cache_path, index=False, compression="zstd")
+    save_json(
+        meta_path,
+        {
+            "conditions": conditions,
+            "stats": {
+                "days": int(len(daily)),
+                "eligible_total_rows": int(daily["eligible_rows"].sum()),
+                "created_at": pd.Timestamp.now().isoformat(),
+            },
+        },
+    )
+    print(f"[CACHE SAVE] {cache_path} rows={len(daily):,}, write={seconds_text(time.time() - start)}")
+
+
 def load_model_frame(
     cfg: FuelConfig,
     date_start: Optional[pd.Timestamp],
@@ -494,6 +679,23 @@ def load_model_frame(
     exclude_history_policy: bool,
     label: str,
 ) -> pd.DataFrame:
+    cache_conditions = frame_cache_conditions(
+        cfg=cfg,
+        date_start=date_start,
+        date_end=date_end,
+        sample_per_mille=sample_per_mille,
+        sample_salt=sample_salt,
+        max_rows=max_rows,
+        force_pre_2026=force_pre_2026,
+        exclude_target_policy=exclude_target_policy,
+        exclude_history_policy=exclude_history_policy,
+        label=label,
+    )
+    cache_path, meta_path = frame_cache_paths(cfg, label)
+    cached = load_cached_frame(cache_path, meta_path, cache_conditions)
+    if cached is not None:
+        return cached
+
     total_rows = estimate_rows(
         cfg,
         date_start=date_start,
@@ -556,10 +758,22 @@ def load_model_frame(
         f"[LOAD DONE] {cfg.label} {label}: rows={len(df):,}/{total_rows:,} ({pct:.2f}%), "
         f"target_date={df['date'].min().date() if len(df) else None}~{df['date'].max().date() if len(df) else None}"
     )
+    cache_meta = frame_cache_metadata(
+        conditions=cache_conditions,
+        total_rows=total_rows,
+        actual_per_mille=actual_per_mille,
+        cached_rows=len(df),
+    )
+    save_cached_frame(df, cache_path, meta_path, cache_meta)
     return df
 
 
 def eligible_daily_counts(cfg: FuelConfig) -> pd.DataFrame:
+    cache_conditions = daily_counts_cache_conditions(cfg)
+    cached = load_cached_daily_counts(cfg, cache_conditions)
+    if cached is not None:
+        return cached
+
     conds = base_date_conditions(
         date_start=None,
         date_end=TEST_START - pd.Timedelta(days=1),
@@ -579,6 +793,7 @@ def eligible_daily_counts(cfg: FuelConfig) -> pd.DataFrame:
     daily["date"] = ensure_date(daily["date"])
     daily["eligible_rows"] = pd.to_numeric(daily["eligible_rows"], errors="coerce").fillna(0).astype("int64")
     daily["cum_rows"] = daily["eligible_rows"].cumsum()
+    save_cached_daily_counts(cfg, daily, cache_conditions)
     return daily
 
 

@@ -90,6 +90,31 @@ hash(grid_id, target_date, salt) 기반 샘플링
 
 따라서 앞쪽 기간이나 특정 지역만 잘리는 방식이 아니라 시간과 공간 전반에 퍼진 재현 가능한 표본을 사용합니다.
 
+## 중간 데이터 캐시
+
+학습용 frame 생성에는 `grid.parquet` 전체를 읽고 lag, spread, 정책기간 제외, 결측 없는 28일 시계열 필터를 계산하는 과정이 필요합니다. 이 작업은 오래 걸리므로 생성된 중간 데이터는 아래 경로에 parquet로 저장합니다.
+
+```text
+ai-model/03_prediction_model_design/outputs/intermediate_data/
+```
+
+다음 실행 때 같은 조건의 중간 데이터가 있으면 DuckDB로 다시 만들지 않고 저장된 parquet를 바로 읽습니다. 캐시 재사용 여부는 다음 조건이 모두 같은지 확인해 결정합니다.
+
+```text
+grid.parquet 경로, 파일 크기, 수정시각
+유종
+train/validation/test/final_train 구분
+날짜 범위
+샘플링 비율과 salt
+최대 row 수
+정책기간 제외 조건
+시계열 길이와 입력 channel
+target 정의
+정책기간 목록
+```
+
+조건이 바뀌면 기존 캐시를 사용하지 않고 새 중간 데이터를 생성합니다. `outputs/` 아래 파일은 Git에 올리지 않습니다.
+
 ## 모델
 
 모델은 단일 PyTorch bidirectional LSTM입니다.
