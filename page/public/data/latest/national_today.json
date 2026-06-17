@@ -26,6 +26,23 @@
       "judge_policy": "비쌈",
       "policy_effect": 145.41
     }
-  }
+  },
+  "policies": [
+    {
+      "title": "유류세 인하 반영",
+      "status": "정책 효과 반영",
+      "period": "분석 산출물 기준",
+      "gasoline_effect": 123.07,
+      "diesel_effect": 145.41,
+      "note": "전국 적정가격 산식에 반영된 정책효과입니다."
+    },
+    {
+      "title": "정유사 최고가격제",
+      "status": "정책 탭 표시 대상",
+      "period": "정책 기간 데이터 연결 전",
+      "gasoline_effect": null,
+      "diesel_effect": null,
+      "note": "정책 기간 원자료가 연결되면 실제 적용 여부를 갱신합니다."
+    }
+  ]
 }
-

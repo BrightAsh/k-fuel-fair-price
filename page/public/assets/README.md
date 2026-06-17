@@ -1,12 +1,15 @@
 # Public Assets
 
-GitHub Pages에서 그대로 공개되는 이미지/정적 파일을 넣는 폴더입니다.
+GitHub Pages에서 그대로 공개되는 정적 파일을 넣는 폴더입니다.
 
-우선 필요한 파일:
+현재 페이지는 정적 이미지 대신 시도 경계 GeoJSON을 사용해 지역별 색상을 직접 칠합니다.
 
 ```text
-korea-map.png
+korea-provinces.geojson
 ```
 
-첫 화면의 지역 현황 패널에 표시할 대한민국 지도 이미지입니다. 나중에 지역별 색칠이 필요하면 `korea-regions.geojson`으로 바꿔 인터랙티브 지도로 확장할 수 있습니다.
+- 용도: 첫 화면의 대한민국 시도별 가격 지도
+- 출처: `southkorea/southkorea-maps`의 KOSTAT 2013 province GeoJSON
+- 원본 경로: `kostat/2013/json/skorea_provinces_geo_simple.json`
 
+나중에 더 최신 행정구역 경계가 필요하면 같은 스키마의 GeoJSON으로 이 파일만 교체하면 됩니다.

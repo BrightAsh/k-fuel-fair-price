@@ -30,17 +30,15 @@ GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON
 
 ## Static Assets
 
-아래 파일을 넣어주세요.
+지도 asset은 이미 repo에 포함되어 있습니다.
 
 ```text
-page/public/assets/korea-map.png
+page/public/assets/korea-provinces.geojson
 ```
 
-지도 이미지는 첫 화면 지역별 패널에 사용합니다. 나중에 인터랙티브 지도까지 가려면 아래 파일을 추가합니다.
+첫 화면은 이 GeoJSON을 SVG로 그려 시도별 색상을 칠합니다. 더 최신 행정구역 경계가 필요할 때만 같은 스키마의 GeoJSON으로 교체하면 됩니다.
 
-```text
-page/public/assets/korea-regions.geojson
-```
+출처는 `southkorea/southkorea-maps`의 KOSTAT 2013 province GeoJSON입니다.
 
 ## Manual Data Until AI 03 Is Final
 
@@ -75,4 +73,3 @@ ai-model/03_prediction_model_design/outputs/model_run_summary.csv
 ```
 
 특히 `grid.parquet`는 Colab Drive에 있고, 03 코드는 repo 내부 `ai-model/02_spatial_grid_build/outputs/grid.parquet`를 기대합니다. 자동화 전 이 경로 연결 방식을 확정해야 합니다.
-

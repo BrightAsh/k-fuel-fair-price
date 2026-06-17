@@ -7,6 +7,7 @@ page/public/data/latest/site_manifest.json
 page/public/data/latest/national_today.json
 page/public/data/latest/region_today.json
 page/public/data/latest/station_search_index.json
+page/public/assets/korea-provinces.geojson
 ```
 
 ## Source Inputs
@@ -101,7 +102,8 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
   "as_of_date": "2026-06-09",
   "generated_at": "2026-06-10T03:00:00+09:00",
   "freshness": "fresh",
-  "files": ["national_today.json", "region_today.json", "station_search_index.json"]
+  "files": ["national_today.json", "region_today.json", "station_search_index.json"],
+  "assets": ["korea-provinces.geojson"]
 }
 ```
 
@@ -125,7 +127,17 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
       "judge_policy": "비쌈",
       "policy_effect": 123.07
     }
-  }
+  },
+  "policies": [
+    {
+      "title": "유류세 인하 반영",
+      "status": "정책 효과 반영",
+      "period": "분석 산출물 기준",
+      "gasoline_effect": 123.07,
+      "diesel_effect": 145.41,
+      "note": "전국 적정가격 산식에 반영된 정책효과입니다."
+    }
+  ]
 }
 ```
 
@@ -177,4 +189,3 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
 ## Freshness Rule
 
 `as_of_date`가 현재 한국 날짜 기준 어제 또는 오늘이면 `fresh`, 그보다 오래되면 `stale`로 표시합니다.
-

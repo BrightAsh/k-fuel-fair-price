@@ -8,6 +8,8 @@
     "region_today.json",
     "station_search_index.json"
   ],
+  "assets": [
+    "korea-provinces.geojson"
+  ],
   "note": "Sample data. GitHub Actions will replace this with generated daily data."
 }
-

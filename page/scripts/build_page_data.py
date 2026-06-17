@@ -157,6 +157,7 @@ def build_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
         "generated_at": generated_at,
         "freshness": freshness,
         "fuels": fuels,
+        "policies": [],
         "errors": errors,
     }
 
@@ -237,6 +238,9 @@ def main() -> None:
             "region_today.json",
             "station_search_index.json",
         ],
+        "assets": [
+            "korea-provinces.geojson",
+        ],
         "source": {
             "national": "data-analysis/05_policy_application/outputs",
             "region": "page/manual_inputs/region_today.csv" if region else None,
@@ -256,4 +260,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
