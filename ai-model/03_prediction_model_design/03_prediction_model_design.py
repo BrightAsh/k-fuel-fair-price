@@ -237,6 +237,12 @@ def evaluate_prediction_frame(df: pd.DataFrame, period: str) -> Dict[str, Any]:
     return row
 
 
+def print_restored_price_scores(scores: pd.DataFrame) -> None:
+    display = scores.sort_values("price_weighted_mae")[["model_name", "price_weighted_mae"]]
+    print("[VALIDATION RESTORED PRICE ERROR]")
+    print(display.to_string(index=False))
+
+
 def sample_frame(df: pd.DataFrame, max_rows: int, salt: str) -> pd.DataFrame:
     if max_rows and len(df) > max_rows:
         seed = abs(hash((salt, RANDOM_SEED))) % (2**32)
@@ -1305,11 +1311,7 @@ def load_completed_validation_artifacts(cfg: FuelConfig, out_dir: Path) -> Optio
         f"[RESUME] {cfg.label}: reuse completed validation artifacts "
         f"(best_epoch={best_epoch}, checkpoint={latest_checkpoint})"
     )
-    print(
-        validation_scores.sort_values("price_weighted_mae")[
-            ["model_name", "price_weighted_mae", "delta_weighted_mae"]
-        ].to_string(index=False)
-    )
+    print_restored_price_scores(validation_scores)
     return {
         "validation_scores": validation_scores,
         "model_score_df": model_score_df,
@@ -1633,11 +1635,7 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         validation_scores_path = out_dir / f"{cfg.fuel}_validation_scores.csv"
         validation_scores.to_csv(validation_scores_path, index=False, encoding="utf-8-sig")
         print(f"[SAVE] {validation_scores_path}")
-        print(
-            validation_scores.sort_values("price_weighted_mae")[
-                ["model_name", "price_weighted_mae", "delta_weighted_mae"]
-            ].to_string(index=False)
-        )
+        print_restored_price_scores(validation_scores)
 
         valid_pred = prediction_frame(valid_df, predict_delta(wrapper, valid_df))
         valid_pred_path = out_dir / f"{cfg.fuel}_validation_predictions.parquet"
