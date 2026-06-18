@@ -795,6 +795,133 @@ tbody tr.is-selected td {
   line-height: 1.45;
 }
 
+.data-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.data-status-card {
+  min-height: 176px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 17px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.data-status-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.data-status-card h3 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.data-status-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.data-status-card code,
+.data-guide-grid code {
+  color: var(--navy);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.status-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #edf2f7;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.status-pill.connected {
+  background: #dff7ec;
+  color: var(--green);
+}
+
+.status-pill.partial {
+  background: #fff1d6;
+  color: var(--orange);
+}
+
+.status-pill.waiting {
+  background: #ffe4e1;
+  color: var(--red);
+}
+
+.data-metric-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.data-metric {
+  padding: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.data-metric span,
+.data-metric strong {
+  display: block;
+}
+
+.data-metric span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.data-metric strong {
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.data-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.data-guide-grid article {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.data-guide-grid h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.data-guide-grid p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .station-card {
   min-height: 140px;
   padding: 15px;
@@ -1002,6 +1129,11 @@ tbody tr.is-selected td {
   .filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .data-status-grid,
+  .data-guide-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -1080,7 +1212,9 @@ tbody tr.is-selected td {
 
   .policy-detail-grid,
   .station-results,
-  .region-station-results {
+  .region-station-results,
+  .data-status-grid,
+  .data-guide-grid {
     grid-template-columns: 1fr;
   }
 

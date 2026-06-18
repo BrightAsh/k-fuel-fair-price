@@ -8,6 +8,7 @@ page/public/data/latest/national_today.json
 page/public/data/latest/region_today.json
 page/public/data/latest/station_search_index.json
 page/public/data/latest/price_history.json
+page/public/data/latest/external_data_status.json
 page/public/assets/korea-provinces.geojson
 ```
 
@@ -84,6 +85,22 @@ page/manual_inputs/station_search_index.csv
 station_id,name,brand,region,address,lon,lat,gasoline_price,diesel_price,judge_policy
 ```
 
+### 수동/강제 수집 가격 이력
+
+비어 있는 날짜를 강제 수집으로 보강할 때 사용합니다.
+
+```text
+page/manual_inputs/price_history.csv
+```
+
+필수 컬럼:
+
+```text
+date,region,fuel,actual_price,fair_price_policy,band_low_policy,band_high_policy,gap_policy
+```
+
+이 파일은 `page/public/data/latest/price_history.json`과 `date + region + fuel` 기준으로 병합됩니다. 따라서 기존 이력은 유지되고, 같은 키의 행은 새 값으로 교체됩니다.
+
 향후에는 아래 AI 01/02 산출물과 AI 03 예측 결과를 결합해 생성합니다.
 
 ```text
@@ -103,7 +120,7 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
   "as_of_date": "2026-06-09",
   "generated_at": "2026-06-10T03:00:00+09:00",
   "freshness": "fresh",
-  "files": ["national_today.json", "region_today.json", "station_search_index.json"],
+  "files": ["national_today.json", "region_today.json", "station_search_index.json", "price_history.json", "external_data_status.json"],
   "assets": ["korea-provinces.geojson"]
 }
 ```
@@ -207,6 +224,31 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
     "source": "data-analysis/05_policy_application/outputs/휘발유/일별_정책적용_데이터_휘발유.csv"
   }
 ]
+```
+
+자동화가 다시 실행될 때 기존 `price_history.json`을 읽어 새 행과 병합합니다. 이 구조 때문에 모델 완성 이후 날짜를 지정해 과거 빈 구간을 강제 수집해도 기존 날짜가 삭제되지 않습니다.
+
+### `external_data_status.json`
+
+웹의 `데이터 현황` 탭이 읽는 데이터 연결 상태입니다.
+
+```json
+{
+  "schema_version": "external_data_status_v1",
+  "generated_at": "2026-06-18T03:00:00+09:00",
+  "datasets": [
+    {
+      "id": "station_search_index",
+      "label": "주유소 검색/주변",
+      "status": "connected",
+      "rows": 5000,
+      "date_min": "2026-06-09",
+      "date_max": "2026-06-09",
+      "path": "page/manual_inputs/station_search_index.csv",
+      "note": "검색 탭과 주변 주유소 탭에 사용합니다."
+    }
+  ]
+}
 ```
 
 ## Freshness Rule

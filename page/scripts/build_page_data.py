@@ -163,7 +163,7 @@ def build_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
 
 
 def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
+    by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
     cutoff = pd.Timestamp(as_of_date) if as_of_date else None
 
     for fuel, cfg in FUEL_CONFIG.items():
@@ -190,7 +190,7 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
         for _, row in work.iterrows():
             actual = to_float(row.get(actual_col)) if actual_col else None
             fair = to_float(row.get(fair_col)) if fair_col else None
-            rows.append({
+            item = {
                 "date": pd.Timestamp(row[date_col]).strftime("%Y-%m-%d"),
                 "region": "전국",
                 "fuel": fuel,
@@ -200,9 +200,162 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
                 "band_high_policy": to_float(row.get(high_col)) if high_col else None,
                 "gap_policy": actual - fair if actual is not None and fair is not None else None,
                 "source": str(cfg["policy_csv"]),
-            })
+            }
+            by_key[(item["date"], item["region"], item["fuel"])] = item
 
-    return rows
+    manual_path = repo_root / "page/manual_inputs/price_history.csv"
+    if manual_path.exists():
+        df = read_csv(manual_path)
+        for _, row in df.iterrows():
+            date = pd.to_datetime(row.get("date") or row.get("as_of_date"), errors="coerce")
+            if pd.isna(date):
+                continue
+            if cutoff is not None and date > cutoff:
+                continue
+            fuel = str(row.get("fuel", "")).strip()
+            if fuel not in FUEL_CONFIG:
+                continue
+            region = str(row.get("region", "전국")).strip() or "전국"
+            actual = to_float(row.get("actual_price"))
+            fair = to_float(row.get("fair_price_policy"))
+            gap = to_float(row.get("gap_policy")) if pd.notna(row.get("gap_policy")) else None
+            if gap is None and actual is not None and fair is not None:
+                gap = actual - fair
+            item = {
+                "date": pd.Timestamp(date).strftime("%Y-%m-%d"),
+                "region": region,
+                "fuel": fuel,
+                "actual_price": actual,
+                "fair_price_policy": fair,
+                "band_low_policy": to_float(row.get("band_low_policy")),
+                "band_high_policy": to_float(row.get("band_high_policy")),
+                "gap_policy": gap,
+                "source": "page/manual_inputs/price_history.csv",
+            }
+            by_key[(item["date"], item["region"], item["fuel"])] = item
+
+    return sorted(by_key.values(), key=lambda item: (item["date"], item["region"], item["fuel"]))
+
+
+def merge_history(existing: list[dict[str, Any]], incoming: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
+    for row in existing + incoming:
+        date = str(row.get("date") or row.get("as_of_date") or "").strip()
+        region = str(row.get("region") or "전국").strip()
+        fuel = str(row.get("fuel") or "").strip()
+        if not date or not region or fuel not in FUEL_CONFIG:
+            continue
+        by_key[(date, region, fuel)] = {**row, "date": date, "region": region, "fuel": fuel}
+    return sorted(by_key.values(), key=lambda item: (item["date"], item["region"], item["fuel"]))
+
+
+def json_row_count(path: Path) -> int | None:
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if isinstance(data, list):
+        return len(data)
+    if isinstance(data, dict):
+        return len(data)
+    return None
+
+
+def csv_row_count(path: Path) -> int | None:
+    if not path.exists():
+        return None
+    try:
+        return len(read_csv(path))
+    except Exception:
+        return None
+
+
+def history_extent(rows: list[dict[str, Any]]) -> tuple[str | None, str | None]:
+    dates = sorted(str(row.get("date", "")) for row in rows if row.get("date"))
+    if not dates:
+        return None, None
+    return dates[0], dates[-1]
+
+
+def build_external_data_status(repo_root: Path, output_dir: Path, national: dict[str, Any], region: list[dict[str, Any]], stations: list[dict[str, Any]], history: list[dict[str, Any]]) -> dict[str, Any]:
+    generated_at = datetime.now(KST).isoformat(timespec="seconds")
+    history_min, history_max = history_extent(history)
+    national_date = national.get("as_of_date")
+    station_input = repo_root / "page/manual_inputs/station_search_index.csv"
+    region_input = repo_root / "page/manual_inputs/region_today.csv"
+    manual_history_input = repo_root / "page/manual_inputs/price_history.csv"
+    ai_gasoline_dir = repo_root / "ai-model/03_prediction_model_design/outputs/gasoline"
+    ai_diesel_dir = repo_root / "ai-model/03_prediction_model_design/outputs/diesel"
+    ai_exists = ai_gasoline_dir.exists() or ai_diesel_dir.exists()
+
+    return {
+        "schema_version": "external_data_status_v1",
+        "generated_at": generated_at,
+        "datasets": [
+            {
+                "id": "national_today",
+                "label": "전국 가격 요약",
+                "status": "connected" if national.get("fuels") else "waiting",
+                "rows": len(national.get("fuels", {})),
+                "date_min": national_date,
+                "date_max": national_date,
+                "path": "data-analysis/05_policy_application/outputs/{fuel}/일별_정책적용_데이터_{fuel}.csv",
+                "note": "전국 실제가격과 정책 적용 적정가격을 만드는 핵심 데이터입니다.",
+            },
+            {
+                "id": "price_history",
+                "label": "기간별 가격 추이",
+                "status": "connected" if history else "waiting",
+                "rows": len(history),
+                "date_min": history_min,
+                "date_max": history_max,
+                "path": "page/public/data/latest/price_history.json",
+                "note": "자동 갱신 시 기존 파일과 병합해 날짜별 이력을 누적합니다.",
+            },
+            {
+                "id": "region_today",
+                "label": "지역별 요약",
+                "status": "connected" if region_input.exists() and region else "waiting",
+                "rows": len(region),
+                "date_min": national_date,
+                "date_max": national_date,
+                "path": "page/manual_inputs/region_today.csv",
+                "note": "AI 모델 완료 전까지 수동 입력합니다.",
+            },
+            {
+                "id": "station_search_index",
+                "label": "주유소 검색/주변",
+                "status": "connected" if station_input.exists() and stations else "waiting",
+                "rows": len(stations),
+                "date_min": national_date,
+                "date_max": national_date,
+                "path": "page/manual_inputs/station_search_index.csv",
+                "note": "주유소명, 주소, 좌표, 현재가를 담는 공개 검색 인덱스입니다.",
+            },
+            {
+                "id": "manual_price_history",
+                "label": "수동 가격 이력",
+                "status": "connected" if manual_history_input.exists() else "waiting",
+                "rows": csv_row_count(manual_history_input) or 0,
+                "date_min": None,
+                "date_max": None,
+                "path": "page/manual_inputs/price_history.csv",
+                "note": "비어 있는 기간을 수동/강제 수집 결과로 보강할 때 사용합니다.",
+            },
+            {
+                "id": "ai_model_outputs",
+                "label": "AI 적정가격 모델",
+                "status": "connected" if ai_exists else "waiting",
+                "rows": 0,
+                "date_min": None,
+                "date_max": None,
+                "path": "ai-model/03_prediction_model_design/outputs/{fuel}/",
+                "note": "학습 완료 후 지역/주유소 적정가격과 예측 이력을 생성합니다.",
+            },
+        ],
+    }
 
 
 def build_region(repo_root: Path) -> list[dict[str, Any]]:
@@ -271,6 +424,15 @@ def main() -> None:
     region = build_region(repo_root)
     stations = build_station_index(repo_root)
     history = build_price_history(repo_root, args.as_of_date)
+    existing_history_path = output_dir / "price_history.json"
+    if existing_history_path.exists():
+        try:
+            existing_history = json.loads(existing_history_path.read_text(encoding="utf-8"))
+            if isinstance(existing_history, list):
+                history = merge_history(existing_history, history)
+        except Exception:
+            pass
+    external_status = build_external_data_status(repo_root, output_dir, national, region, stations, history)
 
     manifest = {
         "schema_version": "page_data_v1",
@@ -282,6 +444,7 @@ def main() -> None:
             "region_today.json",
             "station_search_index.json",
             "price_history.json",
+            "external_data_status.json",
         ],
         "assets": [
             "korea-provinces.geojson",
@@ -297,6 +460,7 @@ def main() -> None:
     write_json(output_dir / "region_today.json", region)
     write_json(output_dir / "station_search_index.json", stations)
     write_json(output_dir / "price_history.json", history)
+    write_json(output_dir / "external_data_status.json", external_status)
     write_json(output_dir / "site_manifest.json", manifest)
 
     print(f"[SAVE] {output_dir}")

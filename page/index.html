@@ -60,6 +60,7 @@
           <button class="top-tab" type="button" data-panel="trend">가격 추이</button>
           <button class="top-tab" type="button" data-panel="download">데이터 다운로드</button>
           <button class="top-tab" type="button" data-panel="search">검색</button>
+          <button class="top-tab" type="button" data-panel="data">데이터 현황</button>
           <button id="region-detail-tab" class="top-tab region-detail-tab" type="button" data-panel="region-detail">선택지역</button>
         </nav>
       </header>
@@ -274,6 +275,37 @@
               <input id="station-search" type="search" placeholder="주유소명, 주소, 지역, 브랜드" autocomplete="off" />
             </label>
             <div id="station-results" class="station-results"></div>
+          </article>
+        </section>
+
+        <section id="panel-data" class="dashboard-panel">
+          <article class="data-card">
+            <div class="section-heading">
+              <div>
+                <p>Data coverage</p>
+                <h2>데이터 현황</h2>
+              </div>
+              <span id="data-status-summary">확인 중</span>
+            </div>
+            <div id="external-data-grid" class="data-status-grid"></div>
+            <div class="data-guide-grid">
+              <article>
+                <h3>지금 넣어줄 공개용 파일</h3>
+                <p><code>page/manual_inputs/region_today.csv</code></p>
+                <p><code>page/manual_inputs/station_search_index.csv</code></p>
+                <p><code>page/manual_inputs/price_history.csv</code></p>
+              </article>
+              <article>
+                <h3>AI 모델 완료 후 연결할 파일</h3>
+                <p><code>ai-model/03_prediction_model_design/outputs/{fuel}/...</code></p>
+                <p><code>page/manual_inputs/region_today.csv</code>와 <code>station_search_index.csv</code>는 자동 생성 대상으로 전환합니다.</p>
+              </article>
+              <article>
+                <h3>자동 수집 누적</h3>
+                <p><code>page/public/data/latest/price_history.json</code>은 새 날짜를 병합해 누적합니다.</p>
+                <p>날짜를 지정해 강제 수집하면 기존 날짜를 유지하면서 빈 날짜가 채워집니다.</p>
+              </article>
+            </div>
           </article>
         </section>
 

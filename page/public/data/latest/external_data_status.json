@@ -1,0 +1,66 @@
+{
+  "schema_version": "external_data_status_v1",
+  "generated_at": "2026-06-18T00:00:00+09:00",
+  "datasets": [
+    {
+      "id": "national_today",
+      "label": "전국 가격 요약",
+      "status": "connected",
+      "rows": 2,
+      "date_min": "2026-06-09",
+      "date_max": "2026-06-09",
+      "path": "data-analysis/05_policy_application/outputs/{fuel}/일별_정책적용_데이터_{fuel}.csv",
+      "note": "전국 실제가격과 정책 적용 적정가격을 만드는 핵심 데이터입니다."
+    },
+    {
+      "id": "price_history",
+      "label": "기간별 가격 추이",
+      "status": "connected",
+      "rows": 2,
+      "date_min": "2026-06-09",
+      "date_max": "2026-06-09",
+      "path": "page/public/data/latest/price_history.json",
+      "note": "자동 갱신 시 기존 파일과 병합해 날짜별 이력을 누적합니다."
+    },
+    {
+      "id": "region_today",
+      "label": "지역별 요약",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "page/manual_inputs/region_today.csv",
+      "note": "AI 모델 완료 전까지 수동 입력합니다."
+    },
+    {
+      "id": "station_search_index",
+      "label": "주유소 검색/주변",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "page/manual_inputs/station_search_index.csv",
+      "note": "주유소명, 주소, 좌표, 현재가를 담는 공개 검색 인덱스입니다."
+    },
+    {
+      "id": "manual_price_history",
+      "label": "수동 가격 이력",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "page/manual_inputs/price_history.csv",
+      "note": "비어 있는 기간을 수동/강제 수집 결과로 보강할 때 사용합니다."
+    },
+    {
+      "id": "ai_model_outputs",
+      "label": "AI 적정가격 모델",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "ai-model/03_prediction_model_design/outputs/{fuel}/",
+      "note": "학습 완료 후 지역/주유소 적정가격과 예측 이력을 생성합니다."
+    }
+  ]
+}

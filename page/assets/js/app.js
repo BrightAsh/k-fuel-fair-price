@@ -7,6 +7,7 @@ const state = {
   regions: [],
   stations: [],
   history: [],
+  externalData: null,
   geojson: null,
   selectedRegion: null,
   regionDetailEnabled: false,
@@ -397,6 +398,100 @@ function setSelectOptions(select, options) {
   const current = select.value;
   select.innerHTML = options.map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join("");
   if (options.some((option) => option.value === current)) select.value = current;
+}
+
+function formatCount(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  return Number(value).toLocaleString("ko-KR");
+}
+
+function statusLabel(status) {
+  if (status === "connected") return "연결됨";
+  if (status === "partial") return "부분 연결";
+  if (status === "waiting") return "대기";
+  return "확인 필요";
+}
+
+function dateRangeLabel(minDate, maxDate) {
+  if (!minDate && !maxDate) return "-";
+  if (minDate && maxDate && minDate !== maxDate) return `${minDate} ~ ${maxDate}`;
+  return minDate || maxDate;
+}
+
+function rowsDateExtent(rows) {
+  return dateExtent(rows.map((row) => ({ date: row.date || row.as_of_date })).filter((row) => row.date));
+}
+
+function derivedDataStatus() {
+  const history = historyRows();
+  const historyExtent = rowsDateExtent(history);
+  const nationalDate = state.national?.as_of_date || FALLBACK_NATIONAL.as_of_date;
+  const stationRows = baseStations();
+  const regionRowsData = Array.isArray(state.regions) && state.regions.length ? state.regions : [];
+  const manifestFiles = Array.isArray(state.manifest?.files) ? state.manifest.files : [];
+
+  return [
+    {
+      id: "national_today",
+      label: "전국 가격 요약",
+      status: state.national?.fuels ? "connected" : "waiting",
+      rows: Object.keys(state.national?.fuels || FALLBACK_NATIONAL.fuels).length,
+      date_min: nationalDate,
+      date_max: nationalDate,
+      path: "page/public/data/latest/national_today.json",
+      note: "전국 실제가격, 적정가격, 적정범위, 정책효과를 표시합니다.",
+    },
+    {
+      id: "price_history",
+      label: "기간별 가격 추이",
+      status: history.length ? "connected" : "waiting",
+      rows: history.length,
+      date_min: historyExtent.min,
+      date_max: historyExtent.max,
+      path: "page/public/data/latest/price_history.json",
+      note: "가격 추이 그래프와 가격 요약 CSV 다운로드에 사용합니다.",
+    },
+    {
+      id: "region_today",
+      label: "지역별 요약",
+      status: regionRowsData.length ? "connected" : "waiting",
+      rows: regionRowsData.length,
+      date_min: nationalDate,
+      date_max: nationalDate,
+      path: "page/manual_inputs/region_today.csv",
+      note: "AI 모델 완료 전까지 수동 입력합니다. 없으면 샘플 지역값으로 지도를 그립니다.",
+    },
+    {
+      id: "station_search_index",
+      label: "주유소 검색/주변",
+      status: Array.isArray(state.stations) && state.stations.length ? "connected" : "waiting",
+      rows: stationRows.length,
+      date_min: nationalDate,
+      date_max: nationalDate,
+      path: "page/manual_inputs/station_search_index.csv",
+      note: "검색 탭과 주변 주유소 탭에 사용합니다. 좌표가 있어야 주변 정렬이 가능합니다.",
+    },
+    {
+      id: "ai_model_outputs",
+      label: "AI 적정가격 모델",
+      status: "waiting",
+      rows: 0,
+      date_min: "",
+      date_max: "",
+      path: "ai-model/03_prediction_model_design/outputs/{fuel}/",
+      note: "현재 학습/예측 완료 대기 상태입니다. 완료 후 지역/주유소 적정가격 생성에 연결합니다.",
+    },
+    {
+      id: "manifest",
+      label: "페이지 데이터 묶음",
+      status: manifestFiles.length ? "connected" : "partial",
+      rows: manifestFiles.length,
+      date_min: state.manifest?.as_of_date || nationalDate,
+      date_max: state.manifest?.as_of_date || nationalDate,
+      path: "page/public/data/latest/site_manifest.json",
+      note: "GitHub Pages가 읽는 공개 JSON 목록과 갱신 상태입니다.",
+    },
+  ];
 }
 
 function renderStatus() {
@@ -812,8 +907,7 @@ function renderNearby() {
       distance: distanceKm(state.userLocation, { lat: Number(station.lat), lon: Number(station.lon) }),
     }))
     .filter((row) => row.distance <= radius)
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 24);
+    .sort((a, b) => a.distance - b.distance);
 
   countEl.textContent = `${rows.length}개 결과`;
   statusEl.textContent = `위치 ${state.userLocation.lat.toFixed(4)}, ${state.userLocation.lon.toFixed(4)}`;
@@ -839,12 +933,20 @@ function initializeAnalysisControls() {
 
   ["trend-start", "download-start"].forEach((id) => {
     const input = document.getElementById(id);
-    if (input && !input.value) input.value = extent.min;
+    if (input) {
+      input.min = extent.min;
+      input.max = extent.max;
+      if (!input.value) input.value = extent.min;
+    }
   });
 
   ["trend-end", "download-end"].forEach((id) => {
     const input = document.getElementById(id);
-    if (input && !input.value) input.value = extent.max;
+    if (input) {
+      input.min = extent.min;
+      input.max = extent.max;
+      if (!input.value) input.value = extent.max;
+    }
   });
 }
 
@@ -965,10 +1067,16 @@ function renderTrend() {
   const rows = selectedPriceRows("trend");
   const fuel = document.getElementById("trend-fuel")?.value || state.fuel;
   const region = document.getElementById("trend-region")?.value || "전국";
+  const start = document.getElementById("trend-start")?.value || "";
+  const end = document.getElementById("trend-end")?.value || "";
+  const availableExtent = dateExtent(historyRows().filter((row) => row.fuel === fuel && row.region === region));
+  const periodLabel = start === availableExtent.min && end === availableExtent.max
+    ? "전체기간"
+    : dateRangeLabel(start, end);
   const summary = document.getElementById("trend-summary");
   const note = document.getElementById("trend-note");
 
-  if (summary) summary.textContent = `${region} · ${fuelLabel(fuel)} · ${rows.length}개 시점`;
+  if (summary) summary.textContent = `${region} · ${fuelLabel(fuel)} · ${periodLabel} · ${rows.length}개 시점`;
   if (note) {
     note.textContent = Array.isArray(state.history) && state.history.length
       ? "선택 기간의 실제가격, 적정가격, 적정가격 범위를 표시합니다. 실제가격은 전일 공시 데이터 기준입니다."
@@ -1022,6 +1130,46 @@ function renderDownloadSummary() {
   const count = document.getElementById("download-count");
   if (!count) return;
   count.textContent = `${downloadRows().length.toLocaleString("ko-KR")}개 행`;
+}
+
+function renderDataStatus() {
+  const grid = document.getElementById("external-data-grid");
+  const summary = document.getElementById("data-status-summary");
+  if (!grid) return;
+
+  const generated = Array.isArray(state.externalData?.datasets) ? state.externalData.datasets : [];
+  const generatedById = new Map(generated.map((item) => [item.id, item]));
+  const baseRows = derivedDataStatus();
+  const baseIds = new Set(baseRows.map((item) => item.id));
+  const rows = [
+    ...baseRows.map((item) => ({ ...item, ...generatedById.get(item.id) })),
+    ...generated.filter((item) => !baseIds.has(item.id)),
+  ];
+  const connected = rows.filter((row) => row.status === "connected").length;
+  const waiting = rows.filter((row) => row.status === "waiting").length;
+
+  if (summary) summary.textContent = `연결 ${connected}개 · 대기 ${waiting}개`;
+
+  grid.innerHTML = rows.map((row) => `
+    <article class="data-status-card">
+      <header>
+        <h3>${escapeHtml(row.label)}</h3>
+        <span class="status-pill ${escapeHtml(row.status || "partial")}">${statusLabel(row.status)}</span>
+      </header>
+      <div class="data-metric-row">
+        <div class="data-metric">
+          <span>행 수</span>
+          <strong>${formatCount(row.rows)}</strong>
+        </div>
+        <div class="data-metric">
+          <span>기간</span>
+          <strong>${escapeHtml(dateRangeLabel(row.date_min, row.date_max))}</strong>
+        </div>
+      </div>
+      <p>${escapeHtml(row.note || "")}</p>
+      <p><code>${escapeHtml(row.path || row.expected_path || "-")}</code></p>
+    </article>
+  `).join("");
 }
 
 function csvCell(value) {
@@ -1135,17 +1283,19 @@ function render() {
   renderNearby();
   renderTrend();
   renderDownloadSummary();
+  renderDataStatus();
 }
 
 async function boot() {
   clearRegionHash();
 
-  const [manifest, national, regions, stations, history, geojson] = await Promise.all([
+  const [manifest, national, regions, stations, history, externalData, geojson] = await Promise.all([
     loadJson("./public/data/latest/site_manifest.json", {}),
     loadJson("./public/data/latest/national_today.json", FALLBACK_NATIONAL),
     loadJson("./public/data/latest/region_today.json", FALLBACK_REGIONS),
     loadJson("./public/data/latest/station_search_index.json", FALLBACK_STATIONS),
     loadJson("./public/data/latest/price_history.json", []),
+    loadJson("./public/data/latest/external_data_status.json", null),
     loadJson("./public/assets/korea-provinces.geojson", null),
   ]);
 
@@ -1154,6 +1304,7 @@ async function boot() {
   state.regions = regions;
   state.stations = stations;
   state.history = history;
+  state.externalData = externalData;
   state.geojson = geojson;
   initializeAnalysisControls();
 
