@@ -32,19 +32,19 @@ TRAINING_COVERAGE_DATASETS = {
     "station_count": {
         "label": "주유소 입력 수",
         "unit": "개",
-        "path": "data collection/derived_data/station_points.csv",
+        "path": "data-analysis/00_data_collection/outputs/derived_data/station_points.csv",
         "note": "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값입니다.",
     },
     "facility_count": {
         "label": "시설 영향력 입력 수",
         "unit": "개",
-        "path": "data collection/derived_data/facility_points.csv",
+        "path": "data-analysis/00_data_collection/outputs/derived_data/facility_points.csv",
         "note": "AI 01 시설 좌표 산출물을 시도별로 집계한 값입니다.",
     },
     "land_price_grid_count": {
         "label": "공시지가 격자 수",
         "unit": "격자",
-        "path": "data collection/derived_data/official_land_price_grid.csv",
+        "path": "data-analysis/00_data_collection/outputs/derived_data/official_land_price_grid.csv",
         "note": "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값입니다.",
     },
 }

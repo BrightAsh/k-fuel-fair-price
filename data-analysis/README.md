@@ -16,7 +16,7 @@
 
 | 폴더 | 역할 | 핵심 산출물 |
 |---|---|---|
-| `00_data_collection` | 원천 데이터 준비 상태 점검 | Drive manifest, 정책 수기 데이터 폴더 보장 |
+| `00_data_collection` | 자동/수동 수집 산출물 보관과 원천 데이터 준비 상태 점검 | `outputs/`, Drive manifest |
 | `01_data_preprocessing` | 원천 데이터를 일별 통합 CSV로 전처리 | `분석용일별통합데이터.csv` |
 | `02_benchmark_selection` | 휘발유/경유 국제 benchmark 선택 | `stage0_selected_benchmarks.csv` |
 | `03_lag_analysis` | 국제가격 반영 시차와 IRF 추정 | `analysis_summary.csv`, `impulse_response_path.csv` |

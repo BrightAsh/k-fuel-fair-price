@@ -1,11 +1,11 @@
 # %% [markdown]
 # # AI Model 01 파생 변수/격자화 전 데이터 준비
 #
-# `data collection/` 안의 수집 산출물을 읽어 격자화 전에 필요한 표준 CSV를 만듭니다.
+# `data-analysis/00_data_collection/outputs/` 안의 수집 산출물을 읽어 격자화 전에 필요한 표준 CSV를 만듭니다.
 #
-# - 자동 수집 산출물: `data collection/{dataset}/final/`
-# - 수동 수집 산출물: `data collection/z_pa_{dataset}/final/`
-# - 01 산출물: `data collection/derived_data/`
+# - 자동 수집 산출물: `data-analysis/00_data_collection/outputs/{dataset}/`
+# - 수동 수집 산출물: `data-analysis/00_data_collection/outputs/z_pa_{dataset}/`
+# - 01 산출물: `data-analysis/00_data_collection/outputs/derived_data/`
 
 # %%
 # ============================================================
@@ -33,7 +33,7 @@ drive.mount("/content/drive")
 ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
 
 ROOT_DIR = Path(ROOT_PATH)
-DATA_COLLECTION_DIR = ROOT_DIR / "data collection"
+DATA_COLLECTION_DIR = ROOT_DIR / "data-analysis" / "00_data_collection" / "outputs"
 DERIVED_DIR = DATA_COLLECTION_DIR / "derived_data"
 
 DATA_COLLECTION_PATH = str(DATA_COLLECTION_DIR) + "/"
@@ -48,8 +48,7 @@ GEOCODE_FACILITY_IF_MISSING = True
 GEOCODE_SLEEP_SEC = 0.20
 
 Z_PA_FACILITY_DIR = DATA_COLLECTION_DIR / "z_pa_facility"
-for sub in ["raw", "final", "logs"]:
-    (Z_PA_FACILITY_DIR / sub).mkdir(parents=True, exist_ok=True)
+Z_PA_FACILITY_DIR.mkdir(parents=True, exist_ok=True)
 
 def get_secret(name, default=""):
     try:
@@ -690,11 +689,8 @@ def geocoder_result_to_lonlat(result):
         return None
     return float(lon), float(lat)
 
-def resolve_collected_file(dataset, final_pattern):
-    final_path = latest_under(DATA_COLLECTION_DIR / dataset / "final", final_pattern)
-    if final_path is not None:
-        return final_path
-    return latest_under(DATA_COLLECTION_DIR / dataset, final_pattern)
+def resolve_collected_file(dataset, pattern):
+    return latest_under(DATA_COLLECTION_DIR / dataset, pattern)
 
 def has_station_region_dirs(root):
     root = Path(root)
@@ -711,7 +707,6 @@ def has_station_region_dirs(root):
 
 def resolve_station_region_root():
     candidates = [
-        DATA_COLLECTION_DIR / "gas_station_prices_by_region" / "final",
         DATA_COLLECTION_DIR / "gas_station_prices_by_region",
     ]
     for p in candidates:
@@ -720,7 +715,7 @@ def resolve_station_region_root():
     return candidates[0]
 
 def resolve_facility_source():
-    zpa_final = DATA_COLLECTION_DIR / "z_pa_facility" / "final"
+    zpa_final = DATA_COLLECTION_DIR / "z_pa_facility"
     return first_existing([
         zpa_final / "facility_location_data_final.csv",
         zpa_final / "1 facility_location_data_final.csv",
@@ -732,14 +727,15 @@ def resolve_facility_source():
     ])
 
 def resolve_facility_cache_source():
-    zpa_final = DATA_COLLECTION_DIR / "z_pa_facility" / "final"
+    zpa_final = DATA_COLLECTION_DIR / "z_pa_facility"
     return first_existing([
         zpa_final / "facility_geocode_cache.csv",
         DERIVED_DIR / "facility_geocode_cache.csv",
     ])
 
 def resolve_official_land_price_source():
-    return latest_under(DATA_COLLECTION_DIR / "official_land_price" / "final", "*.csv")
+    source = latest_under(DATA_COLLECTION_DIR / "official_land_price", "*.csv")
+    return first_existing([source, DERIVED_DIR / "official_land_price_grid.csv"])
 
 # %%
 # ============================================================
@@ -751,84 +747,84 @@ INPUT_SPECS = [
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("fx_usdkrw", "fx_usdkrw_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "fx_usdkrw" / "final" / "fx_usdkrw_*.csv",
+        "expected": DATA_COLLECTION_DIR / "fx_usdkrw" / "fx_usdkrw_*.csv",
     },
     {
         "input_name": "crude",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("crude", "crude_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "crude" / "final" / "crude_*.csv",
+        "expected": DATA_COLLECTION_DIR / "crude" / "crude_*.csv",
     },
     {
         "input_name": "intl_products",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("intl_products", "intl_products_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "intl_products" / "final" / "intl_products_*.csv",
+        "expected": DATA_COLLECTION_DIR / "intl_products" / "intl_products_*.csv",
     },
     {
         "input_name": "retail_avg",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("retail_avg", "retail_avg_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "retail_avg" / "final" / "retail_avg_*.csv",
+        "expected": DATA_COLLECTION_DIR / "retail_avg" / "retail_avg_*.csv",
     },
     {
         "input_name": "brand_gasoline",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("brand_price", "brand_gasoline_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "brand_price" / "final" / "brand_gasoline_*.csv",
+        "expected": DATA_COLLECTION_DIR / "brand_price" / "brand_gasoline_*.csv",
     },
     {
         "input_name": "brand_diesel",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("brand_price", "brand_diesel_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "brand_price" / "final" / "brand_diesel_*.csv",
+        "expected": DATA_COLLECTION_DIR / "brand_price" / "brand_diesel_*.csv",
     },
     {
         "input_name": "gasoline_tax_trend",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
-        "path": latest_under(DATA_COLLECTION_DIR / "fuel_tax_trend" / "final", "gasoline_tax_trend_*.xls"),
-        "expected": DATA_COLLECTION_DIR / "fuel_tax_trend" / "final" / "gasoline_tax_trend_*.xls",
+        "path": latest_under(DATA_COLLECTION_DIR / "fuel_tax_trend", "gasoline_tax_trend_*.xls"),
+        "expected": DATA_COLLECTION_DIR / "fuel_tax_trend" / "gasoline_tax_trend_*.xls",
     },
     {
         "input_name": "diesel_tax_trend",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
-        "path": latest_under(DATA_COLLECTION_DIR / "fuel_tax_trend" / "final", "diesel_tax_trend_*.xls"),
-        "expected": DATA_COLLECTION_DIR / "fuel_tax_trend" / "final" / "diesel_tax_trend_*.xls",
+        "path": latest_under(DATA_COLLECTION_DIR / "fuel_tax_trend", "diesel_tax_trend_*.xls"),
+        "expected": DATA_COLLECTION_DIR / "fuel_tax_trend" / "diesel_tax_trend_*.xls",
     },
     {
         "input_name": "refinery_weekly_supply",
         "collection_type": "automatic",
         "required_for": "national_daily_features",
         "path": resolve_collected_file("refinery_weekly_supply", "refinery_weekly_supply_prices_by_product_*.csv"),
-        "expected": DATA_COLLECTION_DIR / "refinery_weekly_supply" / "final" / "refinery_weekly_supply_prices_by_product_*.csv",
+        "expected": DATA_COLLECTION_DIR / "refinery_weekly_supply" / "refinery_weekly_supply_prices_by_product_*.csv",
     },
     {
         "input_name": "gas_station_prices_by_region",
         "collection_type": "large_collection_not_in_git",
         "required_for": "station_points_and_grid_panel",
         "path": resolve_station_region_root(),
-        "expected": DATA_COLLECTION_DIR / "gas_station_prices_by_region" / "final" / "{region}/gasoline.csv,diesel.csv,metadata__latlon.json",
+        "expected": DATA_COLLECTION_DIR / "gas_station_prices_by_region" / "{region}/gasoline.csv,diesel.csv,metadata__latlon.json",
     },
     {
         "input_name": "facility",
         "collection_type": "manual_z_pa",
         "required_for": "facility_points_and_grid_features",
         "path": resolve_facility_source(),
-        "expected": DATA_COLLECTION_DIR / "z_pa_facility" / "final" / "facility_data.csv",
+        "expected": DATA_COLLECTION_DIR / "z_pa_facility" / "facility_data.csv",
     },
     {
         "input_name": "official_land_price",
         "collection_type": "automatic",
         "required_for": "official_land_price_join",
         "path": resolve_official_land_price_source(),
-        "expected": DATA_COLLECTION_DIR / "official_land_price" / "final" / "*.csv",
+        "expected": DATA_COLLECTION_DIR / "official_land_price" / "*.csv",
     },
 ]
 
@@ -1355,7 +1351,7 @@ if len(missing_station_coord) > 0:
         "gas_station_prices_by_region",
         "station_points_and_grid_panel",
         "missing_coordinates",
-        DATA_COLLECTION_DIR / "gas_station_prices_by_region" / "final" / "{region}" / "metadata__latlon.json",
+        DATA_COLLECTION_DIR / "gas_station_prices_by_region" / "{region}" / "metadata__latlon.json",
         f"좌표가 없거나 한국 범위를 벗어난 주유소 최신 프로필 {len(missing_station_coord):,}건이 있습니다.",
     )
 station_points = station_points_all[station_points_all["coord_valid"] == True].copy()
@@ -1495,7 +1491,7 @@ if len(facility_points) == 0:
         "z_pa_facility",
         "facility_points_and_grid_features",
         "missing",
-        DATA_COLLECTION_DIR / "z_pa_facility" / "final" / "facility_data.csv",
+        DATA_COLLECTION_DIR / "z_pa_facility" / "facility_data.csv",
         "시설 원천 파일이 없습니다. 필수 컬럼은 상표, 구분/대상, 이름, 주소입니다.",
     )
 
@@ -1555,7 +1551,7 @@ if len(facility_missing) > 0:
         "z_pa_facility",
         "facility_points_and_grid_features",
         "missing_coordinates",
-        DATA_COLLECTION_DIR / "z_pa_facility" / "final" / "facility_location_data_final.csv",
+        DATA_COLLECTION_DIR / "z_pa_facility" / "facility_location_data_final.csv",
         f"시설 좌표가 없거나 한국 범위를 벗어난 행 {len(facility_missing):,}건이 있습니다.",
     )
 if len(facility_unknown_type) > 0:
@@ -1565,7 +1561,7 @@ if len(facility_unknown_type) > 0:
         "z_pa_facility",
         "facility_points_and_grid_features",
         "unknown_facility_type",
-        DATA_COLLECTION_DIR / "z_pa_facility" / "final" / "facility_data.csv",
+        DATA_COLLECTION_DIR / "z_pa_facility" / "facility_data.csv",
         "구분/대상 값이 공장, 저유소, 대리점 중 하나로 매핑되지 않는 행이 있습니다.",
     )
 
@@ -1631,8 +1627,9 @@ from pyproj import Transformer
 TO_WORK = Transformer.from_crs(SOURCE_CRS, WORK_CRS, always_xy=True)
 TO_WGS = Transformer.from_crs(WORK_CRS, SOURCE_CRS, always_xy=True)
 
-GEO_BOUNDARY_RAW_DIR = DATA_COLLECTION_DIR / "geo_boundary" / "raw"
-GEO_BOUNDARY_FINAL_DIR = DATA_COLLECTION_DIR / "geo_boundary" / "final"
+GEO_BOUNDARY_CACHE_DIR = Path("/content/kff_geo_boundary_cache")
+GEO_BOUNDARY_RAW_DIR = GEO_BOUNDARY_CACHE_DIR / "raw"
+GEO_BOUNDARY_FINAL_DIR = GEO_BOUNDARY_CACHE_DIR / "final"
 GEO_BOUNDARY_RAW_DIR.mkdir(parents=True, exist_ok=True)
 GEO_BOUNDARY_FINAL_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1892,7 +1889,7 @@ if official_source is None or not Path(official_source).exists():
         "official_land_price",
         "official_land_price_join",
         "missing",
-        DATA_COLLECTION_DIR / "official_land_price" / "final" / "*.csv",
+        DATA_COLLECTION_DIR / "official_land_price" / "*.csv",
         "공시지가 입력 파일을 찾지 못했습니다.",
     )
     official = pd.DataFrame(columns=["grid_id", "cell_x", "cell_y"])

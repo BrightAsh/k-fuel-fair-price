@@ -56,7 +56,7 @@ GitHub Actions cron은 UTC 기준입니다.
 
 ## Data Collection Boundary
 
-현재 레포 구조에서 진짜 원천 수집은 `data collection/`과 Colab/AI 파이프라인이 담당합니다.
+현재 레포 구조에서 원천 수집 산출물은 `data-analysis/00_data_collection/outputs/`에 보관하고, Colab/AI 파이프라인이 이 위치를 입력으로 사용합니다.
 
 GitHub Actions가 완전 자동 수집까지 하려면 아래 중 하나가 필요합니다.
 

@@ -8,20 +8,20 @@
 
 ## 입력
 
-Colab 실행 기준 입력 위치는 `ROOT_PATH/data collection/`입니다. 주요 입력은 아래와 같습니다.
+Colab 실행 기준 입력 위치는 `ROOT_PATH/data-analysis/00_data_collection/outputs/`입니다. 주요 입력은 아래와 같습니다.
 
 | 입력 | 사용 내용 |
 |---|---|
-| `crude/final/crude_*.csv` | 두바이, 브렌트, WTI 원유 가격 |
-| `intl_products/final/intl_products_*.csv` | 휘발유 92RON, 경유 0.05 등 국제 제품가격 |
-| `intl_products/final/intl_product_diesel(0.001)_*.csv` | 저유황 경유 0.001 국제 제품가격 보강 |
-| `fx_usdkrw/final/fx_usdkrw_*.csv` | 원/달러 환율 |
-| `retail_avg/final/retail_avg_*.csv` | 보통휘발유, 자동차용경유 전국 평균 소비자가격 |
-| `brand_price/final/brand_gasoline_*.csv` | 휘발유 브랜드별 가격 |
-| `brand_price/final/brand_diesel_*.csv` | 경유 브랜드별 가격 |
-| `fuel_tax_trend/final/gasoline_tax_trend_*.xls` | 휘발유 유류세 항목 |
-| `fuel_tax_trend/final/diesel_tax_trend_*.xls` | 경유 유류세 항목 |
-| `refinery_weekly_supply/final/refinery_weekly_supply_prices_by_product_*.csv` | 정유사 세전 주간 공급가격 |
+| `crude/crude_*.csv` | 두바이, 브렌트, WTI 원유 가격 |
+| `intl_products/intl_products_*.csv` | 휘발유 92RON, 경유 0.05 등 국제 제품가격 |
+| `intl_products/intl_product_diesel(0.001)_*.csv` | 저유황 경유 0.001 국제 제품가격 보강 |
+| `fx_usdkrw/fx_usdkrw_*.csv` | 원/달러 환율 |
+| `retail_avg/retail_avg_*.csv` | 보통휘발유, 자동차용경유 전국 평균 소비자가격 |
+| `brand_price/brand_gasoline_*.csv` | 휘발유 브랜드별 가격 |
+| `brand_price/brand_diesel_*.csv` | 경유 브랜드별 가격 |
+| `fuel_tax_trend/gasoline_tax_trend_*.xls` | 휘발유 유류세 항목 |
+| `fuel_tax_trend/diesel_tax_trend_*.xls` | 경유 유류세 항목 |
+| `refinery_weekly_supply/refinery_weekly_supply_prices_by_product_*.csv` | 정유사 세전 주간 공급가격 |
 
 ## 처리 로직
 

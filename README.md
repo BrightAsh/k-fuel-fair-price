@@ -9,8 +9,8 @@
 ## 전체 흐름
 
 ```text
-data collection
-  -> data-analysis/00~05
+data-analysis/00_data_collection/outputs
+  -> data-analysis/01~05
   -> ai-model/01_derived_features
   -> ai-model/02_spatial_grid_build
   -> ai-model/03_target_dataset_build
@@ -31,7 +31,7 @@ data collection
 
 | 단계 | 폴더 | 핵심 산출물 |
 |---|---|---|
-| 00 | `data-analysis/00_data_collection` | 원천 데이터 manifest, 수기 정책 폴더 생성 |
+| 00 | `data-analysis/00_data_collection` | 자동/수동 수집 산출물 보관, 원천 데이터 manifest |
 | 01 | `data-analysis/01_data_preprocessing` | `outputs/분석용일별통합데이터.csv` |
 | 02 | `data-analysis/02_benchmark_selection` | `outputs/stage0_selected_benchmarks.csv` |
 | 03 | `data-analysis/03_lag_analysis` | 유종/층위별 `analysis_summary.csv`, `impulse_response_path.csv` |
@@ -67,21 +67,21 @@ Colab 기준 기본 루트는 아래입니다.
 
 ```python
 ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
-DATA_COLLECTION_PATH = ROOT_PATH + "data collection/"
+DATA_COLLECTION_PATH = ROOT_PATH + "data-analysis/00_data_collection/outputs/"
 ```
 
-원천 수집 데이터는 `DATA_COLLECTION_PATH/{dataset}/final/`의 수집 산출물을 직접 사용합니다. 과거 구조였던 `ROOT_PATH/data/` fallback 또는 `preprocessed_data/additional_data` 기준 경로는 새 코드에서 사용하지 않는 방향으로 정리했습니다.
+각 데이터셋 폴더에는 최종 사용 파일만 남기고 `raw/`, `final/`, `logs/` 하위 폴더는 제거했습니다. 예를 들어 `crude/final/crude_*.csv`가 아니라 `crude/crude_*.csv`를 직접 읽습니다. 과거 구조였던 `ROOT_PATH/data/` fallback 또는 `preprocessed_data/additional_data` 기준 경로는 새 코드에서 사용하지 않는 방향으로 정리했습니다.
 
 수동 수집 데이터는 폴더명 앞에 `z_pa_`를 붙입니다.
 
 ```text
-data collection/z_pa_policy/final/korea_fuel_tax_price_policies.csv
-data collection/z_pa_facility/final/facility_data.csv
+data-analysis/00_data_collection/outputs/z_pa_policy/korea_fuel_tax_price_policies.csv
+data-analysis/00_data_collection/outputs/z_pa_facility/facility_data.csv
 ```
 
 ## 실행 순서
 
-1. `data collection/`에 자동 수집 산출물과 수동 수집 파일을 준비합니다.
+1. `data-analysis/00_data_collection/outputs/`에 자동 수집 산출물과 수동 수집 파일을 준비합니다.
 2. `data-analysis/00_data_collection`으로 필수 입력 존재 여부를 점검합니다.
 3. `data-analysis/01_data_preprocessing`부터 `05_policy_application`까지 순서대로 실행합니다.
 4. `ai-model/01_derived_features`로 주유소/시설/공시지가/격자 전처리 산출물을 만듭니다.

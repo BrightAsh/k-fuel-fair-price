@@ -105,8 +105,8 @@ date,region,fuel,actual_price,fair_price_policy,band_low_policy,band_high_policy
 향후에는 아래 AI 01/02 산출물과 AI 03 예측 결과를 결합해 생성합니다.
 
 ```text
-data collection/derived_data/station_latest_profile.csv
-data collection/derived_data/station_points.csv
+data-analysis/00_data_collection/outputs/derived_data/station_latest_profile.csv
+data-analysis/00_data_collection/outputs/derived_data/station_points.csv
 ROOT_PATH/그리드/grid.parquet
 ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.parquet
 ```

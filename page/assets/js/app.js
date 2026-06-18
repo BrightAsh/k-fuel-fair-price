@@ -110,7 +110,7 @@ const TRAINING_COVERAGE_FALLBACK = {
       rows: 0,
       date_min: null,
       date_max: null,
-      path: "data collection/derived_data/station_points.csv",
+      path: "data-analysis/00_data_collection/outputs/derived_data/station_points.csv",
       note: "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값이 필요합니다.",
     },
     {
@@ -121,7 +121,7 @@ const TRAINING_COVERAGE_FALLBACK = {
       rows: 0,
       date_min: null,
       date_max: null,
-      path: "data collection/derived_data/facility_points.csv",
+      path: "data-analysis/00_data_collection/outputs/derived_data/facility_points.csv",
       note: "AI 01 시설 좌표 산출물을 시도별로 집계한 값이 필요합니다.",
     },
     {
@@ -132,7 +132,7 @@ const TRAINING_COVERAGE_FALLBACK = {
       rows: 0,
       date_min: null,
       date_max: null,
-      path: "data collection/derived_data/official_land_price_grid.csv",
+      path: "data-analysis/00_data_collection/outputs/derived_data/official_land_price_grid.csv",
       note: "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값이 필요합니다.",
     },
   ],
@@ -1330,25 +1330,7 @@ function applyFixedSamplePrices() {
     }));
   }
 
-  if (Array.isArray(state.stations) && state.stations.length) {
-    state.stations = state.stations.map((station) => ({
-      ...station,
-      gasoline_price: SAMPLE_ACTUAL_PRICE,
-      diesel_price: SAMPLE_ACTUAL_PRICE,
-      judge_policy: station.judge_policy || "비쌈",
-    }));
-  }
-
-  if (Array.isArray(state.history) && state.history.length) {
-    state.history = state.history.map((row) => ({
-      ...row,
-      actual_price: SAMPLE_ACTUAL_PRICE,
-      fair_price_policy: SAMPLE_FAIR_PRICE,
-      band_low_policy: SAMPLE_BAND_LOW,
-      band_high_policy: SAMPLE_BAND_HIGH,
-      gap_policy: SAMPLE_GAP_PRICE,
-    }));
-  }
+  // Station search and price trend keep source data so users can inspect real history.
 }
 
 function requestUserLocation() {

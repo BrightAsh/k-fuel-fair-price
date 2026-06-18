@@ -1,0 +1,30 @@
+{
+    "schema_version":  "station_price_column_parts_v1",
+    "original_file":  "gasoline.csv",
+    "original_size_bytes":  134678650,
+    "original_sha256":  "9d78136b479cf1256cceda6eea5a8930089097177be118fe54da0b3d9c08d102",
+    "split_by":  "station_columns",
+    "common_columns":  [
+                           "date"
+                       ],
+    "row_count":  6631,
+    "station_column_count":  6385,
+    "part_count":  2,
+    "parts":  [
+                  {
+                      "file":  "part-000.csv",
+                      "size_bytes":  66899068,
+                      "station_column_count":  3193,
+                      "first_station_id":  "A0000003",
+                      "last_station_id":  "A0005509"
+                  },
+                  {
+                      "file":  "part-001.csv",
+                      "size_bytes":  67865789,
+                      "station_column_count":  3192,
+                      "first_station_id":  "A0005510",
+                      "last_station_id":  "A0033822"
+                  }
+              ],
+    "note":  "Each part keeps the date column and a disjoint subset of station-id columns. Recombine by joining parts on date in part order."
+}

@@ -1,6 +1,6 @@
 ﻿param(
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path,
-  [string]$CollectionRoot = "C:\Users\KNOC\Downloads\data collection"
+  [string]$CollectionRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\data-analysis\00_data_collection\outputs")).Path
 )
 
 $ErrorActionPreference = "Stop"
@@ -63,12 +63,18 @@ public sealed class PageDataBuilder
         public string Label;
     }
 
+    private sealed class PriceAccumulator
+    {
+        public double Sum;
+        public long Count;
+    }
+
     public PageDataBuilder(string repoRoot, string collectionRoot)
     {
         this.repoRoot = repoRoot;
         this.collectionRoot = collectionRoot;
-        gasFinalRoot = Path.Combine(collectionRoot, "gas_station_prices_by_region", "final");
-        derivedRoot = Path.Combine(repoRoot, "data collection", "derived_data");
+        gasFinalRoot = Path.Combine(collectionRoot, "gas_station_prices_by_region");
+        derivedRoot = Path.Combine(collectionRoot, "derived_data");
         pageManualRoot = Path.Combine(repoRoot, "page", "manual_inputs");
         pageLatestRoot = Path.Combine(repoRoot, "page", "public", "data", "latest");
     }
@@ -95,8 +101,8 @@ public sealed class PageDataBuilder
             foreach (DirectoryInfo dir in new DirectoryInfo(gasFinalRoot).EnumerateDirectories().OrderBy(d => CanonicalRegion(d.Name), StringComparer.Ordinal))
             {
                 string region = CanonicalRegion(dir.Name);
-                ProcessPriceFile(Path.Combine(dir.FullName, "gasoline.csv"), region, "gasoline", csv, json, ref firstJson);
-                ProcessPriceFile(Path.Combine(dir.FullName, "diesel.csv"), region, "diesel", csv, json, ref firstJson);
+                ProcessRegionFuel(dir, region, "gasoline", csv, json, ref firstJson);
+                ProcessRegionFuel(dir, region, "diesel", csv, json, ref firstJson);
             }
 
             json.Write("]\n");
@@ -119,9 +125,26 @@ public sealed class PageDataBuilder
         Console.WriteLine("[SUMMARY] coverage_rows=" + coverageRows.Count);
     }
 
+    private void ProcessRegionFuel(DirectoryInfo dir, string region, string fuel, StreamWriter csv, StreamWriter json, ref bool firstJson)
+    {
+        string file = Path.Combine(dir.FullName, fuel + ".csv");
+        if (File.Exists(file))
+        {
+            ProcessPriceFile(file, region, fuel, csv, json, ref firstJson);
+            return;
+        }
+
+        string partsRoot = Path.Combine(dir.FullName, fuel + ".parts");
+        if (Directory.Exists(partsRoot))
+        {
+            ProcessPriceParts(partsRoot, region, fuel, csv, json, ref firstJson);
+        }
+    }
+
     private void ProcessPriceFile(string file, string region, string fuel, StreamWriter csv, StreamWriter json, ref bool firstJson)
     {
         if (!File.Exists(file)) return;
+        string sourcePath = PriceSourcePath(region, fuel, false);
 
         using (StreamReader reader = new StreamReader(file, Encoding.UTF8, true, 1024 * 1024))
         {
@@ -159,8 +182,8 @@ public sealed class PageDataBuilder
                 if (count > 0)
                 {
                     double average = Math.Round(sum / count, 1);
-                    WritePriceHistoryCsv(csv, date, region, fuel, average);
-                    WritePriceHistoryJson(json, ref firstJson, date, region, fuel, average);
+                    WritePriceHistoryCsv(csv, date, region, fuel, average, sourcePath);
+                    WritePriceHistoryJson(json, ref firstJson, date, region, fuel, average, sourcePath);
                     observations += count;
                 }
 
@@ -222,6 +245,133 @@ public sealed class PageDataBuilder
             processedFiles++;
             Console.WriteLine("[PRICE] " + region + " " + fuel + " rows=" + rows + " latest=" + latestCount + " obs=" + observations);
         }
+    }
+
+    private void ProcessPriceParts(string partsRoot, string region, string fuel, StreamWriter csv, StreamWriter json, ref bool firstJson)
+    {
+        Dictionary<string, PriceAccumulator> byDate = new Dictionary<string, PriceAccumulator>();
+        Dictionary<string, double> latestValues = new Dictionary<string, double>();
+        string latestDate = null;
+        string dateMin = null;
+        string dateMax = null;
+        long observations = 0;
+        long rows = 0;
+
+        foreach (string file in Directory.EnumerateFiles(partsRoot, "part-*.csv").OrderBy(p => p, StringComparer.Ordinal))
+        {
+            using (StreamReader reader = new StreamReader(file, Encoding.UTF8, true, 1024 * 1024))
+            {
+                string header = reader.ReadLine();
+                if (String.IsNullOrWhiteSpace(header)) continue;
+                header = header.TrimStart('\uFEFF');
+                string[] ids = header.Split(',').Skip(1).ToArray();
+                string[] partLatestParts = null;
+                string partLatestDate = null;
+
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (String.IsNullOrWhiteSpace(line)) continue;
+                    string[] parts = line.Split(',');
+                    if (parts.Length < 2) continue;
+
+                    string date = parts[0];
+                    PriceAccumulator acc;
+                    if (!byDate.TryGetValue(date, out acc))
+                    {
+                        acc = new PriceAccumulator();
+                        byDate[date] = acc;
+                    }
+
+                    for (int i = 1; i < parts.Length; i++)
+                    {
+                        double value;
+                        if (TryPrice(parts[i], out value))
+                        {
+                            acc.Sum += value;
+                            acc.Count++;
+                            observations++;
+                        }
+                    }
+
+                    if (dateMin == null || String.CompareOrdinal(date, dateMin) < 0) dateMin = date;
+                    if (dateMax == null || String.CompareOrdinal(date, dateMax) > 0) dateMax = date;
+                    partLatestDate = date;
+                    partLatestParts = parts;
+                    rows++;
+                }
+
+                if (partLatestDate != null && partLatestParts != null)
+                {
+                    if (latestDate == null || String.CompareOrdinal(partLatestDate, latestDate) > 0)
+                    {
+                        latestDate = partLatestDate;
+                        latestValues.Clear();
+                    }
+
+                    if (String.CompareOrdinal(partLatestDate, latestDate) == 0)
+                    {
+                        for (int i = 1; i < partLatestParts.Length && i - 1 < ids.Length; i++)
+                        {
+                            double value;
+                            if (TryPrice(partLatestParts[i], out value))
+                            {
+                                latestValues[ids[i - 1]] = value;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        string sourcePath = PriceSourcePath(region, fuel, true);
+        foreach (KeyValuePair<string, PriceAccumulator> item in byDate.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (item.Value.Count <= 0) continue;
+            double average = Math.Round(item.Value.Sum / item.Value.Count, 1);
+            WritePriceHistoryCsv(csv, item.Key, region, fuel, average, sourcePath);
+            WritePriceHistoryJson(json, ref firstJson, item.Key, region, fuel, average, sourcePath);
+        }
+
+        foreach (KeyValuePair<string, double> item in latestValues)
+        {
+            if (fuel == "gasoline") latestGasoline[item.Key] = item.Value;
+            else latestDiesel[item.Key] = item.Value;
+        }
+
+        long latestCount = latestValues.Count;
+        if (latestCount > 0)
+        {
+            regionMetrics.Add(new RegionMetric {
+                Region = region,
+                Fuel = fuel,
+                ActualPrice = Math.Round(latestValues.Values.Sum() / latestCount, 1),
+                SourceDate = latestDate,
+                StationCount = latestCount
+            });
+        }
+
+        coverageRows.Add(new CoverageRow {
+            Dataset = fuel + "_price_observations",
+            Date = dateMax,
+            Region = region,
+            Value = observations,
+            Unit = "건",
+            Label = fuel == "gasoline" ? "휘발유 가격 관측 수" : "경유 가격 관측 수"
+        });
+        coverageRows.Add(new CoverageRow {
+            Dataset = fuel + "_latest_station_count",
+            Date = latestDate,
+            Region = region,
+            Value = latestCount,
+            Unit = "개",
+            Label = fuel == "gasoline" ? "최신 휘발유 가격 주유소 수" : "최신 경유 가격 주유소 수"
+        });
+
+        if (dateMin != null && (globalDateMin == null || String.CompareOrdinal(dateMin, globalDateMin) < 0)) globalDateMin = dateMin;
+        if (dateMax != null && (globalDateMax == null || String.CompareOrdinal(dateMax, globalDateMax) > 0)) globalDateMax = dateMax;
+        if (byDate.Count > 0) processedFiles++;
+        Console.WriteLine("[PRICE] " + region + " " + fuel + " part_rows=" + rows + " latest=" + latestCount + " obs=" + observations);
     }
 
     private void BuildStationRows()
@@ -439,12 +589,12 @@ public sealed class PageDataBuilder
             json.Write("{\"schema_version\":\"training_data_coverage_v1\",\"generated_at\":");
             JsonString(json, GeneratedAt());
             json.Write(",\"source\":\"page/manual_inputs/training_data_coverage.csv\",\"datasets\":[");
-            WriteDataset(json, rows, "station_count", "주유소 입력 수", "개", "data collection/derived_data/station_latest_profile.csv + gas_station_prices_by_region/final", "좌표가 유효하고 최신 가격이 붙은 주유소 수를 시도별로 집계했습니다.", true);
-            WriteDataset(json, rows, "facility_count", "시설 영향력 입력 수", "개", "data collection/derived_data/facility_points.csv", "좌표가 유효한 시설 데이터를 주소 기준 시도로 집계했습니다.", false);
-            WriteDataset(json, rows, "gasoline_price_observations", "휘발유 가격 관측 수", "건", "gas_station_prices_by_region/final/{시도}/gasoline.csv", "원천 가격 행렬에서 0과 결측을 제외한 휘발유 관측 수입니다.", false);
-            WriteDataset(json, rows, "diesel_price_observations", "경유 가격 관측 수", "건", "gas_station_prices_by_region/final/{시도}/diesel.csv", "원천 가격 행렬에서 0과 결측을 제외한 경유 관측 수입니다.", false);
-            WriteDataset(json, rows, "gasoline_latest_station_count", "최신 휘발유 가격 주유소 수", "개", "gas_station_prices_by_region/final/{시도}/gasoline.csv", "최신일에 휘발유 가격이 존재하는 주유소 수입니다.", false);
-            WriteDataset(json, rows, "diesel_latest_station_count", "최신 경유 가격 주유소 수", "개", "gas_station_prices_by_region/final/{시도}/diesel.csv", "최신일에 경유 가격이 존재하는 주유소 수입니다.", false);
+            WriteDataset(json, rows, "station_count", "주유소 입력 수", "개", "data-analysis/00_data_collection/outputs/derived_data/station_latest_profile.csv + data-analysis/00_data_collection/outputs/gas_station_prices_by_region", "좌표가 유효하고 최신 가격이 붙은 주유소 수를 시도별로 집계했습니다.", true);
+            WriteDataset(json, rows, "facility_count", "시설 영향력 입력 수", "개", "data-analysis/00_data_collection/outputs/derived_data/facility_points.csv", "좌표가 유효한 시설 데이터를 주소 기준 시도로 집계했습니다.", false);
+            WriteDataset(json, rows, "gasoline_price_observations", "휘발유 가격 관측 수", "건", "data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{시도}/gasoline.csv 또는 gasoline.parts", "원천 가격 행렬에서 0과 결측을 제외한 휘발유 관측 수입니다.", false);
+            WriteDataset(json, rows, "diesel_price_observations", "경유 가격 관측 수", "건", "data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{시도}/diesel.csv 또는 diesel.parts", "원천 가격 행렬에서 0과 결측을 제외한 경유 관측 수입니다.", false);
+            WriteDataset(json, rows, "gasoline_latest_station_count", "최신 휘발유 가격 주유소 수", "개", "data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{시도}/gasoline.csv 또는 gasoline.parts", "최신일에 휘발유 가격이 존재하는 주유소 수입니다.", false);
+            WriteDataset(json, rows, "diesel_latest_station_count", "최신 경유 가격 주유소 수", "개", "data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{시도}/diesel.csv 또는 diesel.parts", "최신일에 경유 가격이 존재하는 주유소 수입니다.", false);
             json.Write("],\"rows\":[");
             bool first = true;
             foreach (CoverageRow row in rows)
@@ -558,17 +708,23 @@ public sealed class PageDataBuilder
         }
     }
 
-    private void WritePriceHistoryCsv(StreamWriter csv, string date, string region, string fuel, double actualPrice)
+    private string PriceSourcePath(string region, string fuel, bool splitParts)
+    {
+        string suffix = splitParts ? fuel + ".parts/" : fuel + ".csv";
+        return "data-analysis/00_data_collection/outputs/gas_station_prices_by_region/" + region + "/" + suffix;
+    }
+
+    private void WritePriceHistoryCsv(StreamWriter csv, string date, string region, string fuel, double actualPrice, string sourcePath)
     {
         csv.Write(Csv(date)); csv.Write(",");
         csv.Write(Csv(region)); csv.Write(",");
         csv.Write(Csv(fuel)); csv.Write(",");
         csv.Write(Number(actualPrice)); csv.Write(",,,,");
-        csv.Write(Csv("gas_station_prices_by_region/final/" + region + "/" + fuel + ".csv"));
+        csv.Write(Csv(sourcePath));
         csv.WriteLine();
     }
 
-    private void WritePriceHistoryJson(StreamWriter json, ref bool first, string date, string region, string fuel, double actualPrice)
+    private void WritePriceHistoryJson(StreamWriter json, ref bool first, string date, string region, string fuel, double actualPrice, string sourcePath)
     {
         if (!first) json.Write(",");
         first = false;
@@ -577,7 +733,7 @@ public sealed class PageDataBuilder
         json.Write(",\"fuel\":"); JsonString(json, fuel);
         json.Write(",\"actual_price\":"); json.Write(Number(actualPrice));
         json.Write(",\"fair_price_policy\":null,\"band_low_policy\":null,\"band_high_policy\":null,\"gap_policy\":null,\"source\":");
-        JsonString(json, "gas_station_prices_by_region/final/" + region + "/" + fuel + ".csv");
+        JsonString(json, sourcePath);
         json.Write("}");
     }
 

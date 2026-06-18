@@ -22,7 +22,7 @@ ROOT_PATH/그리드/grid.parquet
 
 ```python
 ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
-DATA_COLLECTION_PATH = ROOT_PATH + "data collection/"
+DATA_COLLECTION_PATH = ROOT_PATH + "data-analysis/00_data_collection/outputs/"
 DERIVED_DATA_PATH = DATA_COLLECTION_PATH + "derived_data/"
 GRID_OUTPUT_PATH = ROOT_PATH + "그리드/"
 FINAL_PANEL_PATH = ROOT_PATH + "그리드/grid.parquet"
@@ -43,12 +43,14 @@ FINAL_PANEL_PATH = ROOT_PATH + "그리드/grid.parquet"
 ### 대용량 주유소 가격 원자료
 
 ```text
-data collection/gas_station_prices_by_region/final/{region}/gasoline.csv
-data collection/gas_station_prices_by_region/final/{region}/diesel.csv
-data collection/gas_station_prices_by_region/final/{region}/metadata__latlon.json
+data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/gasoline.csv
+data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/diesel.csv
+data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/gasoline.parts/
+data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/diesel.parts/
+data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/metadata.json
 ```
 
-지역별 가격 CSV는 wide 형식입니다. 컬럼은 `date`와 각 `station_id`로 구성되어 있고, 02 단계에서 필요한 station id만 batch 단위로 long 변환합니다.
+지역별 가격 CSV는 wide 형식입니다. 컬럼은 `date`와 각 `station_id`로 구성되어 있고, 02 단계에서 필요한 station id만 batch 단위로 long 변환합니다. `.parts/` 폴더가 있는 경우 `part-*.csv`를 순서대로 읽어 같은 방식으로 처리합니다.
 
 ## 처리 로직
 

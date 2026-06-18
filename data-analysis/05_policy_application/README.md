@@ -14,7 +14,7 @@
 | 04 `diesel_production_predictions_full_calendar.csv` | 경유 정책 미반영 적정가격대 |
 | 04 `gasoline_refinery_weekly_predictions.csv` | 휘발유 정유사 세전 적정가격 진단 |
 | 04 `diesel_refinery_weekly_predictions.csv` | 경유 정유사 세전 적정가격 진단 |
-| 정책 파일 `korea_fuel_tax_price_policies.csv` | 유류세 인하율, 최고가격제 상한, 정책 기간 |
+| 정책 파일 `data-analysis/00_data_collection/outputs/z_pa_policy/korea_fuel_tax_price_policies.csv` | 유류세 인하율, 최고가격제 상한, 정책 기간 |
 | 01 통합 데이터 | 국내 실제가격, 유류세 항목, 정유사 실제 세전 공급가격 |
 
 노트북 출력 기준 데이터 기간은 `2008-04-15 ~ 2026-06-09`입니다.
