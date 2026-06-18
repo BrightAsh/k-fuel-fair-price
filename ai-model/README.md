@@ -8,7 +8,8 @@
 |---|---|---|---|
 | 01 | `01_derived_features/` | 격자화 전 데이터 준비. 주유소 좌표/속성 이력, 시설 좌표, 공시지가 격자, 전국 land grid 생성 | `data collection/derived_data/*.csv`, `korea_land_grid_500m.parquet` |
 | 02 | `02_spatial_grid_build/` | 01 산출물과 주유소 가격 원자료를 결합해 최종 일별 500m 격자 패널 생성 | `ROOT_PATH/그리드/grid.parquet` |
-| 03 | `03_prediction_model_design/` | 02 격자 패널로 격자별 spread 변동 예측 LSTM 학습 | 학습 중. 결과 README는 학습 완료 후 보강 |
+| 03 | `03_target_dataset_build/` | `data-analysis/05`의 전국 적정가격을 격자별 spread와 결합해 target dataset 생성 | `outputs/grid_target.parquet` |
+| 04 | `04_prediction_model_training/` | 03 target dataset으로 격자별 적정가격 예측 LSTM 학습/test | validation/test 예측, checkpoint, 최종 모델 |
 
 ## 입력 경로 원칙
 
@@ -55,7 +56,13 @@ data collection/derived_data/
 ROOT_PATH/그리드/grid.parquet
         |
         v
-03_prediction_model_design
+03_target_dataset_build
+        |
+        v
+ai-model/03_target_dataset_build/outputs/grid_target.parquet
+        |
+        v
+04_prediction_model_training
 ```
 
 ## 현재 확인된 실행 결과
@@ -94,7 +101,8 @@ AI 02 노트북 최종 출력 기준 `grid.parquet` 요약입니다.
 - 기존 원본 코드의 `DATA_PATH`, `preprocessed_data/additional_data` 참조는 과거 구조입니다. 새 구조에서는 `data collection/{dataset}/final/` 또는 `data collection/derived_data/` 기준으로 읽습니다.
 - 01 단계에서 좌표가 비어 있는 주유소/시설은 숫자 좌표가 잘못된 것이 아니라 lon/lat 자체가 없는 경우입니다.
 - 02 단계의 최종 산출물은 `grid.parquet` 하나입니다. 중간 parquet는 `/content/kff_spatial_grid_build_tmp`에 만들고 마지막에 삭제합니다.
-- 03 단계는 아직 학습 중이므로 최종 성능 지표와 결과 파일 해석은 README에 확정하지 않았습니다.
+- 03 단계는 `grid.parquet`을 덮어쓰지 않고 별도 `grid_target.parquet`을 만듭니다.
+- 04 단계는 `grid_target.parquet`을 읽어 학습하며, 2026년 이후 데이터는 학습에 사용하지 않고 test로만 사용합니다.
 
 ## 하위 README
 
@@ -102,4 +110,5 @@ AI 02 노트북 최종 출력 기준 `grid.parquet` 요약입니다.
 |---|---|
 | `01_derived_features/README.md` | 01 입력 파일, 좌표 보강 방식, 산출물별 역할, QC 결과 |
 | `02_spatial_grid_build/README.md` | 02 최종 격자 패널 생성 로직, 스키마, 최종 출력 |
-| `03_prediction_model_design/README.md` | 03 학습 데이터 정의, target, split, cache, 모델 설계, 예상 산출물 |
+| `03_target_dataset_build/README.md` | 03 target dataset 정의, 공식, 입력/출력 |
+| `04_prediction_model_training/README.md` | 04 학습 데이터 정의, split, cache, 모델 설계, 산출물 |

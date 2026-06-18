@@ -28,11 +28,11 @@ warnings.filterwarnings("ignore")
 # =============================================================================
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-STAGE3_DIR = Path(__file__).resolve().parent
-GRID_PATH = REPO_ROOT / "ai-model" / "02_spatial_grid_build" / "outputs" / "grid.parquet"
-OUTPUT_ROOT = STAGE3_DIR / "outputs"
+STAGE4_DIR = Path(__file__).resolve().parent
+TARGET_DATASET_PATH = REPO_ROOT / "ai-model" / "03_target_dataset_build" / "outputs" / "grid_target.parquet"
+OUTPUT_ROOT = STAGE4_DIR / "outputs"
 INTERMEDIATE_DATA_DIR = OUTPUT_ROOT / "intermediate_data"
-CACHE_DATASET_VERSION = "stage03_price_delta_hybrid_lstm_v1"
+CACHE_DATASET_VERSION = "stage04_grid_fair_price_delta_hybrid_lstm_v1"
 
 TEST_START = pd.Timestamp("2026-01-01")
 TEST_END = pd.Timestamp("2026-12-31")
@@ -47,10 +47,10 @@ GAP_DAYS = 7
 SEQUENCE_LENGTH_DAYS = 28
 SEQUENCE_REQUIRED_HISTORY_DAYS = SEQUENCE_LENGTH_DAYS + 1
 
-TARGET_COLUMN = "price_delta_target"
-PREDICTED_TARGET_COLUMN = "pred_price_delta"
-MODEL_TARGET_MODE = "price_delta"
-MODEL_NAME = "hybrid_price_delta_lstm"
+TARGET_COLUMN = "fair_price_delta_target"
+PREDICTED_TARGET_COLUMN = "pred_fair_price_delta"
+MODEL_TARGET_MODE = "grid_fair_price_delta"
+MODEL_NAME = "hybrid_grid_fair_price_delta_lstm"
 
 TRAIN_SAMPLE_PER_MILLE = 200
 VALID_SAMPLE_PER_MILLE = 200
@@ -111,6 +111,8 @@ class FuelConfig:
     label: str
     target_col: str
     station_count_col: str
+    fair_target_col: str
+    national_actual_col: str
 
 
 FUEL_CONFIG: Dict[str, FuelConfig] = {
@@ -119,12 +121,16 @@ FUEL_CONFIG: Dict[str, FuelConfig] = {
         label="gasoline",
         target_col="gasoline_price_mean",
         station_count_col="gasoline_station_count",
+        fair_target_col="gasoline_grid_fair_price_target",
+        national_actual_col="gasoline_national_actual_price_grid",
     ),
     "diesel": FuelConfig(
         fuel="diesel",
         label="diesel",
         target_col="diesel_price_mean",
         station_count_col="diesel_station_count",
+        fair_target_col="diesel_grid_fair_price_target",
+        national_actual_col="diesel_national_actual_price_grid",
     ),
 }
 
@@ -258,8 +264,8 @@ def evaluate_prediction_frame(df: pd.DataFrame, period: str) -> Dict[str, Any]:
         "date_max": str(df["date"].max().date()) if len(df) else None,
         "station_weight_sum": float(df["station_weight"].sum()) if len(df) else 0.0,
     }
-    row.update(regression_metric_row(df["actual_grid_price"], df["pred_grid_price"], df["station_weight"], "price"))
-    row.update(regression_metric_row(df["spread_target"], df["pred_spread"], df["station_weight"], "spread"))
+    row.update(regression_metric_row(df["grid_fair_price_target"], df["pred_grid_fair_price"], df["station_weight"], "price"))
+    row.update(regression_metric_row(df["fair_spread_target"], df["pred_fair_spread"], df["station_weight"], "spread"))
     row.update(regression_metric_row(df[TARGET_COLUMN], df[PREDICTED_TARGET_COLUMN], df["station_weight"], "target"))
     return row
 
@@ -288,18 +294,22 @@ def seconds_text(seconds: float) -> str:
 # =============================================================================
 
 
-if not GRID_PATH.exists():
-    raise FileNotFoundError(f"grid.parquet not found: {GRID_PATH}")
+if not TARGET_DATASET_PATH.exists():
+    raise FileNotFoundError(
+        f"stage 03 target dataset not found: {TARGET_DATASET_PATH}\n"
+        "Run ai-model/03_target_dataset_build/03_target_dataset_build.py first."
+    )
 
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 INTERMEDIATE_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 con = duckdb.connect(database=":memory:")
 con.execute(f"PRAGMA threads={max(os.cpu_count() or 2, 2)}")
+con.execute("SET preserve_insertion_order=false")
 
 
 def panel_sql() -> str:
-    return f"read_parquet({qstr(GRID_PATH)})"
+    return f"read_parquet({qstr(TARGET_DATASET_PATH)})"
 
 
 schema_df = con.execute(f"DESCRIBE SELECT * FROM {panel_sql()} LIMIT 0").df()
@@ -422,10 +432,12 @@ def selected_column_exprs() -> List[str]:
         "t.feature_date AS feature_date",
         "t.grid_id",
         "t.actual_grid_price",
+        "t.grid_fair_price_target",
         "t.station_weight",
         "t.national_actual_price",
         "t.spread_target",
-        "(CAST(t.actual_grid_price AS DOUBLE) - CAST(t.actual_price_lag_1d AS DOUBLE)) AS price_delta_target",
+        "(CAST(t.grid_fair_price_target AS DOUBLE) - CAST(t.national_actual_price AS DOUBLE)) AS fair_spread_target",
+        "(CAST(t.grid_fair_price_target AS DOUBLE) - CAST(t.actual_price_lag_1d AS DOUBLE)) AS fair_price_delta_target",
         "CAST(t.spread_lag_1d AS DOUBLE) AS spread_lag_1d",
         "CAST(t.actual_price_lag_1d AS DOUBLE) AS actual_price_lag_1d",
         "CAST(t.national_price_lag_1d AS DOUBLE) AS national_price_lag_1d",
@@ -505,17 +517,14 @@ def model_frame_query(cfg: FuelConfig, select_sql: str, where_sql: str, group_sq
                 date_key - INTERVAL {PREDICTION_HORIZON_DAYS} DAY AS feature_date,
                 grid_id,
                 CAST({qid(cfg.target_col)} AS DOUBLE) AS actual_grid_price,
-                CAST({qid(cfg.station_count_col)} AS DOUBLE) AS station_weight
+                CAST({qid(cfg.fair_target_col)} AS DOUBLE) AS grid_fair_price_target,
+                CAST({qid(cfg.station_count_col)} AS DOUBLE) AS station_weight,
+                CAST({qid(cfg.national_actual_col)} AS DOUBLE) AS national_actual_price
             FROM raw
             WHERE {qid(cfg.target_col)} IS NOT NULL
+              AND {qid(cfg.fair_target_col)} IS NOT NULL
+              AND {qid(cfg.national_actual_col)} IS NOT NULL
               AND CAST({qid(cfg.station_count_col)} AS DOUBLE) > 0
-        ),
-        anchor AS (
-            SELECT
-                target_date,
-                SUM(actual_grid_price * station_weight) / NULLIF(SUM(station_weight), 0) AS national_actual_price
-            FROM target_rows
-            GROUP BY target_date
         ),
         spread_all AS (
             SELECT
@@ -523,12 +532,11 @@ def model_frame_query(cfg: FuelConfig, select_sql: str, where_sql: str, group_sq
                 t.feature_date,
                 t.grid_id,
                 t.actual_grid_price,
+                t.grid_fair_price_target,
                 t.station_weight,
-                CAST(a.national_actual_price AS DOUBLE) AS national_actual_price,
-                t.actual_grid_price - CAST(a.national_actual_price AS DOUBLE) AS spread_target
+                t.national_actual_price,
+                t.actual_grid_price - t.national_actual_price AS spread_target
             FROM target_rows t
-            INNER JOIN anchor a
-                ON a.target_date = t.target_date
         ),
         history AS (
             SELECT
@@ -576,10 +584,10 @@ def cache_safe(value: Any) -> str:
     return "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in text)
 
 
-def grid_file_signature() -> Dict[str, Any]:
-    stat = GRID_PATH.stat()
+def target_dataset_signature() -> Dict[str, Any]:
+    stat = TARGET_DATASET_PATH.stat()
     return {
-        "path": str(GRID_PATH.resolve()),
+        "path": str(TARGET_DATASET_PATH.resolve()),
         "size": int(stat.st_size),
         "mtime_ns": int(stat.st_mtime_ns),
     }
@@ -606,6 +614,8 @@ def frame_cache_conditions(
         "fuel": cfg.fuel,
         "target_col": cfg.target_col,
         "station_count_col": cfg.station_count_col,
+        "fair_target_col": cfg.fair_target_col,
+        "national_actual_col": cfg.national_actual_col,
         "label": label,
         "date_start": cache_date(date_start),
         "date_end": cache_date(date_end),
@@ -629,7 +639,7 @@ def frame_cache_conditions(
         "static_feature_columns": STATIC_FEATURE_COLUMNS,
         "policy_exclude_ranges": normalized_policy_ranges(),
         "random_seed": RANDOM_SEED,
-        "grid_file": grid_file_signature(),
+        "target_dataset_file": target_dataset_signature(),
     }
 
 
@@ -691,6 +701,8 @@ def daily_counts_cache_conditions(cfg: FuelConfig) -> Dict[str, Any]:
         "fuel": cfg.fuel,
         "target_col": cfg.target_col,
         "station_count_col": cfg.station_count_col,
+        "fair_target_col": cfg.fair_target_col,
+        "national_actual_col": cfg.national_actual_col,
         "test_start": cache_date(TEST_START),
         "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
         "sequence_length_days": SEQUENCE_LENGTH_DAYS,
@@ -700,7 +712,7 @@ def daily_counts_cache_conditions(cfg: FuelConfig) -> Dict[str, Any]:
         "latest_feature_columns": LATEST_FEATURE_COLUMNS,
         "static_feature_columns": STATIC_FEATURE_COLUMNS,
         "policy_exclude_ranges": normalized_policy_ranges(),
-        "grid_file": grid_file_signature(),
+        "target_dataset_file": target_dataset_signature(),
     }
 
 
@@ -815,10 +827,12 @@ def load_model_frame(
 
     numeric_cols = [
         "actual_grid_price",
+        "grid_fair_price_target",
         "station_weight",
         "national_actual_price",
         "spread_target",
-        "price_delta_target",
+        "fair_spread_target",
+        TARGET_COLUMN,
         "spread_lag_1d",
         "actual_price_lag_1d",
         "national_price_lag_1d",
@@ -1119,8 +1133,10 @@ def prediction_frame(df: pd.DataFrame, pred_delta: np.ndarray) -> pd.DataFrame:
         "grid_id",
         "station_weight",
         "actual_grid_price",
+        "grid_fair_price_target",
         "national_actual_price",
         "spread_target",
+        "fair_spread_target",
         TARGET_COLUMN,
         "spread_lag_1d",
         "actual_price_lag_1d",
@@ -1129,9 +1145,10 @@ def prediction_frame(df: pd.DataFrame, pred_delta: np.ndarray) -> pd.DataFrame:
     ]
     out = df[out_cols].copy()
     out[PREDICTED_TARGET_COLUMN] = np.asarray(pred_delta, dtype=float)
-    out["pred_grid_price"] = pd.to_numeric(out["actual_price_lag_1d"], errors="coerce") + out[PREDICTED_TARGET_COLUMN]
-    out["pred_spread"] = out["pred_grid_price"] - out["national_actual_price"]
-    out["prediction_error_to_actual"] = out["pred_grid_price"] - out["actual_grid_price"]
+    out["pred_grid_fair_price"] = pd.to_numeric(out["actual_price_lag_1d"], errors="coerce") + out[PREDICTED_TARGET_COLUMN]
+    out["pred_fair_spread"] = out["pred_grid_fair_price"] - out["national_actual_price"]
+    out["prediction_error_to_target"] = out["pred_grid_fair_price"] - out["grid_fair_price_target"]
+    out["actual_gap_to_fair_target"] = out["actual_grid_price"] - out["grid_fair_price_target"]
     return out
 
 
@@ -1207,15 +1224,17 @@ def baseline_scores(train_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.DataFr
             "station_weight",
             "national_actual_price",
             "actual_grid_price",
+            "grid_fair_price_target",
             "spread_target",
+            "fair_spread_target",
             TARGET_COLUMN,
             "actual_price_lag_1d",
         ]
     ].copy()
     lag1[PREDICTED_TARGET_COLUMN] = 0.0
-    lag1["pred_grid_price"] = pd.to_numeric(lag1["actual_price_lag_1d"], errors="coerce")
-    lag1["pred_spread"] = lag1["pred_grid_price"] - lag1["national_actual_price"]
-    rows.append({"model_name": "baseline_yesterday_grid_price", **evaluate_prediction_frame(lag1, "validation")})
+    lag1["pred_grid_fair_price"] = pd.to_numeric(lag1["actual_price_lag_1d"], errors="coerce")
+    lag1["pred_fair_spread"] = lag1["pred_grid_fair_price"] - lag1["national_actual_price"]
+    rows.append({"model_name": "baseline_yesterday_actual_price", **evaluate_prediction_frame(lag1, "validation")})
 
     train_delta_mean = float(np.average(train_df[TARGET_COLUMN], weights=train_df["station_weight"].clip(lower=1)))
     mean_delta = valid_df[
@@ -1224,15 +1243,17 @@ def baseline_scores(train_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.DataFr
             "station_weight",
             "national_actual_price",
             "actual_grid_price",
+            "grid_fair_price_target",
             "spread_target",
+            "fair_spread_target",
             TARGET_COLUMN,
             "actual_price_lag_1d",
         ]
     ].copy()
     mean_delta[PREDICTED_TARGET_COLUMN] = train_delta_mean
-    mean_delta["pred_grid_price"] = pd.to_numeric(mean_delta["actual_price_lag_1d"], errors="coerce") + train_delta_mean
-    mean_delta["pred_spread"] = mean_delta["pred_grid_price"] - mean_delta["national_actual_price"]
-    rows.append({"model_name": "baseline_train_mean_price_delta", **evaluate_prediction_frame(mean_delta, "validation")})
+    mean_delta["pred_grid_fair_price"] = pd.to_numeric(mean_delta["actual_price_lag_1d"], errors="coerce") + train_delta_mean
+    mean_delta["pred_fair_spread"] = mean_delta["pred_grid_fair_price"] - mean_delta["national_actual_price"]
+    rows.append({"model_name": "baseline_train_mean_fair_delta", **evaluate_prediction_frame(mean_delta, "validation")})
 
     return pd.DataFrame(rows)
 
@@ -1584,6 +1605,8 @@ def get_test_date_range(cfg: FuelConfig) -> Optional[Tuple[pd.Timestamp, pd.Time
         WHERE CAST(date AS DATE) >= {sql_date(TEST_START)}
           AND CAST(date AS DATE) <= {sql_date(TEST_END)}
           AND {qid(cfg.target_col)} IS NOT NULL
+          AND {qid(cfg.fair_target_col)} IS NOT NULL
+          AND {qid(cfg.national_actual_col)} IS NOT NULL
           AND CAST({qid(cfg.station_count_col)} AS DOUBLE) > 0
         """
     ).fetchone()
@@ -1619,13 +1642,15 @@ def write_combined_prediction_outputs(out_dir: Path, cfg: FuelConfig, parts: Lis
                 SUM(station_weight) AS station_weight_sum,
                 AVG(actual_grid_price) AS actual_grid_price_mean_unweighted,
                 SUM(actual_grid_price * station_weight) / NULLIF(SUM(station_weight), 0) AS actual_grid_price_mean_weighted,
-                AVG(pred_grid_price) AS pred_grid_price_mean_unweighted,
-                SUM(pred_grid_price * station_weight) / NULLIF(SUM(station_weight), 0) AS pred_grid_price_mean_weighted,
-                AVG(pred_spread) AS pred_spread_mean_unweighted,
-                SUM(pred_spread * station_weight) / NULLIF(SUM(station_weight), 0) AS pred_spread_mean_weighted,
-                AVG(prediction_error_to_actual) AS error_mean_unweighted,
-                SUM(prediction_error_to_actual * station_weight) / NULLIF(SUM(station_weight), 0) AS error_mean_weighted,
-                SUM(ABS(prediction_error_to_actual) * station_weight) / NULLIF(SUM(station_weight), 0) AS weighted_mae_to_actual
+                AVG(grid_fair_price_target) AS grid_fair_price_target_mean_unweighted,
+                SUM(grid_fair_price_target * station_weight) / NULLIF(SUM(station_weight), 0) AS grid_fair_price_target_mean_weighted,
+                AVG(pred_grid_fair_price) AS pred_grid_fair_price_mean_unweighted,
+                SUM(pred_grid_fair_price * station_weight) / NULLIF(SUM(station_weight), 0) AS pred_grid_fair_price_mean_weighted,
+                AVG(pred_fair_spread) AS pred_fair_spread_mean_unweighted,
+                SUM(pred_fair_spread * station_weight) / NULLIF(SUM(station_weight), 0) AS pred_fair_spread_mean_weighted,
+                AVG(prediction_error_to_target) AS error_mean_unweighted,
+                SUM(prediction_error_to_target * station_weight) / NULLIF(SUM(station_weight), 0) AS error_mean_weighted,
+                SUM(ABS(prediction_error_to_target) * station_weight) / NULLIF(SUM(station_weight), 0) AS weighted_mae_to_target
             FROM read_parquet({parts_sql})
             GROUP BY date
             ORDER BY date
@@ -1644,12 +1669,13 @@ def write_combined_prediction_outputs(out_dir: Path, cfg: FuelConfig, parts: Lis
                 ANY_VALUE(center_lat) AS center_lat,
                 COUNT(*) AS days,
                 AVG(actual_grid_price) AS actual_grid_price_mean,
-                AVG(pred_grid_price) AS pred_grid_price_mean,
-                AVG(prediction_error_to_actual) AS error_mean,
-                AVG(ABS(prediction_error_to_actual)) AS mae_to_actual
+                AVG(grid_fair_price_target) AS grid_fair_price_target_mean,
+                AVG(pred_grid_fair_price) AS pred_grid_fair_price_mean,
+                AVG(prediction_error_to_target) AS error_mean,
+                AVG(ABS(prediction_error_to_target)) AS mae_to_target
             FROM read_parquet({parts_sql})
             GROUP BY grid_id
-            ORDER BY mae_to_actual DESC
+            ORDER BY mae_to_target DESC
         ) TO {qstr(grid_path)} (HEADER, DELIMITER ',')
         """
     )
@@ -1703,16 +1729,19 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
             "center_lat",
             "station_weight",
             "actual_grid_price",
+            "grid_fair_price_target",
             "actual_price_lag_1d",
             "national_actual_price",
             "national_price_lag_1d",
             "spread_target",
+            "fair_spread_target",
             TARGET_COLUMN,
             "spread_lag_1d",
             PREDICTED_TARGET_COLUMN,
-            "pred_spread",
-            "pred_grid_price",
-            "prediction_error_to_actual",
+            "pred_fair_spread",
+            "pred_grid_fair_price",
+            "prediction_error_to_target",
+            "actual_gap_to_fair_target",
         ]
         save_cols = [c for c in save_cols if c in pred.columns]
         part_path = parts_dir / f"{m_start:%Y%m}.parquet"
@@ -1735,14 +1764,14 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
                 MIN(date) AS date_min,
                 MAX(date) AS date_max,
                 SUM(station_weight) AS station_weight_sum,
-                AVG(ABS(prediction_error_to_actual)) AS price_mae,
-                SQRT(AVG(POWER(prediction_error_to_actual, 2))) AS price_rmse,
-                SUM(ABS(prediction_error_to_actual) * station_weight) / NULLIF(SUM(station_weight), 0) AS price_weighted_mae,
-                SQRT(SUM(POWER(prediction_error_to_actual, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS price_weighted_rmse,
-                AVG(ABS(spread_target - pred_spread)) AS spread_mae,
-                SQRT(AVG(POWER(spread_target - pred_spread, 2))) AS spread_rmse,
-                SUM(ABS(spread_target - pred_spread) * station_weight) / NULLIF(SUM(station_weight), 0) AS spread_weighted_mae,
-                SQRT(SUM(POWER(spread_target - pred_spread, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS spread_weighted_rmse,
+                AVG(ABS(prediction_error_to_target)) AS price_mae,
+                SQRT(AVG(POWER(prediction_error_to_target, 2))) AS price_rmse,
+                SUM(ABS(prediction_error_to_target) * station_weight) / NULLIF(SUM(station_weight), 0) AS price_weighted_mae,
+                SQRT(SUM(POWER(prediction_error_to_target, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS price_weighted_rmse,
+                AVG(ABS(fair_spread_target - pred_fair_spread)) AS spread_mae,
+                SQRT(AVG(POWER(fair_spread_target - pred_fair_spread, 2))) AS spread_rmse,
+                SUM(ABS(fair_spread_target - pred_fair_spread) * station_weight) / NULLIF(SUM(station_weight), 0) AS spread_weighted_mae,
+                SQRT(SUM(POWER(fair_spread_target - pred_fair_spread, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS spread_weighted_rmse,
                 AVG(ABS({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)})) AS target_mae,
                 SQRT(AVG(POWER({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)}, 2))) AS target_rmse,
                 SUM(ABS({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)}) * station_weight) / NULLIF(SUM(station_weight), 0) AS target_weighted_mae,
@@ -1850,7 +1879,7 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
     if USE_CUDA:
         torch.cuda.empty_cache()
 
-    model_path = model_dir / f"{cfg.fuel}_price_delta_lstm.pt"
+    model_path = model_dir / f"{cfg.fuel}_grid_fair_price_delta_lstm.pt"
     final_wrapper = train_final_model(final_df, cfg, best_epoch, model_path)
 
     test_metrics = predict_test_2026(cfg, final_wrapper, out_dir)
@@ -1858,14 +1887,14 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
     metadata = {
         "created_at": pd.Timestamp.now().isoformat(),
         "config": asdict(cfg),
-        "grid_path": str(GRID_PATH),
+        "target_dataset_path": str(TARGET_DATASET_PATH),
         "output_dir": str(out_dir),
         "model_path": str(model_path),
         "test_start": str(TEST_START.date()),
         "test_end": str(TEST_END.date()),
         "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
-        "target_definition": "price_delta_target = actual_grid_price(t) - actual_price_lag_1d(t-1)",
-        "prediction_definition": "pred_grid_price(t) = actual_price_lag_1d(t-1) + pred_price_delta; no target-date national average is used for price restoration",
+        "target_definition": "fair_price_delta_target = grid_fair_price_target(t) - actual_price_lag_1d(t-1)",
+        "prediction_definition": "pred_grid_fair_price(t) = actual_price_lag_1d(t-1) + pred_fair_price_delta; target-date national average is not used as an inference input",
         "train_valid_train_ratio_requested": TRAIN_VALID_TRAIN_RATIO,
         "gap_days": GAP_DAYS,
         "policy_exclude_ranges": POLICY_EXCLUDE_RANGES,
@@ -1926,7 +1955,7 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
 def main() -> None:
     print("[CONFIG]")
     print(f"REPO_ROOT                  = {REPO_ROOT}")
-    print(f"GRID_PATH                  = {GRID_PATH}")
+    print(f"TARGET_DATASET_PATH        = {TARGET_DATASET_PATH}")
     print(f"OUTPUT_ROOT                = {OUTPUT_ROOT}")
     print(f"TEST_START                 = {TEST_START.date()}")
     print(f"TEST_END                   = {TEST_END.date()}")

@@ -13,7 +13,8 @@ data collection
   -> data-analysis/00~05
   -> ai-model/01_derived_features
   -> ai-model/02_spatial_grid_build
-  -> ai-model/03_prediction_model_design
+  -> ai-model/03_target_dataset_build
+  -> ai-model/04_prediction_model_training
 ```
 
 ## 폴더 역할
@@ -21,7 +22,7 @@ data collection
 | 폴더 | 역할 | 현재 상태 |
 |---|---|---|
 | `data-analysis/` | 전국 단위 유가 적정성 분석 | 00~05 산출물과 README 정리 완료 |
-| `ai-model/` | 주유소/시설/격자 기반 AI 모델 데이터와 학습 코드 | 01~02 산출물 구조 확정, 03 학습 진행 중 |
+| `ai-model/` | 주유소/시설/격자 기반 AI 모델 데이터와 학습 코드 | 01~02 격자 입력, 03 target dataset, 04 학습 코드 |
 | `page/` | GitHub Pages 대시보드와 자동화 | 이번 README 정리 대상 제외 |
 
 ## Data Analysis 요약
@@ -55,7 +56,8 @@ data collection
 |---|---|---|
 | 01 | `ai-model/01_derived_features` | 주유소 좌표/속성 이력, 시설 좌표, 공시지가 격자, 전국 500m land grid |
 | 02 | `ai-model/02_spatial_grid_build` | 최종 학습 입력 `ROOT_PATH/그리드/grid.parquet` |
-| 03 | `ai-model/03_prediction_model_design` | 격자별 spread 변동 예측 LSTM 학습 코드. 모델 학습 결과는 아직 작성 대상 아님 |
+| 03 | `ai-model/03_target_dataset_build` | `data-analysis/05`의 전국 적정가격을 격자 spread와 결합한 `grid_target.parquet` 생성 |
+| 04 | `ai-model/04_prediction_model_training` | `grid_target.parquet` 기반 격자별 적정가격 예측 LSTM 학습/test 코드 |
 
 AI 02 최종 노트북 출력 기준 `grid.parquet`는 63,800,291행, 12,338개 격자, 2008-04-15 ~ 2026-06-11 기간을 포함합니다. 이 파일은 대용량이라 레포에 포함하지 않고 Colab/Drive 또는 로컬 실행 환경에서 관리합니다.
 
@@ -84,7 +86,8 @@ data collection/z_pa_facility/final/facility_data.csv
 3. `data-analysis/01_data_preprocessing`부터 `05_policy_application`까지 순서대로 실행합니다.
 4. `ai-model/01_derived_features`로 주유소/시설/공시지가/격자 전처리 산출물을 만듭니다.
 5. `ai-model/02_spatial_grid_build`로 최종 `grid.parquet`을 만듭니다.
-6. `ai-model/03_prediction_model_design`에서 `grid.parquet` 기반 모델을 학습합니다.
+6. `ai-model/03_target_dataset_build`에서 `grid.parquet`과 `data-analysis/05` 산출물을 결합해 `grid_target.parquet`을 만듭니다.
+7. `ai-model/04_prediction_model_training`에서 `grid_target.parquet` 기반 모델을 학습합니다.
 
 ## 자세한 문서
 

@@ -5,6 +5,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.idea/
 .ipynb_checkpoints/
 ai-model/**/outputs/
+ai-model/03_prediction_model_design/
 

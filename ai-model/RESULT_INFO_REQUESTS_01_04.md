@@ -51,35 +51,55 @@ print(con.execute(f"DESCRIBE SELECT * FROM read_parquet('{path}')").df())
 con.close()
 ```
 
-## 03. Prediction Model Design
+## 03. Target Dataset Build
+
+target dataset 생성 후 아래 정보를 전달하면 README 결과 섹션을 갱신할 수 있습니다.
+
+| 확인할 내용 | 최소 정보 |
+|---|---|
+| 전국 적정가격 정리 | `outputs/national_fair_prices.parquet` rows, date min/max |
+| target dataset | `outputs/grid_target.parquet` file size, rows, unique grid count, date min/max |
+| target coverage | `target_dataset_summary.csv`의 gasoline/diesel target rows, 2026 rows |
+| 공식 확인 | `target_dataset_metadata.json`의 `target_formula` |
+
+03 단계의 현재 코드 기준 주요 산출물은 다음입니다.
+
+```text
+ai-model/03_target_dataset_build/outputs/national_fair_prices.parquet
+ai-model/03_target_dataset_build/outputs/grid_target.parquet
+ai-model/03_target_dataset_build/outputs/target_dataset_summary.csv
+ai-model/03_target_dataset_build/outputs/target_dataset_metadata.json
+```
+
+## 04. Prediction Model Training
 
 모델 학습 중간 또는 완료 후 아래 정보를 전달하면 README 결과 섹션을 갱신할 수 있습니다.
 
 | 확인할 내용 | 최소 정보 |
 |---|---|
-| 입력 grid | `GRID_PATH`, file size, rows, unique grid count, date min/max |
+| 입력 target dataset | `TARGET_DATASET_PATH`, file size, rows, unique grid count, date min/max |
 | train/validation split | `{fuel}_model_metadata.json`의 `train_validation_split` |
 | cache 사용 여부 | `[CACHE HIT]`, `[CACHE SAVE]`, `[CACHE MISS]` 로그 |
-| validation 성능 | `{fuel}_validation_scores.csv` 전체 또는 상위 row |
+| validation 성능 | `{fuel}_validation_scores.csv` 전체 또는 상위 row. `price_weighted_mae`는 적정가격 target 복원 오차 |
 | 학습 이력 | `{fuel}_training_history.csv` 마지막 5행, best epoch |
 | test 성능 | `{fuel}_test_metrics_2026.csv`의 `test_2026_all` row |
 | 2026 예측 row 수 | `{fuel}_test_predictions_2026.parquet` rows/date/grid 수 |
 | 일별/격자 요약 | `{fuel}_test_daily_summary_2026.csv`, `{fuel}_test_grid_summary_2026.csv` row 수와 주요 컬럼 |
 | 전체 실행 요약 | `model_run_summary.csv` |
 
-03 단계의 현재 코드 기준 주요 산출물은 다음입니다.
+04 단계의 현재 코드 기준 주요 산출물은 다음입니다.
 
 ```text
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_training_history.csv
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_validation_scores.csv
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_validation_predictions.parquet
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_model.pt
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_model_metadata.json
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.parquet
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_daily_summary_2026.csv
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_grid_summary_2026.csv
-ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_metrics_2026.csv
-ai-model/03_prediction_model_design/outputs/model_run_summary.csv
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_training_history.csv
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_validation_scores.csv
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_validation_predictions.parquet
+ai-model/04_prediction_model_training/outputs/{fuel}/model/{fuel}_grid_fair_price_delta_lstm.pt
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_model_metadata.json
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_test_predictions_2026.parquet
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_test_daily_summary_2026.csv
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_test_grid_summary_2026.csv
+ai-model/04_prediction_model_training/outputs/{fuel}/{fuel}_test_metrics_2026.csv
+ai-model/04_prediction_model_training/outputs/model_run_summary.csv
 ```
 
 `{fuel}`은 `gasoline` 또는 `diesel`입니다.
