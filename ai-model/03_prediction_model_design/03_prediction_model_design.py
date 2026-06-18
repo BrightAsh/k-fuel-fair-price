@@ -32,7 +32,7 @@ STAGE3_DIR = Path(__file__).resolve().parent
 GRID_PATH = REPO_ROOT / "ai-model" / "02_spatial_grid_build" / "outputs" / "grid.parquet"
 OUTPUT_ROOT = STAGE3_DIR / "outputs"
 INTERMEDIATE_DATA_DIR = OUTPUT_ROOT / "intermediate_data"
-CACHE_DATASET_VERSION = "stage03_price_delta_lstm_v1"
+CACHE_DATASET_VERSION = "stage03_price_delta_hybrid_lstm_v1"
 
 TEST_START = pd.Timestamp("2026-01-01")
 TEST_END = pd.Timestamp("2026-12-31")
@@ -50,7 +50,7 @@ SEQUENCE_REQUIRED_HISTORY_DAYS = SEQUENCE_LENGTH_DAYS + 1
 TARGET_COLUMN = "price_delta_target"
 PREDICTED_TARGET_COLUMN = "pred_price_delta"
 MODEL_TARGET_MODE = "price_delta"
-MODEL_NAME = "lstm_price_delta"
+MODEL_NAME = "hybrid_price_delta_lstm"
 
 TRAIN_SAMPLE_PER_MILLE = 200
 VALID_SAMPLE_PER_MILLE = 200
@@ -62,14 +62,14 @@ SEQUENCE_MAX_TRAIN_ROWS = 6_000_000
 SEQUENCE_MAX_VALID_ROWS = 2_500_000
 SEQUENCE_MAX_FINAL_ROWS = 8_000_000
 
-MODEL_EPOCHS = 100
+MODEL_EPOCHS = 20
 MODEL_BATCH_SIZE = 8192
 MODEL_LEARNING_RATE = 0.0025
 MODEL_WEIGHT_DECAY = 0.0001
 MODEL_GRAD_CLIP_NORM = 1.0
-EARLY_STOPPING_PATIENCE = 10
+EARLY_STOPPING_PATIENCE = 5
 EARLY_STOPPING_MIN_DELTA = 0.001
-LR_REDUCE_PATIENCE = 5
+LR_REDUCE_PATIENCE = 2
 LR_REDUCE_FACTOR = 0.5
 MIN_LEARNING_RATE = 0.00001
 FINAL_EXTRA_EPOCHS = 0
@@ -133,9 +133,33 @@ SEQUENCE_CHANNELS = {
     "spread_delta": [f"spread_delta_lag_{d}d" for d in range(SEQUENCE_LENGTH_DAYS, 0, -1)],
     "actual_price_delta": [f"actual_grid_price_delta_lag_{d}d" for d in range(SEQUENCE_LENGTH_DAYS, 0, -1)],
     "national_price_delta": [f"national_price_delta_lag_{d}d" for d in range(SEQUENCE_LENGTH_DAYS, 0, -1)],
-    "station_weight": [f"station_weight_lag_{d}d" for d in range(SEQUENCE_LENGTH_DAYS, 0, -1)],
 }
 MODEL_INPUT_COLUMNS = [col for cols in SEQUENCE_CHANNELS.values() for col in cols]
+LATEST_FEATURE_COLUMNS = ["actual_price_lag_1d", "national_price_lag_1d", "spread_lag_1d", "station_weight_lag_1d"]
+STATIC_FEATURE_BASE_COLUMNS = [
+    "cell_x",
+    "cell_y",
+    "center_lon",
+    "center_lat",
+    "station_count_total",
+    "gasoline_station_count",
+    "diesel_station_count",
+    "station_neighbor_influence",
+    "facility_count_total",
+    "facility_storage_count",
+    "facility_factory_count",
+    "facility_agency_count",
+    "storage_influence",
+    "agency_influence",
+    "factory_influence",
+    "is_sea",
+    "is_island",
+    "land_component_id",
+    "official_land_price",
+]
+STATIC_FEATURE_PREFIXES = ("brand_count__", "self_count__")
+STATIC_FEATURE_DERIVED_COLUMNS = ["official_price_age_days", "official_price_source_year"]
+STATIC_FEATURE_COLUMNS: List[str] = []
 OUTPUT_PANEL_COLUMNS = ["cell_x", "cell_y", "center_lon", "center_lat"]
 
 
@@ -279,7 +303,20 @@ def panel_sql() -> str:
 
 
 schema_df = con.execute(f"DESCRIBE SELECT * FROM {panel_sql()} LIMIT 0").df()
-ALL_COLUMNS = set(schema_df["column_name"].astype(str))
+ALL_COLUMN_LIST = schema_df["column_name"].astype(str).tolist()
+ALL_COLUMNS = set(ALL_COLUMN_LIST)
+STATIC_FEATURE_COLUMNS = [
+    col
+    for col in STATIC_FEATURE_BASE_COLUMNS
+    if col in ALL_COLUMNS
+]
+STATIC_FEATURE_COLUMNS.extend(
+    col
+    for col in ALL_COLUMN_LIST
+    if any(col.startswith(prefix) for prefix in STATIC_FEATURE_PREFIXES)
+)
+if "official_price_source_date" in ALL_COLUMNS:
+    STATIC_FEATURE_COLUMNS.extend(STATIC_FEATURE_DERIVED_COLUMNS)
 
 
 def policy_membership_condition(date_expr: str) -> str:
@@ -344,9 +381,34 @@ def history_sql_exprs() -> List[str]:
     return exprs
 
 
-def output_panel_exprs() -> List[str]:
+def static_feature_exprs() -> List[str]:
+    exprs: List[str] = []
+    for col in STATIC_FEATURE_COLUMNS:
+        if col == "official_price_age_days":
+            exprs.append(
+                "CASE WHEN p.official_price_source_date IS NULL THEN NULL ELSE "
+                "CAST(date_diff('day', CAST(p.official_price_source_date AS DATE), CAST(t.feature_date AS DATE)) AS DOUBLE) "
+                "END AS official_price_age_days"
+            )
+        elif col == "official_price_source_year":
+            exprs.append(
+                "CASE WHEN p.official_price_source_date IS NULL THEN NULL ELSE "
+                "CAST(year(CAST(p.official_price_source_date AS DATE)) AS DOUBLE) "
+                "END AS official_price_source_year"
+            )
+        elif col in ALL_COLUMNS:
+            exprs.append(f"CAST(p.{qid(col)} AS DOUBLE) AS {qid(col)}")
+        else:
+            exprs.append(f"NULL AS {qid(col)}")
+    return exprs
+
+
+def output_panel_exprs(exclude: Optional[set[str]] = None) -> List[str]:
+    exclude = exclude or set()
     exprs: List[str] = []
     for col in OUTPUT_PANEL_COLUMNS:
+        if col in exclude:
+            continue
         if col in ALL_COLUMNS:
             exprs.append(f"p.{qid(col)} AS {qid(col)}")
         else:
@@ -367,12 +429,14 @@ def selected_column_exprs() -> List[str]:
         "CAST(t.spread_lag_1d AS DOUBLE) AS spread_lag_1d",
         "CAST(t.actual_price_lag_1d AS DOUBLE) AS actual_price_lag_1d",
         "CAST(t.national_price_lag_1d AS DOUBLE) AS national_price_lag_1d",
+        "CAST(t.station_weight_lag_1d AS DOUBLE) AS station_weight_lag_1d",
         "CAST(t.sequence_hist_count AS DOUBLE) AS sequence_hist_count",
         "CAST(t.sequence_policy_days AS DOUBLE) AS sequence_policy_days",
         "CAST(t.sequence_calendar_span AS DOUBLE) AS sequence_calendar_span",
     ]
     exprs.extend([f"CAST(t.{qid(col)} AS DOUBLE) AS {qid(col)}" for col in MODEL_INPUT_COLUMNS])
-    exprs.extend(output_panel_exprs())
+    exprs.extend(static_feature_exprs())
+    exprs.extend(output_panel_exprs(exclude=set(STATIC_FEATURE_COLUMNS)))
     return exprs
 
 
@@ -401,6 +465,7 @@ def sequence_quality_conditions(exclude_history_policy: bool) -> List[str]:
         "t.spread_lag_1d IS NOT NULL",
         "t.actual_price_lag_1d IS NOT NULL",
         "t.national_price_lag_1d IS NOT NULL",
+        "t.station_weight_lag_1d IS NOT NULL",
     ]
     conds.extend([f"t.{qid(col)} IS NOT NULL" for col in MODEL_INPUT_COLUMNS])
     if exclude_history_policy:
@@ -560,6 +625,8 @@ def frame_cache_conditions(
         "model_target_mode": MODEL_TARGET_MODE,
         "model_input_columns": MODEL_INPUT_COLUMNS,
         "sequence_channels": SEQUENCE_CHANNELS,
+        "latest_feature_columns": LATEST_FEATURE_COLUMNS,
+        "static_feature_columns": STATIC_FEATURE_COLUMNS,
         "policy_exclude_ranges": normalized_policy_ranges(),
         "random_seed": RANDOM_SEED,
         "grid_file": grid_file_signature(),
@@ -630,6 +697,8 @@ def daily_counts_cache_conditions(cfg: FuelConfig) -> Dict[str, Any]:
         "sequence_required_history_days": SEQUENCE_REQUIRED_HISTORY_DAYS,
         "model_input_columns": MODEL_INPUT_COLUMNS,
         "sequence_channels": SEQUENCE_CHANNELS,
+        "latest_feature_columns": LATEST_FEATURE_COLUMNS,
+        "static_feature_columns": STATIC_FEATURE_COLUMNS,
         "policy_exclude_ranges": normalized_policy_ranges(),
         "grid_file": grid_file_signature(),
     }
@@ -753,17 +822,19 @@ def load_model_frame(
         "spread_lag_1d",
         "actual_price_lag_1d",
         "national_price_lag_1d",
+        "station_weight_lag_1d",
         "sequence_hist_count",
         "sequence_policy_days",
         "sequence_calendar_span",
         *MODEL_INPUT_COLUMNS,
+        *STATIC_FEATURE_COLUMNS,
         *[c for c in OUTPUT_PANEL_COLUMNS if c in df.columns],
     ]
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    required = [TARGET_COLUMN, "actual_price_lag_1d", "national_price_lag_1d", "spread_lag_1d", *MODEL_INPUT_COLUMNS]
+    required = [TARGET_COLUMN, *LATEST_FEATURE_COLUMNS, *MODEL_INPUT_COLUMNS]
     before = len(df)
     df = df.dropna(subset=[c for c in required if c in df.columns]).sort_values(["date", "grid_id"]).reset_index(drop=True)
     dropped = before - len(df)
@@ -858,19 +929,39 @@ def train_validation_split(cfg: FuelConfig) -> Dict[str, Any]:
 # =============================================================================
 
 
-class PriceDeltaLstm(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int = 128, num_layers: int = 2, dropout: float = 0.20):
+class PriceDeltaHybridLstm(nn.Module):
+    def __init__(
+        self,
+        sequence_input_size: int,
+        latest_input_size: int,
+        static_input_size: int,
+        hidden_size: int = 128,
+        num_layers: int = 2,
+        dropout: float = 0.20,
+    ):
         super().__init__()
         self.lstm = nn.LSTM(
-            input_size=input_size,
+            input_size=sequence_input_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             dropout=dropout if num_layers > 1 else 0.0,
             batch_first=True,
             bidirectional=True,
         )
+        self.latest_net = nn.Sequential(
+            nn.Linear(latest_input_size, 32),
+            nn.LayerNorm(32),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
+        self.static_net = nn.Sequential(
+            nn.Linear(static_input_size, 32),
+            nn.LayerNorm(32),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+        )
         self.head = nn.Sequential(
-            nn.Linear(hidden_size * 2, 128),
+            nn.Linear(hidden_size * 2 + 64, 128),
             nn.LayerNorm(128),
             nn.ReLU(),
             nn.Dropout(dropout),
@@ -879,18 +970,49 @@ class PriceDeltaLstm(nn.Module):
             nn.Linear(64, 1),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        _, (h_n, _) = self.lstm(x)
+    def forward(self, seq: torch.Tensor, latest: torch.Tensor, static: torch.Tensor) -> torch.Tensor:
+        _, (h_n, _) = self.lstm(seq)
         h = torch.cat([h_n[-2], h_n[-1]], dim=1)
-        return self.head(h).squeeze(1)
+        latest_h = self.latest_net(latest)
+        static_h = self.static_net(static)
+        return self.head(torch.cat([h, latest_h, static_h], dim=1)).squeeze(1)
+
+
+def matrix_stats(arr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    if arr.shape[1] == 0:
+        return np.zeros(0, dtype="float32"), np.ones(0, dtype="float32")
+    mean = np.zeros(arr.shape[1], dtype="float32")
+    std = np.ones(arr.shape[1], dtype="float32")
+    for idx in range(arr.shape[1]):
+        values = arr[:, idx]
+        values = values[np.isfinite(values)]
+        if len(values):
+            mean[idx] = float(values.mean())
+            col_std = float(values.std())
+            std[idx] = col_std if np.isfinite(col_std) and col_std > 1e-6 else 1.0
+    return mean, std
+
+
+def sequence_channel_stats(seq: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    mean = np.zeros(seq.shape[-1], dtype="float32")
+    std = np.ones(seq.shape[-1], dtype="float32")
+    for idx in range(seq.shape[-1]):
+        values = seq[:, :, idx].reshape(-1)
+        values = values[np.isfinite(values)]
+        if len(values):
+            mean[idx] = float(values.mean())
+            col_std = float(values.std())
+            std[idx] = col_std if np.isfinite(col_std) and col_std > 1e-6 else 1.0
+    return mean, std
 
 
 def fit_preprocess(df: pd.DataFrame) -> Dict[str, Any]:
     seq = raw_sequence_array(df)
-    seq_mean = np.nanmean(seq, axis=(0, 1)).astype("float32")
-    seq_std = np.nanstd(seq, axis=(0, 1)).astype("float32")
-    seq_std = np.where(np.isfinite(seq_std) & (seq_std > 1e-6), seq_std, 1.0).astype("float32")
-
+    seq_mean, seq_std = sequence_channel_stats(seq)
+    latest = raw_feature_array(df, LATEST_FEATURE_COLUMNS)
+    latest_mean, latest_std = matrix_stats(latest)
+    static = raw_feature_array(df, STATIC_FEATURE_COLUMNS)
+    static_mean, static_std = matrix_stats(static)
     y = pd.to_numeric(df[TARGET_COLUMN], errors="coerce").to_numpy(dtype="float32")
     y_mean = float(np.nanmean(y)) if np.isfinite(y).any() else 0.0
     y_std = float(np.nanstd(y)) if np.isfinite(y).any() else 1.0
@@ -902,6 +1024,12 @@ def fit_preprocess(df: pd.DataFrame) -> Dict[str, Any]:
         "sequence_channels": SEQUENCE_CHANNELS,
         "seq_mean": seq_mean.tolist(),
         "seq_std": seq_std.tolist(),
+        "latest_feature_columns": LATEST_FEATURE_COLUMNS,
+        "latest_mean": latest_mean.tolist(),
+        "latest_std": latest_std.tolist(),
+        "static_feature_columns": STATIC_FEATURE_COLUMNS,
+        "static_mean": static_mean.tolist(),
+        "static_std": static_std.tolist(),
         "y_mean": y_mean,
         "y_std": y_std,
     }
@@ -914,16 +1042,33 @@ def raw_sequence_array(df: pd.DataFrame) -> np.ndarray:
     return np.stack(channel_arrays, axis=-1)
 
 
+def raw_feature_array(df: pd.DataFrame, cols: List[str]) -> np.ndarray:
+    if not cols:
+        return np.zeros((len(df), 0), dtype="float32")
+    return df[cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype="float32")
+
+
+def normalized_feature_array(df: pd.DataFrame, prep: Dict[str, Any], key: str) -> np.ndarray:
+    cols = prep[f"{key}_feature_columns"]
+    arr = raw_feature_array(df, cols)
+    mean = np.asarray(prep[f"{key}_mean"], dtype="float32").reshape(1, -1)
+    std = np.asarray(prep[f"{key}_std"], dtype="float32").reshape(1, -1)
+    arr = ((arr - mean) / std).astype("float32")
+    return np.where(np.isfinite(arr), arr, 0.0).astype("float32")
+
+
 def sequence_arrays(
     df: pd.DataFrame,
     prep: Dict[str, Any],
     include_target: bool,
-) -> Tuple[np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Optional[np.ndarray], Optional[np.ndarray]]:
     seq = raw_sequence_array(df)
     mean = np.asarray(prep["seq_mean"], dtype="float32").reshape(1, 1, -1)
     std = np.asarray(prep["seq_std"], dtype="float32").reshape(1, 1, -1)
     seq = ((seq - mean) / std).astype("float32")
     seq = np.where(np.isfinite(seq), seq, 0.0).astype("float32")
+    latest = normalized_feature_array(df, prep, "latest")
+    static = normalized_feature_array(df, prep, "static")
 
     y_arr: Optional[np.ndarray] = None
     w_arr: Optional[np.ndarray] = None
@@ -933,7 +1078,7 @@ def sequence_arrays(
         w = pd.to_numeric(df["station_weight"], errors="coerce").fillna(0).clip(lower=0).to_numpy(dtype="float32")
         w_mean = float(np.nanmean(w[w > 0])) if np.any(w > 0) else 1.0
         w_arr = np.where(np.isfinite(w) & (w > 0), w / w_mean, 0.0).astype("float32")
-    return seq, y_arr, w_arr
+    return seq, latest, static, y_arr, w_arr
 
 
 def make_loader(
@@ -943,25 +1088,25 @@ def make_loader(
     shuffle: bool,
     include_target: bool,
 ) -> DataLoader:
-    seq, y, w = sequence_arrays(df, prep, include_target=include_target)
+    seq, latest, static, y, w = sequence_arrays(df, prep, include_target=include_target)
     if include_target:
         assert y is not None and w is not None
-        ds = TensorDataset(torch.from_numpy(seq), torch.from_numpy(y), torch.from_numpy(w))
+        ds = TensorDataset(torch.from_numpy(seq), torch.from_numpy(latest), torch.from_numpy(static), torch.from_numpy(y), torch.from_numpy(w))
     else:
-        ds = TensorDataset(torch.from_numpy(seq))
+        ds = TensorDataset(torch.from_numpy(seq), torch.from_numpy(latest), torch.from_numpy(static))
     return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=0, pin_memory=USE_CUDA)
 
 
 def predict_delta(wrapper: Dict[str, Any], df: pd.DataFrame) -> np.ndarray:
-    model: PriceDeltaLstm = wrapper["model"]
+    model: PriceDeltaHybridLstm = wrapper["model"]
     prep = wrapper["preprocess"]
     loader = make_loader(df, prep, MODEL_BATCH_SIZE, shuffle=False, include_target=False)
 
     preds: List[np.ndarray] = []
     model.eval()
     with torch.no_grad():
-        for (xb,) in loader:
-            raw = model(xb.to(DEVICE)).detach().cpu().numpy()
+        for xb, latestb, staticb in loader:
+            raw = model(xb.to(DEVICE), latestb.to(DEVICE), staticb.to(DEVICE)).detach().cpu().numpy()
             preds.append(raw)
     scaled = np.concatenate(preds) if preds else np.array([], dtype="float32")
     return scaled * float(prep["y_std"]) + float(prep["y_mean"])
@@ -1010,7 +1155,7 @@ def save_best_checkpoint(
     payload = {
         "created_at": pd.Timestamp.now().isoformat(),
         "model_name": MODEL_NAME,
-        "model_class": "PriceDeltaLstm",
+        "model_class": "PriceDeltaHybridLstm",
         "model_state_dict": model_state,
         "preprocess": prep,
         "fuel_config": asdict(cfg),
@@ -1021,7 +1166,9 @@ def save_best_checkpoint(
         "train_rows": int(train_rows),
         "valid_rows": int(valid_rows),
         "model_config": {
-            "input_size": len(SEQUENCE_CHANNELS),
+            "sequence_input_size": len(SEQUENCE_CHANNELS),
+            "latest_input_size": len(LATEST_FEATURE_COLUMNS),
+            "static_input_size": len(STATIC_FEATURE_COLUMNS),
             "hidden_size": 128,
             "num_layers": 2,
             "dropout": 0.20,
@@ -1030,6 +1177,8 @@ def save_best_checkpoint(
             "predicted_target_column": PREDICTED_TARGET_COLUMN,
             "target_mode": MODEL_TARGET_MODE,
             "sequence_channels": SEQUENCE_CHANNELS,
+            "latest_feature_columns": LATEST_FEATURE_COLUMNS,
+            "static_feature_columns": STATIC_FEATURE_COLUMNS,
         },
         "training_config": {
             "model_epochs": MODEL_EPOCHS,
@@ -1098,7 +1247,11 @@ def train_with_validation(
     valid_model_df = sample_frame(valid_df, SEQUENCE_MAX_VALID_ROWS, f"{cfg.fuel}_valid_model")
     prep = fit_preprocess(train_model_df)
 
-    model = PriceDeltaLstm(input_size=len(SEQUENCE_CHANNELS)).to(DEVICE)
+    model = PriceDeltaHybridLstm(
+        sequence_input_size=len(SEQUENCE_CHANNELS),
+        latest_input_size=len(LATEST_FEATURE_COLUMNS),
+        static_input_size=len(STATIC_FEATURE_COLUMNS),
+    ).to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=MODEL_LEARNING_RATE, weight_decay=MODEL_WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -1111,7 +1264,8 @@ def train_with_validation(
 
     print(
         f"[MODEL] {cfg.label}: train_rows={len(train_model_df):,}, valid_rows={len(valid_model_df):,}, "
-        f"device={DEVICE}, seq_len={SEQUENCE_LENGTH_DAYS}, channels={len(SEQUENCE_CHANNELS)}, "
+        f"device={DEVICE}, seq_len={SEQUENCE_LENGTH_DAYS}, seq_channels={len(SEQUENCE_CHANNELS)}, "
+        f"latest_features={len(LATEST_FEATURE_COLUMNS)}, static_features={len(STATIC_FEATURE_COLUMNS)}, "
         f"epochs={MODEL_EPOCHS}, batch={MODEL_BATCH_SIZE}"
     )
 
@@ -1131,13 +1285,15 @@ def train_with_validation(
         train_loss_sum = 0.0
         train_weight_sum = 0.0
 
-        for xb, yb, wb in loader:
+        for xb, latestb, staticb, yb, wb in loader:
             xb = xb.to(DEVICE)
+            latestb = latestb.to(DEVICE)
+            staticb = staticb.to(DEVICE)
             yb = yb.to(DEVICE)
             wb = wb.to(DEVICE).clip(min=0)
 
             optimizer.zero_grad(set_to_none=True)
-            pred = model(xb)
+            pred = model(xb, latestb, staticb)
             loss_vec = F.smooth_l1_loss(pred, yb, reduction="none")
             denom = wb.sum().clamp(min=1.0)
             loss = (loss_vec * wb).sum() / denom
@@ -1238,7 +1394,11 @@ def train_with_validation(
 def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, model_path: Path) -> Dict[str, Any]:
     final_model_df = sample_frame(final_df, SEQUENCE_MAX_FINAL_ROWS, f"{cfg.fuel}_final_model")
     prep = fit_preprocess(final_model_df)
-    model = PriceDeltaLstm(input_size=len(SEQUENCE_CHANNELS)).to(DEVICE)
+    model = PriceDeltaHybridLstm(
+        sequence_input_size=len(SEQUENCE_CHANNELS),
+        latest_input_size=len(LATEST_FEATURE_COLUMNS),
+        static_input_size=len(STATIC_FEATURE_COLUMNS),
+    ).to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=MODEL_LEARNING_RATE, weight_decay=MODEL_WEIGHT_DECAY)
     loader = make_loader(final_model_df, prep, MODEL_BATCH_SIZE, shuffle=True, include_target=True)
 
@@ -1253,13 +1413,15 @@ def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, mode
         model.train()
         train_loss_sum = 0.0
         train_weight_sum = 0.0
-        for xb, yb, wb in loader:
+        for xb, latestb, staticb, yb, wb in loader:
             xb = xb.to(DEVICE)
+            latestb = latestb.to(DEVICE)
+            staticb = staticb.to(DEVICE)
             yb = yb.to(DEVICE)
             wb = wb.to(DEVICE).clip(min=0)
 
             optimizer.zero_grad(set_to_none=True)
-            pred = model(xb)
+            pred = model(xb, latestb, staticb)
             loss_vec = F.smooth_l1_loss(pred, yb, reduction="none")
             denom = wb.sum().clamp(min=1.0)
             loss = (loss_vec * wb).sum() / denom
@@ -1281,13 +1443,18 @@ def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, mode
     torch.save(
         {
             "model_state_dict": model.state_dict(),
-            "model_class": "PriceDeltaLstm",
+            "model_class": "PriceDeltaHybridLstm",
             "model_config": {
-                "input_size": len(SEQUENCE_CHANNELS),
+                "sequence_input_size": len(SEQUENCE_CHANNELS),
+                "latest_input_size": len(LATEST_FEATURE_COLUMNS),
+                "static_input_size": len(STATIC_FEATURE_COLUMNS),
                 "sequence_length_days": SEQUENCE_LENGTH_DAYS,
                 "target_column": TARGET_COLUMN,
                 "predicted_target_column": PREDICTED_TARGET_COLUMN,
                 "target_mode": MODEL_TARGET_MODE,
+                "sequence_channels": SEQUENCE_CHANNELS,
+                "latest_feature_columns": LATEST_FEATURE_COLUMNS,
+                "static_feature_columns": STATIC_FEATURE_COLUMNS,
             },
             "preprocess": prep,
             "fuel_config": asdict(cfg),
@@ -1706,6 +1873,8 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         "sequence_length_days": SEQUENCE_LENGTH_DAYS,
         "sequence_required_history_days": SEQUENCE_REQUIRED_HISTORY_DAYS,
         "sequence_channels": SEQUENCE_CHANNELS,
+        "latest_feature_columns": LATEST_FEATURE_COLUMNS,
+        "static_feature_columns": STATIC_FEATURE_COLUMNS,
         "device": str(DEVICE),
         "model_epochs": MODEL_EPOCHS,
         "best_epoch": best_epoch,
@@ -1765,7 +1934,9 @@ def main() -> None:
     print(f"TARGET_COLUMN              = {TARGET_COLUMN}")
     print(f"RUN_FUELS                  = {', '.join(RUN_FUELS)}")
     print(f"DEVICE                     = {DEVICE}")
-    print(f"MODEL_INPUT_CHANNELS       = {list(SEQUENCE_CHANNELS.keys())}")
+    print(f"SEQUENCE_CHANNELS          = {list(SEQUENCE_CHANNELS.keys())}")
+    print(f"LATEST_FEATURE_COLUMNS     = {LATEST_FEATURE_COLUMNS}")
+    print(f"STATIC_FEATURE_COLUMNS     = {STATIC_FEATURE_COLUMNS}")
     print(f"TRAIN/VALID SAMPLE         = {TRAIN_SAMPLE_PER_MILLE}/1000, {VALID_SAMPLE_PER_MILLE}/1000")
     print(f"MAX TRAIN/VALID ROWS       = {MAX_TRAIN_ROWS_PER_FUEL:,}, {MAX_VALID_ROWS_PER_FUEL:,}")
     print(f"MAX FINAL TRAIN ROWS       = {MAX_FINAL_TRAIN_ROWS_PER_FUEL:,}")
