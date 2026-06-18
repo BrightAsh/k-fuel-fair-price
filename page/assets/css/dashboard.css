@@ -81,13 +81,14 @@ button {
   place-items: center;
   width: 62px;
   height: 62px;
-  border-radius: 8px;
-  background: var(--navy);
+  border: 1px solid rgba(16, 35, 55, 0.12);
+  border-radius: 12px;
+  background: #fff;
   color: #fff;
   font-size: 14px;
   font-weight: 900;
   letter-spacing: 0;
-  box-shadow: 0 16px 34px rgba(16, 35, 55, 0.24);
+  box-shadow: 0 14px 30px rgba(16, 35, 55, 0.16);
   overflow: hidden;
 }
 
