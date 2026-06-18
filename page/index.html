@@ -55,6 +55,8 @@
           <button class="top-tab" type="button" data-panel="regions">지역</button>
           <button class="top-tab" type="button" data-panel="policy">정책</button>
           <button class="top-tab" type="button" data-panel="search">검색</button>
+          <button class="top-tab" type="button" data-panel="nearby">주변</button>
+          <button id="region-detail-tab" class="top-tab region-detail-tab" type="button" data-panel="region-detail">선택지역</button>
         </nav>
 
         <div class="freshness" aria-live="polite">
@@ -89,15 +91,14 @@
                 <span id="region-count">-</span>
               </div>
 
-              <div class="map-legend" aria-label="색상 범례">
-                <span><i class="legend-chip fair"></i>적정권</span>
-                <span><i class="legend-chip high"></i>비쌈</span>
-                <span><i class="legend-chip low"></i>저렴</span>
+              <div class="map-legend" aria-label="지도 범례">
+                <span><i class="legend-chip province"></i>시도 고정색</span>
+                <span><i class="legend-chip connector"></i>가격 연결선</span>
+                <span><i class="legend-chip selected"></i>선택 지역</span>
               </div>
 
               <div class="korea-map-wrap">
-                <svg id="korea-map" viewBox="0 0 720 780" role="img" aria-label="대한민국 시도별 유가 지도"></svg>
-                <div id="map-label-layer" class="map-label-layer"></div>
+                <svg id="korea-map" viewBox="0 0 1040 1180" role="img" aria-label="대한민국 시도별 유가 지도"></svg>
               </div>
 
               <p class="map-source">
@@ -141,6 +142,58 @@
                 </div>
                 <div id="policy-list" class="policy-list"></div>
               </article>
+            </aside>
+          </div>
+        </section>
+
+        <section id="panel-region-detail" class="dashboard-panel">
+          <div class="region-detail-grid">
+            <article class="data-card region-map-card">
+              <div class="section-heading">
+                <div>
+                  <p>Selected region</p>
+                  <h2 id="region-detail-title">선택 지역</h2>
+                </div>
+                <span id="region-detail-date">-</span>
+              </div>
+
+              <div class="region-detail-summary">
+                <div>
+                  <span>실제 가격</span>
+                  <strong id="region-detail-actual">-</strong>
+                </div>
+                <div>
+                  <span>적정 가격</span>
+                  <strong id="region-detail-fair">-</strong>
+                </div>
+                <div>
+                  <span>차이</span>
+                  <strong id="region-detail-gap">-</strong>
+                </div>
+                <div>
+                  <span>판정</span>
+                  <strong id="region-detail-judge">-</strong>
+                </div>
+              </div>
+
+              <div class="region-map-wrap">
+                <svg id="region-detail-map" viewBox="0 0 620 720" role="img" aria-label="선택 시도 지도"></svg>
+              </div>
+            </article>
+
+            <aside class="data-card region-station-card">
+              <div class="section-heading">
+                <div>
+                  <p>Station lookup</p>
+                  <h2 id="region-station-title">지역 주유소</h2>
+                </div>
+                <span id="region-station-count">-</span>
+              </div>
+              <label class="local-search">
+                <span>주유소 검색</span>
+                <input id="region-station-search" type="search" placeholder="주유소명, 브랜드, 주소" autocomplete="off" />
+              </label>
+              <div id="region-station-results" class="station-results region-station-results"></div>
             </aside>
           </div>
         </section>
@@ -193,6 +246,32 @@
               <span id="search-count">검색어를 입력하세요</span>
             </div>
             <div id="station-results" class="station-results"></div>
+          </article>
+        </section>
+
+        <section id="panel-nearby" class="dashboard-panel">
+          <article class="data-card">
+            <div class="section-heading">
+              <div>
+                <p>Nearby stations</p>
+                <h2>내 주변 주유소</h2>
+              </div>
+              <span id="nearby-count">위치 확인 전</span>
+            </div>
+            <div class="nearby-toolbar">
+              <button id="use-location" class="primary-action" type="button">내 위치 사용</button>
+              <label>
+                <span>반경</span>
+                <select id="nearby-radius">
+                  <option value="3">3 km</option>
+                  <option value="5" selected>5 km</option>
+                  <option value="10">10 km</option>
+                  <option value="20">20 km</option>
+                </select>
+              </label>
+              <strong id="location-status">위치 동의 후 표시</strong>
+            </div>
+            <div id="nearby-results" class="station-results nearby-results"></div>
           </article>
         </section>
       </main>
