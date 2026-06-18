@@ -189,9 +189,8 @@ h2 {
 }
 
 .toolbar {
-  display: grid;
-  grid-template-columns: auto minmax(300px, 460px);
-  justify-content: space-between;
+  display: flex;
+  justify-content: flex-end;
   align-items: center;
   gap: 14px;
 }
@@ -305,48 +304,31 @@ h2 {
   margin-bottom: 12px;
 }
 
-.map-legend {
+.map-card-header {
   position: relative;
   z-index: 1;
   display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-  margin-bottom: 8px;
-}
-
-.map-legend span {
-  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-height: 28px;
-  padding: 0 10px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.map-card-header h2 {
+  font-size: 21px;
+}
+
+.map-card-header p {
+  margin: 7px 0 0;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
-.legend-chip {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-}
-
-.legend-chip.province {
-  background: #5b8def;
-}
-
-.legend-chip.connector {
-  width: 18px;
-  height: 2px;
-  border-radius: 999px;
-  background: #7f8da0;
-}
-
-.legend-chip.selected {
-  background: var(--navy);
+.map-fuel-switch {
+  flex: 0 0 auto;
+  box-shadow: none;
 }
 
 .korea-map-wrap {
@@ -472,14 +454,6 @@ h2 {
   font-size: 11px;
   font-weight: 900;
   line-height: 1.2;
-}
-
-.map-source {
-  position: relative;
-  z-index: 1;
-  margin: 10px 2px 0;
-  color: var(--muted);
-  font-size: 11px;
 }
 
 .insight-rail {
@@ -906,7 +880,6 @@ tbody tr.is-selected td {
 @media (max-width: 1180px) {
   .topbar,
   .primary-grid,
-  .toolbar,
   .region-detail-grid {
     grid-template-columns: 1fr;
   }
@@ -945,6 +918,23 @@ tbody tr.is-selected td {
   .top-tabs {
     overflow-x: auto;
     justify-content: flex-start;
+  }
+
+  .toolbar {
+    justify-content: stretch;
+  }
+
+  .global-search {
+    width: 100%;
+  }
+
+  .map-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .map-fuel-switch {
+    width: 100%;
   }
 
   .map-card {

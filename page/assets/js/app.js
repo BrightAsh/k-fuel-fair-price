@@ -7,7 +7,7 @@ const state = {
   regions: [],
   stations: [],
   geojson: null,
-  selectedRegion: "서울",
+  selectedRegion: null,
   regionDetailEnabled: false,
   userLocation: null,
   locationError: "",
@@ -207,6 +207,12 @@ function signedWon(value) {
   return `${sign}${numeric.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}원/L`;
 }
 
+function koreanDate(value) {
+  const date = new Date(`${value || ""}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "오늘";
+  return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
+}
+
 function gapToneClass(gap) {
   const numeric = Number(gap);
   if (numeric > 0) return "gap-high";
@@ -325,6 +331,14 @@ function renderNational() {
   chip.className = `judge-chip ${klass}`;
 }
 
+function renderMapHeader() {
+  const data = state.national || FALLBACK_NATIONAL;
+  const fuel = activeFuel();
+  const fuelLabel = fuel.label || (state.fuel === "gasoline" ? "휘발유" : "경유");
+  const dateLabel = koreanDate(data.as_of_date);
+  document.getElementById("map-today-copy").textContent = `오늘(${dateLabel})의 ${fuelLabel} 가격을 한눈에 확인하세요`;
+}
+
 function renderPolicies() {
   const policies = activePolicies();
   const policyMarkup = policies.map((policy) => `
@@ -354,7 +368,6 @@ function renderRegions() {
     .map((row) => ({ ...row, metric: metricFor(row) }))
     .sort((a, b) => Math.abs(Number(b.metric.gap_policy || 0)) - Math.abs(Number(a.metric.gap_policy || 0)));
 
-  document.getElementById("region-count").textContent = `${rows.length}개 시도`;
   document.getElementById("region-table").innerHTML = sorted.map((row) => {
     const metric = row.metric;
     const klass = judgeClass(metric.judge_policy, metric.gap_policy);
@@ -582,11 +595,16 @@ function renderRegionDetailMap() {
 function updateRegionDetailTab() {
   const tab = document.getElementById("region-detail-tab");
   if (!tab) return;
-  tab.textContent = state.selectedRegion;
-  tab.classList.toggle("has-region", state.regionDetailEnabled);
+  tab.textContent = state.selectedRegion || "선택지역";
+  tab.classList.toggle("has-region", Boolean(state.regionDetailEnabled && state.selectedRegion));
 }
 
 function renderRegionDetail() {
+  if (!state.selectedRegion) {
+    updateRegionDetailTab();
+    return;
+  }
+
   const row = rowForRegion(state.selectedRegion);
   const metric = metricFor(row);
   const klass = judgeClass(metric.judge_policy, metric.gap_policy);
@@ -736,6 +754,22 @@ function activatePanel(name) {
   });
 }
 
+function clearRegionSelection(updateUrl = true) {
+  state.selectedRegion = null;
+  state.regionDetailEnabled = false;
+
+  const regionSearch = document.getElementById("region-station-search");
+  if (regionSearch) regionSearch.value = "";
+
+  updateRegionDetailTab();
+  renderRegions();
+  renderMap();
+
+  if (updateUrl && location.hash.startsWith("#region=")) {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  }
+}
+
 function openRegionDetail(region, updateUrl = true) {
   if (!region) return;
   state.selectedRegion = canonicalRegionName(region);
@@ -764,6 +798,7 @@ function parseRegionHash() {
 function render() {
   renderStatus();
   renderNational();
+  renderMapHeader();
   renderPolicies();
   renderRegions();
   renderMap();
@@ -803,7 +838,11 @@ async function boot() {
 
   document.querySelectorAll(".top-tab").forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.panel === "region-detail") state.regionDetailEnabled = true;
+      if (button.dataset.panel === "map") {
+        clearRegionSelection();
+      } else if (button.dataset.panel === "region-detail") {
+        state.regionDetailEnabled = Boolean(state.selectedRegion);
+      }
       updateRegionDetailTab();
       activatePanel(button.dataset.panel);
     });
@@ -820,7 +859,12 @@ async function boot() {
 
   window.addEventListener("popstate", () => {
     const region = parseRegionHash();
-    if (region && REGION_ORDER.includes(region)) openRegionDetail(region, false);
+    if (region && REGION_ORDER.includes(region)) {
+      openRegionDetail(region, false);
+    } else {
+      clearRegionSelection(false);
+      activatePanel("map");
+    }
   });
 
   render();

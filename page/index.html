@@ -70,10 +70,6 @@
 
       <main class="dashboard">
         <section class="toolbar" aria-label="조회 조건">
-          <div class="segmented-control">
-            <button class="fuel-button is-active" type="button" data-fuel="gasoline">휘발유</button>
-            <button class="fuel-button" type="button" data-fuel="diesel">경유</button>
-          </div>
           <label class="global-search">
             <span>주유소 검색</span>
             <input id="station-search" type="search" placeholder="지역, 주소, 주유소명" autocomplete="off" />
@@ -83,27 +79,20 @@
         <section id="panel-map" class="dashboard-panel is-visible">
           <div class="primary-grid">
             <article class="map-card">
-              <div class="section-heading">
+              <div class="map-card-header">
                 <div>
-                  <p>Regional price position</p>
                   <h2>지역별 실제가격 vs 적정가격</h2>
+                  <p id="map-today-copy">오늘의 기름 가격을 확인하는 중입니다</p>
                 </div>
-                <span id="region-count">-</span>
-              </div>
-
-              <div class="map-legend" aria-label="지도 범례">
-                <span><i class="legend-chip province"></i>시도 고정색</span>
-                <span><i class="legend-chip connector"></i>가격 연결선</span>
-                <span><i class="legend-chip selected"></i>선택 지역</span>
+                <div class="segmented-control map-fuel-switch" aria-label="유종 선택">
+                  <button class="fuel-button is-active" type="button" data-fuel="gasoline">휘발유</button>
+                  <button class="fuel-button" type="button" data-fuel="diesel">경유</button>
+                </div>
               </div>
 
               <div class="korea-map-wrap">
                 <svg id="korea-map" viewBox="0 0 1040 900" role="img" aria-label="대한민국 시도별 유가 지도"></svg>
               </div>
-
-              <p class="map-source">
-                Map boundary: southkorea/southkorea-maps KOSTAT 2013 GeoJSON.
-              </p>
             </article>
 
             <aside class="insight-rail">
@@ -152,7 +141,7 @@
               <div class="section-heading">
                 <div>
                   <p>Selected region</p>
-                  <h2 id="region-detail-title">선택 지역</h2>
+                  <h2 id="region-detail-title">지역 상세</h2>
                 </div>
                 <span id="region-detail-date">-</span>
               </div>
