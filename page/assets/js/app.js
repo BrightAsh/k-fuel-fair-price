@@ -63,28 +63,28 @@ const REGION_COLORS = {
 const MAP_SIZE = { width: 1040, height: 900 };
 const MAP_BOUNDS = { x: 214, y: 58, width: 612, height: 780 };
 const DETAIL_MAP_SIZE = { width: 620, height: 720 };
-const CALLOUT_W = 178;
-const CALLOUT_H = 56;
+const CALLOUT_W = 228;
+const CALLOUT_H = 76;
 const KOREA_LAT_SCALE = 1.0;
 
 const CALLOUT_POSITIONS = {
-  서울: { side: "left", x: 24, y: 48 },
-  인천: { side: "left", x: 24, y: 118 },
-  경기: { side: "left", x: 24, y: 188 },
-  충남: { side: "left", x: 24, y: 258 },
-  세종: { side: "left", x: 24, y: 328 },
-  전북: { side: "left", x: 24, y: 398 },
-  광주: { side: "left", x: 24, y: 468 },
-  전남: { side: "left", x: 24, y: 538 },
-  제주: { side: "left", x: 24, y: 786 },
-  강원: { side: "right", x: 838, y: 72 },
-  충북: { side: "right", x: 838, y: 184 },
-  대전: { side: "right", x: 838, y: 296 },
-  경북: { side: "right", x: 838, y: 408 },
-  대구: { side: "right", x: 838, y: 520 },
-  울산: { side: "right", x: 838, y: 632 },
-  부산: { side: "right", x: 838, y: 702 },
-  경남: { side: "right", x: 838, y: 772 },
+  서울: { side: "left", x: 20, y: 38 },
+  인천: { side: "left", x: 20, y: 122 },
+  경기: { side: "left", x: 20, y: 206 },
+  충남: { side: "left", x: 20, y: 290 },
+  세종: { side: "left", x: 20, y: 374 },
+  전북: { side: "left", x: 20, y: 458 },
+  광주: { side: "left", x: 20, y: 542 },
+  전남: { side: "left", x: 20, y: 626 },
+  제주: { side: "left", x: 20, y: 786 },
+  강원: { side: "right", x: 792, y: 54 },
+  충북: { side: "right", x: 792, y: 158 },
+  대전: { side: "right", x: 792, y: 262 },
+  경북: { side: "right", x: 792, y: 366 },
+  대구: { side: "right", x: 792, y: 470 },
+  울산: { side: "right", x: 792, y: 574 },
+  부산: { side: "right", x: 792, y: 678 },
+  경남: { side: "right", x: 792, y: 782 },
 };
 
 const FALLBACK_NATIONAL = {
