@@ -68,6 +68,24 @@ const DETAIL_MAP_SIZE = { width: 620, height: 720 };
 const CALLOUT_W = 228;
 const CALLOUT_H = 76;
 const KOREA_LAT_SCALE = 1.0;
+const USE_FIXED_SAMPLE_PRICES = true;
+const SAMPLE_ACTUAL_PRICE = 1500;
+const SAMPLE_FAIR_PRICE = 1400;
+const SAMPLE_BAND_LOW = 1380;
+const SAMPLE_BAND_HIGH = 1420;
+const SAMPLE_GAP_PRICE = SAMPLE_ACTUAL_PRICE - SAMPLE_FAIR_PRICE;
+
+function sampleMetric(extra = {}) {
+  return {
+    actual_price: SAMPLE_ACTUAL_PRICE,
+    fair_price_policy: SAMPLE_FAIR_PRICE,
+    band_low_policy: SAMPLE_BAND_LOW,
+    band_high_policy: SAMPLE_BAND_HIGH,
+    gap_policy: SAMPLE_GAP_PRICE,
+    judge_policy: "비쌈",
+    ...extra,
+  };
+}
 
 const TRAINING_COVERAGE_FALLBACK = {
   schema_version: "training_data_coverage_v1",
@@ -149,25 +167,11 @@ const FALLBACK_NATIONAL = {
   fuels: {
     gasoline: {
       label: "휘발유",
-      actual_price: 2009.98,
-      fair_price_policy: 1886.91,
-      band_low_policy: 1873.12,
-      band_high_policy: 1901.02,
-      gap_policy: 123.07,
-      judge_policy: "비쌈",
-      policy_effect: 123.07,
-      actual_delta_1d: 1.2,
+      ...sampleMetric({ policy_effect: 0, actual_delta_1d: 0 }),
     },
     diesel: {
       label: "경유",
-      actual_price: 2004.82,
-      fair_price_policy: 1859.41,
-      band_low_policy: 1845.22,
-      band_high_policy: 1874.11,
-      gap_policy: 145.41,
-      judge_policy: "비쌈",
-      policy_effect: 145.41,
-      actual_delta_1d: 0.8,
+      ...sampleMetric({ policy_effect: 0, actual_delta_1d: 0 }),
     },
   },
   policies: [
@@ -175,8 +179,8 @@ const FALLBACK_NATIONAL = {
       title: "유류세 인하 반영",
       status: "정책 효과 반영",
       period: "분석 산출물 기준",
-      gasoline_effect: 123.07,
-      diesel_effect: 145.41,
+      gasoline_effect: 0,
+      diesel_effect: 0,
       note: "전국 적정가격 산식에 반영된 정책효과입니다.",
     },
     {
@@ -190,38 +194,29 @@ const FALLBACK_NATIONAL = {
   ],
 };
 
-const FALLBACK_REGIONS = [
-  { region: "서울", gasoline: { actual_price: 2078, fair_price_policy: 1934, gap_policy: 144, judge_policy: "비쌈" }, diesel: { actual_price: 2059, fair_price_policy: 1906, gap_policy: 153, judge_policy: "비쌈" } },
-  { region: "부산", gasoline: { actual_price: 1988, fair_price_policy: 1880, gap_policy: 108, judge_policy: "비쌈" }, diesel: { actual_price: 1985, fair_price_policy: 1850, gap_policy: 135, judge_policy: "비쌈" } },
-  { region: "대구", gasoline: { actual_price: 1994, fair_price_policy: 1878, gap_policy: 116, judge_policy: "비쌈" }, diesel: { actual_price: 1987, fair_price_policy: 1848, gap_policy: 139, judge_policy: "비쌈" } },
-  { region: "인천", gasoline: { actual_price: 2018, fair_price_policy: 1888, gap_policy: 130, judge_policy: "비쌈" }, diesel: { actual_price: 2002, fair_price_policy: 1860, gap_policy: 142, judge_policy: "비쌈" } },
-  { region: "광주", gasoline: { actual_price: 1972, fair_price_policy: 1874, gap_policy: 98, judge_policy: "비쌈" }, diesel: { actual_price: 1964, fair_price_policy: 1844, gap_policy: 120, judge_policy: "비쌈" } },
-  { region: "대전", gasoline: { actual_price: 1986, fair_price_policy: 1879, gap_policy: 107, judge_policy: "비쌈" }, diesel: { actual_price: 1977, fair_price_policy: 1850, gap_policy: 127, judge_policy: "비쌈" } },
-  { region: "울산", gasoline: { actual_price: 1990, fair_price_policy: 1882, gap_policy: 108, judge_policy: "비쌈" }, diesel: { actual_price: 1976, fair_price_policy: 1852, gap_policy: 124, judge_policy: "비쌈" } },
-  { region: "세종", gasoline: { actual_price: 2001, fair_price_policy: 1881, gap_policy: 120, judge_policy: "비쌈" }, diesel: { actual_price: 1988, fair_price_policy: 1853, gap_policy: 135, judge_policy: "비쌈" } },
-  { region: "경기", gasoline: { actual_price: 2010, fair_price_policy: 1886, gap_policy: 124, judge_policy: "비쌈" }, diesel: { actual_price: 2006, fair_price_policy: 1857, gap_policy: 149, judge_policy: "비쌈" } },
-  { region: "강원", gasoline: { actual_price: 2006, fair_price_policy: 1890, gap_policy: 116, judge_policy: "비쌈" }, diesel: { actual_price: 1992, fair_price_policy: 1860, gap_policy: 132, judge_policy: "비쌈" } },
-  { region: "충북", gasoline: { actual_price: 1981, fair_price_policy: 1877, gap_policy: 104, judge_policy: "비쌈" }, diesel: { actual_price: 1972, fair_price_policy: 1848, gap_policy: 124, judge_policy: "비쌈" } },
-  { region: "충남", gasoline: { actual_price: 1996, fair_price_policy: 1883, gap_policy: 113, judge_policy: "비쌈" }, diesel: { actual_price: 1984, fair_price_policy: 1852, gap_policy: 132, judge_policy: "비쌈" } },
-  { region: "전북", gasoline: { actual_price: 1968, fair_price_policy: 1872, gap_policy: 96, judge_policy: "비쌈" }, diesel: { actual_price: 1956, fair_price_policy: 1843, gap_policy: 113, judge_policy: "비쌈" } },
-  { region: "전남", gasoline: { actual_price: 1975, fair_price_policy: 1876, gap_policy: 99, judge_policy: "비쌈" }, diesel: { actual_price: 1961, fair_price_policy: 1846, gap_policy: 115, judge_policy: "비쌈" } },
-  { region: "경북", gasoline: { actual_price: 1984, fair_price_policy: 1879, gap_policy: 105, judge_policy: "비쌈" }, diesel: { actual_price: 1974, fair_price_policy: 1849, gap_policy: 125, judge_policy: "비쌈" } },
-  { region: "경남", gasoline: { actual_price: 1980, fair_price_policy: 1878, gap_policy: 102, judge_policy: "비쌈" }, diesel: { actual_price: 1969, fair_price_policy: 1848, gap_policy: 121, judge_policy: "비쌈" } },
-  { region: "제주", gasoline: { actual_price: 1914, fair_price_policy: 1889, gap_policy: 25, judge_policy: "적정" }, diesel: { actual_price: 1890, fair_price_policy: 1862, gap_policy: 28, judge_policy: "적정" } },
-];
+const FALLBACK_REGIONS = REGION_ORDER.map((region) => ({
+  region,
+  gasoline: sampleMetric(),
+  diesel: sampleMetric(),
+}));
 
 const FALLBACK_STATIONS = [
-  { station_id: "sample-seoul-1", name: "도심셀프주유소", brand: "SK에너지", region: "서울", address: "서울특별시 중구 세종대로 1", lon: 126.978, lat: 37.566, gasoline_price: 2012, diesel_price: 1998, judge_policy: "적정" },
-  { station_id: "sample-seoul-2", name: "한강대로주유소", brand: "GS칼텍스", region: "서울", address: "서울특별시 용산구 한강대로 100", lon: 126.972, lat: 37.532, gasoline_price: 2038, diesel_price: 2017, judge_policy: "비쌈" },
-  { station_id: "sample-gyeonggi-1", name: "수원표준주유소", brand: "HD현대오일뱅크", region: "경기", address: "경기도 수원시 팔달구 효원로 1", lon: 127.028, lat: 37.263, gasoline_price: 1999, diesel_price: 1982, judge_policy: "적정" },
-  { station_id: "sample-incheon-1", name: "송도에너지", brand: "S-OIL", region: "인천", address: "인천광역시 연수구 컨벤시아대로 1", lon: 126.645, lat: 37.389, gasoline_price: 2016, diesel_price: 1993, judge_policy: "비쌈" },
-  { station_id: "sample-busan-1", name: "부산항주유소", brand: "GS칼텍스", region: "부산", address: "부산광역시 중구 중앙대로 1", lon: 129.04, lat: 35.104, gasoline_price: 1984, diesel_price: 1969, judge_policy: "적정" },
-  { station_id: "sample-daegu-1", name: "달구벌셀프", brand: "SK에너지", region: "대구", address: "대구광역시 중구 달구벌대로 1", lon: 128.601, lat: 35.871, gasoline_price: 1994, diesel_price: 1987, judge_policy: "비쌈" },
-  { station_id: "sample-gwangju-1", name: "무등주유소", brand: "알뜰", region: "광주", address: "광주광역시 동구 금남로 1", lon: 126.916, lat: 35.146, gasoline_price: 1972, diesel_price: 1964, judge_policy: "적정" },
-  { station_id: "sample-daejeon-1", name: "대전IC주유소", brand: "HD현대오일뱅크", region: "대전", address: "대전광역시 동구 동서대로 1", lon: 127.433, lat: 36.35, gasoline_price: 1986, diesel_price: 1977, judge_policy: "비쌈" },
-  { station_id: "sample-ulsan-1", name: "태화강주유소", brand: "S-OIL", region: "울산", address: "울산광역시 남구 삼산로 1", lon: 129.311, lat: 35.539, gasoline_price: 1990, diesel_price: 1976, judge_policy: "비쌈" },
-  { station_id: "sample-jeju-1", name: "제주공항주유소", brand: "GS칼텍스", region: "제주", address: "제주특별자치도 제주시 공항로 1", lon: 126.493, lat: 33.506, gasoline_price: 1914, diesel_price: 1890, judge_policy: "적정" },
-];
+  { station_id: "sample-seoul-1", name: "도심셀프주유소", brand: "SK에너지", region: "서울", address: "서울특별시 중구 세종대로 1", lon: 126.978, lat: 37.566, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-seoul-2", name: "한강대로주유소", brand: "GS칼텍스", region: "서울", address: "서울특별시 용산구 한강대로 100", lon: 126.972, lat: 37.532, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-gyeonggi-1", name: "수원표준주유소", brand: "HD현대오일뱅크", region: "경기", address: "경기도 수원시 팔달구 효원로 1", lon: 127.028, lat: 37.263, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-incheon-1", name: "송도에너지", brand: "S-OIL", region: "인천", address: "인천광역시 연수구 컨벤시아대로 1", lon: 126.645, lat: 37.389, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-busan-1", name: "부산항주유소", brand: "GS칼텍스", region: "부산", address: "부산광역시 중구 중앙대로 1", lon: 129.04, lat: 35.104, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-daegu-1", name: "달구벌셀프", brand: "SK에너지", region: "대구", address: "대구광역시 중구 달구벌대로 1", lon: 128.601, lat: 35.871, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-gwangju-1", name: "무등주유소", brand: "알뜰", region: "광주", address: "광주광역시 동구 금남로 1", lon: 126.916, lat: 35.146, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-daejeon-1", name: "대전IC주유소", brand: "HD현대오일뱅크", region: "대전", address: "대전광역시 동구 동서대로 1", lon: 127.433, lat: 36.35, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-ulsan-1", name: "태화강주유소", brand: "S-OIL", region: "울산", address: "울산광역시 남구 삼산로 1", lon: 129.311, lat: 35.539, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+  { station_id: "sample-jeju-1", name: "제주공항주유소", brand: "GS칼텍스", region: "제주", address: "제주특별자치도 제주시 공항로 1", lon: 126.493, lat: 33.506, gasoline_price: SAMPLE_ACTUAL_PRICE, diesel_price: SAMPLE_ACTUAL_PRICE, judge_policy: "비쌈" },
+].map((station) => ({
+  ...station,
+  gasoline_price: SAMPLE_ACTUAL_PRICE,
+  diesel_price: SAMPLE_ACTUAL_PRICE,
+  judge_policy: "비쌈",
+}));
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -1303,6 +1298,59 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
+function fixedSampleFuel(metric = {}, label) {
+  return {
+    ...metric,
+    label: metric.label || label,
+    ...sampleMetric({
+      actual_delta_1d: 0,
+      policy_effect: metric.policy_effect ?? 0,
+    }),
+  };
+}
+
+function applyFixedSamplePrices() {
+  if (!USE_FIXED_SAMPLE_PRICES) return;
+
+  const baseNational = state.national || FALLBACK_NATIONAL;
+  state.national = {
+    ...baseNational,
+    freshness: "sample",
+    fuels: {
+      gasoline: fixedSampleFuel(baseNational.fuels?.gasoline, "휘발유"),
+      diesel: fixedSampleFuel(baseNational.fuels?.diesel, "경유"),
+    },
+  };
+
+  if (Array.isArray(state.regions) && state.regions.length) {
+    state.regions = state.regions.map((row) => ({
+      ...row,
+      gasoline: fixedSampleFuel(row.gasoline, "휘발유"),
+      diesel: fixedSampleFuel(row.diesel, "경유"),
+    }));
+  }
+
+  if (Array.isArray(state.stations) && state.stations.length) {
+    state.stations = state.stations.map((station) => ({
+      ...station,
+      gasoline_price: SAMPLE_ACTUAL_PRICE,
+      diesel_price: SAMPLE_ACTUAL_PRICE,
+      judge_policy: station.judge_policy || "비쌈",
+    }));
+  }
+
+  if (Array.isArray(state.history) && state.history.length) {
+    state.history = state.history.map((row) => ({
+      ...row,
+      actual_price: SAMPLE_ACTUAL_PRICE,
+      fair_price_policy: SAMPLE_FAIR_PRICE,
+      band_low_policy: SAMPLE_BAND_LOW,
+      band_high_policy: SAMPLE_BAND_HIGH,
+      gap_policy: SAMPLE_GAP_PRICE,
+    }));
+  }
+}
+
 function requestUserLocation() {
   const statusEl = document.getElementById("location-status");
   if (!navigator.geolocation) {
@@ -1406,6 +1454,7 @@ async function boot() {
   state.history = history;
   state.trainingCoverage = trainingCoverage;
   state.geojson = geojson;
+  applyFixedSamplePrices();
   initializeAnalysisControls();
   initializeTrainingCoverageControls();
 

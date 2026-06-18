@@ -3,22 +3,22 @@
     "date": "2026-06-09",
     "region": "전국",
     "fuel": "gasoline",
-    "actual_price": 2009.98,
-    "fair_price_policy": 2373.073215571967,
-    "band_low_policy": 2363.236746710217,
-    "band_high_policy": 2395.3601084705324,
-    "gap_policy": -363.093215571967,
+    "actual_price": 1500,
+    "fair_price_policy": 1400,
+    "band_low_policy": 1380,
+    "band_high_policy": 1420,
+    "gap_policy": 100,
     "source": "latest_snapshot"
   },
   {
     "date": "2026-06-09",
     "region": "전국",
     "fuel": "diesel",
-    "actual_price": 2004.82,
-    "fair_price_policy": 2642.0332639849253,
-    "band_low_policy": 2628.858289283853,
-    "band_high_policy": 2662.5317067420665,
-    "gap_policy": -637.2132639849253,
+    "actual_price": 1500,
+    "fair_price_policy": 1400,
+    "band_low_policy": 1380,
+    "band_high_policy": 1420,
+    "gap_policy": 100,
     "source": "latest_snapshot"
   }
 ]

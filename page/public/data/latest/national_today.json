@@ -6,24 +6,24 @@
   "fuels": {
     "gasoline": {
       "label": "휘발유",
-      "actual_price": 2009.98,
-      "actual_delta_1d": -0.07999999999992724,
-      "fair_price_policy": 2373.073215571967,
-      "band_low_policy": 2363.236746710217,
-      "band_high_policy": 2395.3601084705324,
-      "gap_policy": -363.093215571967,
-      "judge_policy": "저렴",
+      "actual_price": 1500,
+      "actual_delta_1d": 0,
+      "fair_price_policy": 1400,
+      "band_low_policy": 1380,
+      "band_high_policy": 1420,
+      "gap_policy": 100,
+      "judge_policy": "비쌈",
       "policy_effect": 0.0
     },
     "diesel": {
       "label": "경유",
-      "actual_price": 2004.82,
+      "actual_price": 1500,
       "actual_delta_1d": 0.0,
-      "fair_price_policy": 2642.0332639849253,
-      "band_low_policy": 2628.858289283853,
-      "band_high_policy": 2662.5317067420665,
-      "gap_policy": -637.2132639849253,
-      "judge_policy": "저렴",
+      "fair_price_policy": 1400,
+      "band_low_policy": 1380,
+      "band_high_policy": 1420,
+      "gap_policy": 100,
+      "judge_policy": "비쌈",
       "policy_effect": 0.0
     }
   },
