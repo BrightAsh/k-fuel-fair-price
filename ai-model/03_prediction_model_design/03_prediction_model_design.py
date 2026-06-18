@@ -32,7 +32,7 @@ STAGE3_DIR = Path(__file__).resolve().parent
 GRID_PATH = REPO_ROOT / "ai-model" / "02_spatial_grid_build" / "outputs" / "grid.parquet"
 OUTPUT_ROOT = STAGE3_DIR / "outputs"
 INTERMEDIATE_DATA_DIR = OUTPUT_ROOT / "intermediate_data"
-CACHE_DATASET_VERSION = "stage03_spread_delta_lstm_v1"
+CACHE_DATASET_VERSION = "stage03_price_delta_lstm_v1"
 
 TEST_START = pd.Timestamp("2026-01-01")
 TEST_END = pd.Timestamp("2026-12-31")
@@ -47,8 +47,10 @@ GAP_DAYS = 7
 SEQUENCE_LENGTH_DAYS = 28
 SEQUENCE_REQUIRED_HISTORY_DAYS = SEQUENCE_LENGTH_DAYS + 1
 
-TARGET_COLUMN = "spread_delta_target"
-MODEL_TARGET_MODE = "spread_delta"
+TARGET_COLUMN = "price_delta_target"
+PREDICTED_TARGET_COLUMN = "pred_price_delta"
+MODEL_TARGET_MODE = "price_delta"
+MODEL_NAME = "lstm_price_delta"
 
 TRAIN_SAMPLE_PER_MILLE = 200
 VALID_SAMPLE_PER_MILLE = 200
@@ -60,14 +62,14 @@ SEQUENCE_MAX_TRAIN_ROWS = 6_000_000
 SEQUENCE_MAX_VALID_ROWS = 2_500_000
 SEQUENCE_MAX_FINAL_ROWS = 8_000_000
 
-MODEL_EPOCHS = 20
+MODEL_EPOCHS = 100
 MODEL_BATCH_SIZE = 8192
 MODEL_LEARNING_RATE = 0.0025
 MODEL_WEIGHT_DECAY = 0.0001
 MODEL_GRAD_CLIP_NORM = 1.0
-EARLY_STOPPING_PATIENCE = 5
+EARLY_STOPPING_PATIENCE = 10
 EARLY_STOPPING_MIN_DELTA = 0.001
-LR_REDUCE_PATIENCE = 2
+LR_REDUCE_PATIENCE = 5
 LR_REDUCE_FACTOR = 0.5
 MIN_LEARNING_RATE = 0.00001
 FINAL_EXTRA_EPOCHS = 0
@@ -234,7 +236,7 @@ def evaluate_prediction_frame(df: pd.DataFrame, period: str) -> Dict[str, Any]:
     }
     row.update(regression_metric_row(df["actual_grid_price"], df["pred_grid_price"], df["station_weight"], "price"))
     row.update(regression_metric_row(df["spread_target"], df["pred_spread"], df["station_weight"], "spread"))
-    row.update(regression_metric_row(df[TARGET_COLUMN], df["pred_spread_delta"], df["station_weight"], "delta"))
+    row.update(regression_metric_row(df[TARGET_COLUMN], df[PREDICTED_TARGET_COLUMN], df["station_weight"], "target"))
     return row
 
 
@@ -311,6 +313,8 @@ def history_sql_exprs() -> List[str]:
                 f"target_date) AS sequence_calendar_span"
             ),
             "LAG(spread_target, 1) OVER (PARTITION BY grid_id ORDER BY target_date) AS spread_lag_1d",
+            "LAG(actual_grid_price, 1) OVER (PARTITION BY grid_id ORDER BY target_date) AS actual_price_lag_1d",
+            "LAG(national_actual_price, 1) OVER (PARTITION BY grid_id ORDER BY target_date) AS national_price_lag_1d",
         ]
     )
     for d in range(1, SEQUENCE_LENGTH_DAYS + 1):
@@ -359,8 +363,10 @@ def selected_column_exprs() -> List[str]:
         "t.station_weight",
         "t.national_actual_price",
         "t.spread_target",
-        "(CAST(t.spread_target AS DOUBLE) - CAST(t.spread_lag_1d AS DOUBLE)) AS spread_delta_target",
+        "(CAST(t.actual_grid_price AS DOUBLE) - CAST(t.actual_price_lag_1d AS DOUBLE)) AS price_delta_target",
         "CAST(t.spread_lag_1d AS DOUBLE) AS spread_lag_1d",
+        "CAST(t.actual_price_lag_1d AS DOUBLE) AS actual_price_lag_1d",
+        "CAST(t.national_price_lag_1d AS DOUBLE) AS national_price_lag_1d",
         "CAST(t.sequence_hist_count AS DOUBLE) AS sequence_hist_count",
         "CAST(t.sequence_policy_days AS DOUBLE) AS sequence_policy_days",
         "CAST(t.sequence_calendar_span AS DOUBLE) AS sequence_calendar_span",
@@ -393,6 +399,8 @@ def sequence_quality_conditions(exclude_history_policy: bool) -> List[str]:
         f"t.sequence_hist_count = {SEQUENCE_REQUIRED_HISTORY_DAYS}",
         f"t.sequence_calendar_span = {SEQUENCE_REQUIRED_HISTORY_DAYS}",
         "t.spread_lag_1d IS NOT NULL",
+        "t.actual_price_lag_1d IS NOT NULL",
+        "t.national_price_lag_1d IS NOT NULL",
     ]
     conds.extend([f"t.{qid(col)} IS NOT NULL" for col in MODEL_INPUT_COLUMNS])
     if exclude_history_policy:
@@ -741,8 +749,10 @@ def load_model_frame(
         "station_weight",
         "national_actual_price",
         "spread_target",
-        "spread_delta_target",
+        "price_delta_target",
         "spread_lag_1d",
+        "actual_price_lag_1d",
+        "national_price_lag_1d",
         "sequence_hist_count",
         "sequence_policy_days",
         "sequence_calendar_span",
@@ -753,7 +763,7 @@ def load_model_frame(
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    required = [TARGET_COLUMN, "spread_lag_1d", *MODEL_INPUT_COLUMNS]
+    required = [TARGET_COLUMN, "actual_price_lag_1d", "national_price_lag_1d", "spread_lag_1d", *MODEL_INPUT_COLUMNS]
     before = len(df)
     df = df.dropna(subset=[c for c in required if c in df.columns]).sort_values(["date", "grid_id"]).reset_index(drop=True)
     dropped = before - len(df)
@@ -848,7 +858,7 @@ def train_validation_split(cfg: FuelConfig) -> Dict[str, Any]:
 # =============================================================================
 
 
-class SpreadDeltaLstm(nn.Module):
+class PriceDeltaLstm(nn.Module):
     def __init__(self, input_size: int, hidden_size: int = 128, num_layers: int = 2, dropout: float = 0.20):
         super().__init__()
         self.lstm = nn.LSTM(
@@ -943,7 +953,7 @@ def make_loader(
 
 
 def predict_delta(wrapper: Dict[str, Any], df: pd.DataFrame) -> np.ndarray:
-    model: SpreadDeltaLstm = wrapper["model"]
+    model: PriceDeltaLstm = wrapper["model"]
     prep = wrapper["preprocess"]
     loader = make_loader(df, prep, MODEL_BATCH_SIZE, shuffle=False, include_target=False)
 
@@ -968,13 +978,14 @@ def prediction_frame(df: pd.DataFrame, pred_delta: np.ndarray) -> pd.DataFrame:
         "spread_target",
         TARGET_COLUMN,
         "spread_lag_1d",
+        "actual_price_lag_1d",
+        "national_price_lag_1d",
         *[c for c in OUTPUT_PANEL_COLUMNS if c in df.columns],
     ]
     out = df[out_cols].copy()
-    out["pred_spread_delta"] = np.asarray(pred_delta, dtype=float)
-    out["pred_spread_raw"] = pd.to_numeric(out["spread_lag_1d"], errors="coerce") + out["pred_spread_delta"]
-    out["pred_spread"] = recenter_spread_by_date(out, "pred_spread_raw", "station_weight")
-    out["pred_grid_price"] = out["national_actual_price"] + out["pred_spread"]
+    out[PREDICTED_TARGET_COLUMN] = np.asarray(pred_delta, dtype=float)
+    out["pred_grid_price"] = pd.to_numeric(out["actual_price_lag_1d"], errors="coerce") + out[PREDICTED_TARGET_COLUMN]
+    out["pred_spread"] = out["pred_grid_price"] - out["national_actual_price"]
     out["prediction_error_to_actual"] = out["pred_grid_price"] - out["actual_grid_price"]
     return out
 
@@ -994,12 +1005,12 @@ def save_best_checkpoint(
     checkpoint_dir = out_dir / "model" / "checkpoints"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    epoch_path = checkpoint_dir / f"{cfg.fuel}_best_epoch_{epoch:04d}_wmae_{best_wmae:.4f}.pt"
-    latest_path = checkpoint_dir / f"{cfg.fuel}_best_latest.pt"
+    epoch_path = checkpoint_dir / f"{cfg.fuel}_{MODEL_TARGET_MODE}_best_epoch_{epoch:04d}_wmae_{best_wmae:.4f}.pt"
+    latest_path = checkpoint_dir / f"{cfg.fuel}_{MODEL_TARGET_MODE}_best_latest.pt"
     payload = {
         "created_at": pd.Timestamp.now().isoformat(),
-        "model_name": "lstm_spread_delta",
-        "model_class": "SpreadDeltaLstm",
+        "model_name": MODEL_NAME,
+        "model_class": "PriceDeltaLstm",
         "model_state_dict": model_state,
         "preprocess": prep,
         "fuel_config": asdict(cfg),
@@ -1016,6 +1027,7 @@ def save_best_checkpoint(
             "dropout": 0.20,
             "sequence_length_days": SEQUENCE_LENGTH_DAYS,
             "target_column": TARGET_COLUMN,
+            "predicted_target_column": PREDICTED_TARGET_COLUMN,
             "target_mode": MODEL_TARGET_MODE,
             "sequence_channels": SEQUENCE_CHANNELS,
         },
@@ -1040,30 +1052,38 @@ def save_best_checkpoint(
 def baseline_scores(train_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
 
-    zero_spread = valid_df[["date", "station_weight", "national_actual_price", "actual_grid_price", "spread_target", TARGET_COLUMN]].copy()
-    zero_spread["pred_spread_delta"] = -pd.to_numeric(valid_df["spread_lag_1d"], errors="coerce")
-    zero_spread["pred_spread"] = 0.0
-    zero_spread["pred_grid_price"] = zero_spread["national_actual_price"]
-    rows.append({"model_name": "baseline_national_average", **evaluate_prediction_frame(zero_spread, "validation")})
-
     lag1 = valid_df[
-        ["date", "station_weight", "national_actual_price", "actual_grid_price", "spread_target", TARGET_COLUMN, "spread_lag_1d"]
+        [
+            "date",
+            "station_weight",
+            "national_actual_price",
+            "actual_grid_price",
+            "spread_target",
+            TARGET_COLUMN,
+            "actual_price_lag_1d",
+        ]
     ].copy()
-    lag1["pred_spread_delta"] = 0.0
-    lag1["pred_spread_raw"] = pd.to_numeric(lag1["spread_lag_1d"], errors="coerce")
-    lag1["pred_spread"] = recenter_spread_by_date(lag1, "pred_spread_raw", "station_weight")
-    lag1["pred_grid_price"] = lag1["national_actual_price"] + lag1["pred_spread"]
-    rows.append({"model_name": "baseline_lag1_delta0", **evaluate_prediction_frame(lag1, "validation")})
+    lag1[PREDICTED_TARGET_COLUMN] = 0.0
+    lag1["pred_grid_price"] = pd.to_numeric(lag1["actual_price_lag_1d"], errors="coerce")
+    lag1["pred_spread"] = lag1["pred_grid_price"] - lag1["national_actual_price"]
+    rows.append({"model_name": "baseline_yesterday_grid_price", **evaluate_prediction_frame(lag1, "validation")})
 
     train_delta_mean = float(np.average(train_df[TARGET_COLUMN], weights=train_df["station_weight"].clip(lower=1)))
     mean_delta = valid_df[
-        ["date", "station_weight", "national_actual_price", "actual_grid_price", "spread_target", TARGET_COLUMN, "spread_lag_1d"]
+        [
+            "date",
+            "station_weight",
+            "national_actual_price",
+            "actual_grid_price",
+            "spread_target",
+            TARGET_COLUMN,
+            "actual_price_lag_1d",
+        ]
     ].copy()
-    mean_delta["pred_spread_delta"] = train_delta_mean
-    mean_delta["pred_spread_raw"] = pd.to_numeric(mean_delta["spread_lag_1d"], errors="coerce") + train_delta_mean
-    mean_delta["pred_spread"] = recenter_spread_by_date(mean_delta, "pred_spread_raw", "station_weight")
-    mean_delta["pred_grid_price"] = mean_delta["national_actual_price"] + mean_delta["pred_spread"]
-    rows.append({"model_name": "baseline_train_mean_delta", **evaluate_prediction_frame(mean_delta, "validation")})
+    mean_delta[PREDICTED_TARGET_COLUMN] = train_delta_mean
+    mean_delta["pred_grid_price"] = pd.to_numeric(mean_delta["actual_price_lag_1d"], errors="coerce") + train_delta_mean
+    mean_delta["pred_spread"] = mean_delta["pred_grid_price"] - mean_delta["national_actual_price"]
+    rows.append({"model_name": "baseline_train_mean_price_delta", **evaluate_prediction_frame(mean_delta, "validation")})
 
     return pd.DataFrame(rows)
 
@@ -1078,7 +1098,7 @@ def train_with_validation(
     valid_model_df = sample_frame(valid_df, SEQUENCE_MAX_VALID_ROWS, f"{cfg.fuel}_valid_model")
     prep = fit_preprocess(train_model_df)
 
-    model = SpreadDeltaLstm(input_size=len(SEQUENCE_CHANNELS)).to(DEVICE)
+    model = PriceDeltaLstm(input_size=len(SEQUENCE_CHANNELS)).to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=MODEL_LEARNING_RATE, weight_decay=MODEL_WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
@@ -1147,7 +1167,7 @@ def train_with_validation(
             patience_left -= 1
 
         row = {
-            "model_name": "lstm_spread_delta",
+            "model_name": MODEL_NAME,
             "epoch": epoch,
             "device": str(DEVICE),
             "learning_rate": current_lr,
@@ -1203,7 +1223,7 @@ def train_with_validation(
     validation_model_scores = pd.DataFrame(
         [
             {
-                "model_name": "lstm_spread_delta",
+                "model_name": MODEL_NAME,
                 "best_epoch": best_epoch,
                 "device": str(DEVICE),
                 "best_checkpoint_epoch_path": best_checkpoint_epoch_path,
@@ -1218,7 +1238,7 @@ def train_with_validation(
 def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, model_path: Path) -> Dict[str, Any]:
     final_model_df = sample_frame(final_df, SEQUENCE_MAX_FINAL_ROWS, f"{cfg.fuel}_final_model")
     prep = fit_preprocess(final_model_df)
-    model = SpreadDeltaLstm(input_size=len(SEQUENCE_CHANNELS)).to(DEVICE)
+    model = PriceDeltaLstm(input_size=len(SEQUENCE_CHANNELS)).to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=MODEL_LEARNING_RATE, weight_decay=MODEL_WEIGHT_DECAY)
     loader = make_loader(final_model_df, prep, MODEL_BATCH_SIZE, shuffle=True, include_target=True)
 
@@ -1261,11 +1281,12 @@ def train_final_model(final_df: pd.DataFrame, cfg: FuelConfig, epochs: int, mode
     torch.save(
         {
             "model_state_dict": model.state_dict(),
-            "model_class": "SpreadDeltaLstm",
+            "model_class": "PriceDeltaLstm",
             "model_config": {
                 "input_size": len(SEQUENCE_CHANNELS),
                 "sequence_length_days": SEQUENCE_LENGTH_DAYS,
                 "target_column": TARGET_COLUMN,
+                "predicted_target_column": PREDICTED_TARGET_COLUMN,
                 "target_mode": MODEL_TARGET_MODE,
             },
             "preprocess": prep,
@@ -1295,7 +1316,7 @@ def load_completed_validation_artifacts(cfg: FuelConfig, out_dir: Path) -> Optio
         print(f"[RESUME MISS] {cfg.label}: validation scores read failed ({type(exc).__name__}: {exc})")
         return None
 
-    model_score_df = validation_scores.loc[validation_scores["model_name"].astype(str).eq("lstm_spread_delta")].copy()
+    model_score_df = validation_scores.loc[validation_scores["model_name"].astype(str).eq(MODEL_NAME)].copy()
     if len(model_score_df) != 1 or "best_epoch" not in model_score_df.columns:
         return None
 
@@ -1515,12 +1536,13 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
             "center_lat",
             "station_weight",
             "actual_grid_price",
+            "actual_price_lag_1d",
             "national_actual_price",
+            "national_price_lag_1d",
             "spread_target",
             TARGET_COLUMN,
             "spread_lag_1d",
-            "pred_spread_delta",
-            "pred_spread_raw",
+            PREDICTED_TARGET_COLUMN,
             "pred_spread",
             "pred_grid_price",
             "prediction_error_to_actual",
@@ -1554,10 +1576,10 @@ def predict_test_2026(cfg: FuelConfig, wrapper: Dict[str, Any], out_dir: Path) -
                 SQRT(AVG(POWER(spread_target - pred_spread, 2))) AS spread_rmse,
                 SUM(ABS(spread_target - pred_spread) * station_weight) / NULLIF(SUM(station_weight), 0) AS spread_weighted_mae,
                 SQRT(SUM(POWER(spread_target - pred_spread, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS spread_weighted_rmse,
-                AVG(ABS(spread_delta_target - pred_spread_delta)) AS delta_mae,
-                SQRT(AVG(POWER(spread_delta_target - pred_spread_delta, 2))) AS delta_rmse,
-                SUM(ABS(spread_delta_target - pred_spread_delta) * station_weight) / NULLIF(SUM(station_weight), 0) AS delta_weighted_mae,
-                SQRT(SUM(POWER(spread_delta_target - pred_spread_delta, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS delta_weighted_rmse
+                AVG(ABS({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)})) AS target_mae,
+                SQRT(AVG(POWER({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)}, 2))) AS target_rmse,
+                SUM(ABS({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)}) * station_weight) / NULLIF(SUM(station_weight), 0) AS target_weighted_mae,
+                SQRT(SUM(POWER({qid(TARGET_COLUMN)} - {qid(PREDICTED_TARGET_COLUMN)}, 2) * station_weight) / NULLIF(SUM(station_weight), 0)) AS target_weighted_rmse
             FROM read_parquet({qstr(out_dir / f'{cfg.fuel}_test_predictions_2026.parquet')})
             """
         ).df()
@@ -1661,7 +1683,7 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
     if USE_CUDA:
         torch.cuda.empty_cache()
 
-    model_path = model_dir / f"{cfg.fuel}_spread_delta_lstm.pt"
+    model_path = model_dir / f"{cfg.fuel}_price_delta_lstm.pt"
     final_wrapper = train_final_model(final_df, cfg, best_epoch, model_path)
 
     test_metrics = predict_test_2026(cfg, final_wrapper, out_dir)
@@ -1675,8 +1697,8 @@ def run_one_fuel(cfg: FuelConfig) -> Dict[str, Any]:
         "test_start": str(TEST_START.date()),
         "test_end": str(TEST_END.date()),
         "prediction_horizon_days": PREDICTION_HORIZON_DAYS,
-        "target_definition": "spread_delta_target = spread_target - spread_lag_1d",
-        "prediction_definition": "pred_spread = spread_lag_1d + predicted_spread_delta; pred_grid_price = national_actual_price + pred_spread",
+        "target_definition": "price_delta_target = actual_grid_price(t) - actual_price_lag_1d(t-1)",
+        "prediction_definition": "pred_grid_price(t) = actual_price_lag_1d(t-1) + pred_price_delta; no target-date national average is used for price restoration",
         "train_valid_train_ratio_requested": TRAIN_VALID_TRAIN_RATIO,
         "gap_days": GAP_DAYS,
         "policy_exclude_ranges": POLICY_EXCLUDE_RANGES,
