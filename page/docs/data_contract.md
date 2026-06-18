@@ -187,7 +187,7 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
 
 ### `station_search_index.json`
 
-검색 성능을 위해 너무 크게 만들지 않습니다. 첫 버전은 최신 가격과 위치 정보만 담습니다.
+검색/주변 주유소 기능에 쓰는 공개 인덱스입니다. `station_search_index.csv`에 들어온 행 전체를 변환하므로, 주변 주유소 탭은 선택 반경 안의 모든 행을 거리순으로 표시합니다. 단, GitHub Pages에 공개되는 파일이므로 내부용 원천 컬럼은 넣지 않습니다.
 
 ```json
 [

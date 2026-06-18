@@ -382,12 +382,12 @@ def build_region(repo_root: Path) -> list[dict[str, Any]]:
     return list(rows.values())
 
 
-def build_station_index(repo_root: Path, limit: int = 5000) -> list[dict[str, Any]]:
+def build_station_index(repo_root: Path) -> list[dict[str, Any]]:
     path = repo_root / "page/manual_inputs/station_search_index.csv"
     if not path.exists():
         return []
 
-    df = read_csv(path).head(limit)
+    df = read_csv(path)
     out = []
     for _, row in df.iterrows():
         out.append({
