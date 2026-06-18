@@ -32,9 +32,20 @@ def patched_source(source: str, repo_root: Path, notebook_path: Path) -> str:
 
 def run_notebook(notebook_path: Path, repo_root: Path) -> None:
     nb = json.loads(notebook_path.read_text(encoding="utf-8"))
+
+    def display(value: object = None, *args: object, **kwargs: object) -> None:
+        if value is None:
+            return
+        to_string = getattr(value, "to_string", None)
+        if callable(to_string):
+            print(to_string())
+        else:
+            print(value)
+
     globals_dict: dict[str, object] = {
         "__name__": "__main__",
         "__file__": str(notebook_path),
+        "display": display,
     }
     for idx, cell in enumerate(nb.get("cells", [])):
         if cell.get("cell_type") != "code":
