@@ -8,6 +8,7 @@
     "region_today.json",
     "station_search_index.json",
     "price_history.json",
+    "training_data_coverage.json",
     "external_data_status.json"
   ],
   "assets": [

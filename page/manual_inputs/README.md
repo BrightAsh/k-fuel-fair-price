@@ -8,6 +8,7 @@
 region_today.csv
 station_search_index.csv
 price_history.csv
+training_data_coverage.csv
 ```
 
 `region_today.csv`는 지역별 적정가격 요약을 직접 제공할 때 사용합니다.
@@ -35,6 +36,20 @@ date,region,fuel,actual_price,fair_price_policy,band_low_policy,band_high_policy
 ```
 
 `region`은 전국 또는 시도명, `fuel`은 `gasoline`, `diesel`을 사용합니다.
+
+`training_data_coverage.csv`는 `데이터 현황` 탭의 AI 학습 데이터 히트맵에 사용합니다. 브라우저가 직접 CSV를 읽지 않고, 빌드 스크립트가 이 파일을 `page/public/data/latest/training_data_coverage.json`으로 변환합니다.
+
+필수 컬럼 예시:
+
+```text
+dataset,date,region,value,unit,label
+```
+
+- `dataset`: `grid_panel_rows`, `station_count`, `facility_count`, `land_price_grid_count` 중 하나입니다.
+- `date`: 날짜가 있는 데이터면 `YYYY-MM-DD`, 날짜가 없는 snapshot이면 비워도 됩니다.
+- `region`: 서울, 부산, 경기 같은 시도명입니다.
+- `value`: 지도 색상에 사용할 숫자입니다.
+- `unit`, `label`: 선택 컬럼입니다.
 
 개인정보나 내부용 원천 컬럼은 넣지 않습니다. GitHub Pages에 올라가는 데이터는 공개 데이터로 봐야 합니다.
 

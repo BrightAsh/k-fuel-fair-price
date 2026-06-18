@@ -22,6 +22,33 @@ FUEL_CONFIG = {
     },
 }
 
+TRAINING_COVERAGE_DATASETS = {
+    "grid_panel_rows": {
+        "label": "AI 학습 격자 패널 행 수",
+        "unit": "행",
+        "path": "ROOT_PATH/그리드/grid.parquet",
+        "note": "AI 02 최종 grid.parquet를 시도·날짜별로 집계한 값입니다.",
+    },
+    "station_count": {
+        "label": "주유소 입력 수",
+        "unit": "개",
+        "path": "data collection/derived_data/station_points.csv",
+        "note": "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값입니다.",
+    },
+    "facility_count": {
+        "label": "시설 영향력 입력 수",
+        "unit": "개",
+        "path": "data collection/derived_data/facility_points.csv",
+        "note": "AI 01 시설 좌표 산출물을 시도별로 집계한 값입니다.",
+    },
+    "land_price_grid_count": {
+        "label": "공시지가 격자 수",
+        "unit": "격자",
+        "path": "data collection/derived_data/official_land_price_grid.csv",
+        "note": "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값입니다.",
+    },
+}
+
 
 def read_csv(path: Path) -> pd.DataFrame:
     for encoding in ("utf-8-sig", "utf-8", "cp949", "euc-kr"):
@@ -279,6 +306,78 @@ def history_extent(rows: list[dict[str, Any]]) -> tuple[str | None, str | None]:
     return dates[0], dates[-1]
 
 
+def build_training_data_coverage(repo_root: Path) -> dict[str, Any]:
+    generated_at = datetime.now(KST).isoformat(timespec="seconds")
+    path = repo_root / "page/manual_inputs/training_data_coverage.csv"
+    rows: list[dict[str, Any]] = []
+
+    if path.exists():
+        df = read_csv(path)
+        for _, row in df.iterrows():
+            dataset = str(row.get("dataset", "")).strip()
+            region = str(row.get("region", "")).strip()
+            value = to_float(row.get("value"))
+            if not dataset or not region or value is None:
+                continue
+            date_raw = row.get("date")
+            date = ""
+            if date_raw is not None and not pd.isna(date_raw) and str(date_raw).strip():
+                parsed_date = pd.to_datetime(date_raw, errors="coerce")
+                if not pd.isna(parsed_date):
+                    date = pd.Timestamp(parsed_date).strftime("%Y-%m-%d")
+            rows.append({
+                "dataset": dataset,
+                "date": date,
+                "region": region,
+                "value": value,
+                "unit": row.get("unit") if pd.notna(row.get("unit")) else TRAINING_COVERAGE_DATASETS.get(dataset, {}).get("unit"),
+                "label": row.get("label") if pd.notna(row.get("label")) else None,
+            })
+
+    rows_by_dataset: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        rows_by_dataset.setdefault(row["dataset"], []).append(row)
+
+    datasets: list[dict[str, Any]] = []
+    for dataset, cfg in TRAINING_COVERAGE_DATASETS.items():
+        dataset_rows = rows_by_dataset.get(dataset, [])
+        dates = sorted({row["date"] for row in dataset_rows if row.get("date")})
+        datasets.append({
+            "id": dataset,
+            "label": cfg["label"],
+            "unit": cfg["unit"],
+            "status": "connected" if dataset_rows else "waiting",
+            "rows": len(dataset_rows),
+            "date_min": dates[0] if dates else None,
+            "date_max": dates[-1] if dates else None,
+            "path": cfg["path"],
+            "note": cfg["note"],
+        })
+
+    for dataset in sorted(set(rows_by_dataset) - set(TRAINING_COVERAGE_DATASETS)):
+        dataset_rows = rows_by_dataset[dataset]
+        dates = sorted({row["date"] for row in dataset_rows if row.get("date")})
+        datasets.append({
+            "id": dataset,
+            "label": dataset,
+            "unit": dataset_rows[0].get("unit"),
+            "status": "connected",
+            "rows": len(dataset_rows),
+            "date_min": dates[0] if dates else None,
+            "date_max": dates[-1] if dates else None,
+            "path": "page/manual_inputs/training_data_coverage.csv",
+            "note": "수동 입력된 AI 학습 데이터 커버리지입니다.",
+        })
+
+    return {
+        "schema_version": "training_data_coverage_v1",
+        "generated_at": generated_at,
+        "source": "page/manual_inputs/training_data_coverage.csv" if path.exists() else None,
+        "datasets": datasets,
+        "rows": sorted(rows, key=lambda item: (item["dataset"], item.get("date") or "", item["region"])),
+    }
+
+
 def build_external_data_status(repo_root: Path, output_dir: Path, national: dict[str, Any], region: list[dict[str, Any]], stations: list[dict[str, Any]], history: list[dict[str, Any]]) -> dict[str, Any]:
     generated_at = datetime.now(KST).isoformat(timespec="seconds")
     history_min, history_max = history_extent(history)
@@ -432,6 +531,7 @@ def main() -> None:
                 history = merge_history(existing_history, history)
         except Exception:
             pass
+    training_coverage = build_training_data_coverage(repo_root)
     external_status = build_external_data_status(repo_root, output_dir, national, region, stations, history)
 
     manifest = {
@@ -444,6 +544,7 @@ def main() -> None:
             "region_today.json",
             "station_search_index.json",
             "price_history.json",
+            "training_data_coverage.json",
             "external_data_status.json",
         ],
         "assets": [
@@ -460,6 +561,7 @@ def main() -> None:
     write_json(output_dir / "region_today.json", region)
     write_json(output_dir / "station_search_index.json", stations)
     write_json(output_dir / "price_history.json", history)
+    write_json(output_dir / "training_data_coverage.json", training_coverage)
     write_json(output_dir / "external_data_status.json", external_status)
     write_json(output_dir / "site_manifest.json", manifest)
 

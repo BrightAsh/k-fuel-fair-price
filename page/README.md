@@ -44,7 +44,7 @@ GitHub Actions 워크플로는 GitHub가 인식해야 하므로 레포 루트의
 - 전체 기간 기본값의 지역/유종별 가격 추이
 - 기간/지역/유종 조건의 데이터 다운로드
 - 지역/주유소 검색
-- 페이지 입력 데이터 연결 상태
+- AI 학습 데이터 지역별 분포 지도
 
 ## 데이터 갱신 원칙
 
@@ -62,11 +62,13 @@ GitHub Actions 워크플로는 GitHub가 인식해야 하므로 레포 루트의
 page/manual_inputs/region_today.csv
 page/manual_inputs/station_search_index.csv
 page/manual_inputs/price_history.csv
+page/manual_inputs/training_data_coverage.csv
 ```
 
 - `region_today.csv`: 지역별 오늘 표시용 요약입니다. AI 모델 완료 전까지 수동 보강 파일로 사용합니다.
 - `station_search_index.csv`: 주유소 검색과 주변 주유소 탭에 쓰는 공개 인덱스입니다. 위치 기반 목록은 반경 안의 주유소를 거리순으로 모두 표시합니다.
 - `price_history.csv`: 비어 있는 기간을 수동/강제 수집 결과로 보강하는 파일입니다.
+- `training_data_coverage.csv`: `데이터 현황` 탭의 AI 학습 데이터 히트맵용 시도별 집계 파일입니다.
 
 파일별 컬럼은 `page/manual_inputs/README.md`와 `page/docs/data_contract.md`에 정리합니다.
 

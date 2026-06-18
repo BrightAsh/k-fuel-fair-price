@@ -8,6 +8,7 @@ page/public/data/latest/national_today.json
 page/public/data/latest/region_today.json
 page/public/data/latest/station_search_index.json
 page/public/data/latest/price_history.json
+page/public/data/latest/training_data_coverage.json
 page/public/data/latest/external_data_status.json
 page/public/assets/korea-provinces.geojson
 ```
@@ -110,6 +111,33 @@ ROOT_PATH/그리드/grid.parquet
 ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.parquet
 ```
 
+### AI 학습 데이터 지도
+
+`데이터 현황` 탭은 연결 상태 목록이 아니라 AI 학습에 사용한 데이터의 지역별 분포를 대한민국 지도 히트맵으로 보여줍니다.
+
+수동/중간 입력:
+
+```text
+page/manual_inputs/training_data_coverage.csv
+```
+
+필수 컬럼:
+
+```text
+dataset,date,region,value,unit,label
+```
+
+기본 `dataset` 값:
+
+```text
+grid_panel_rows          # AI 02 최종 grid.parquet의 시도·날짜별 행 수
+station_count            # 주유소 입력 수
+facility_count           # 시설 영향력 입력 수
+land_price_grid_count    # 공시지가 격자 수
+```
+
+`date`가 있으면 페이지에서 날짜를 선택할 수 있고, 날짜가 없는 snapshot 데이터는 전체값으로 표시합니다.
+
 ## Output JSON
 
 ### `site_manifest.json`
@@ -120,7 +148,7 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
   "as_of_date": "2026-06-09",
   "generated_at": "2026-06-10T03:00:00+09:00",
   "freshness": "fresh",
-  "files": ["national_today.json", "region_today.json", "station_search_index.json", "price_history.json", "external_data_status.json"],
+  "files": ["national_today.json", "region_today.json", "station_search_index.json", "price_history.json", "training_data_coverage.json", "external_data_status.json"],
   "assets": ["korea-provinces.geojson"]
 }
 ```
@@ -228,9 +256,44 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
 
 자동화가 다시 실행될 때 기존 `price_history.json`을 읽어 새 행과 병합합니다. 이 구조 때문에 모델 완성 이후 날짜를 지정해 과거 빈 구간을 강제 수집해도 기존 날짜가 삭제되지 않습니다.
 
+### `training_data_coverage.json`
+
+`데이터 현황` 탭의 지도 히트맵에 사용합니다.
+
+```json
+{
+  "schema_version": "training_data_coverage_v1",
+  "generated_at": "2026-06-18T03:00:00+09:00",
+  "source": "page/manual_inputs/training_data_coverage.csv",
+  "datasets": [
+    {
+      "id": "grid_panel_rows",
+      "label": "AI 학습 격자 패널 행 수",
+      "unit": "행",
+      "status": "connected",
+      "rows": 340,
+      "date_min": "2026-06-01",
+      "date_max": "2026-06-10",
+      "path": "ROOT_PATH/그리드/grid.parquet",
+      "note": "AI 02 최종 grid.parquet를 시도·날짜별로 집계한 값입니다."
+    }
+  ],
+  "rows": [
+    {
+      "dataset": "grid_panel_rows",
+      "date": "2026-06-10",
+      "region": "서울",
+      "value": 123456,
+      "unit": "행",
+      "label": null
+    }
+  ]
+}
+```
+
 ### `external_data_status.json`
 
-웹의 `데이터 현황` 탭이 읽는 데이터 연결 상태입니다.
+웹 내부 점검용 데이터 연결 상태입니다. 현재 사용자 화면의 `데이터 현황` 탭은 `training_data_coverage.json`을 우선 사용합니다.
 
 ```json
 {

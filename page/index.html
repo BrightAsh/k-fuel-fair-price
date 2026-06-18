@@ -282,29 +282,34 @@
           <article class="data-card">
             <div class="section-heading">
               <div>
-                <p>Data coverage</p>
-                <h2>데이터 현황</h2>
+                <p>Training data map</p>
+                <h2>AI 학습 데이터 현황</h2>
               </div>
-              <span id="data-status-summary">확인 중</span>
+              <span id="training-coverage-summary">확인 중</span>
             </div>
-            <div id="external-data-grid" class="data-status-grid"></div>
-            <div class="data-guide-grid">
-              <article>
-                <h3>지금 넣어줄 공개용 파일</h3>
-                <p><code>page/manual_inputs/region_today.csv</code></p>
-                <p><code>page/manual_inputs/station_search_index.csv</code></p>
-                <p><code>page/manual_inputs/price_history.csv</code></p>
-              </article>
-              <article>
-                <h3>AI 모델 완료 후 연결할 파일</h3>
-                <p><code>ai-model/03_prediction_model_design/outputs/{fuel}/...</code></p>
-                <p><code>page/manual_inputs/region_today.csv</code>와 <code>station_search_index.csv</code>는 자동 생성 대상으로 전환합니다.</p>
-              </article>
-              <article>
-                <h3>자동 수집 누적</h3>
-                <p><code>page/public/data/latest/price_history.json</code>은 새 날짜를 병합해 누적합니다.</p>
-                <p>날짜를 지정해 강제 수집하면 기존 날짜를 유지하면서 빈 날짜가 채워집니다.</p>
-              </article>
+            <div class="coverage-toolbar">
+              <label>
+                <span>데이터</span>
+                <select id="training-dataset"></select>
+              </label>
+              <label>
+                <span>날짜</span>
+                <select id="training-date"></select>
+              </label>
+            </div>
+            <div class="coverage-layout">
+              <div class="coverage-map-shell">
+                <svg id="training-data-map" viewBox="0 0 620 740" role="img" aria-label="AI 학습 데이터 지역별 분포"></svg>
+              </div>
+              <aside class="coverage-side">
+                <div id="training-coverage-stats" class="coverage-stats"></div>
+                <p id="training-coverage-note" class="panel-note"></p>
+                <div class="coverage-legend">
+                  <span>낮음</span>
+                  <i></i>
+                  <strong>높음</strong>
+                </div>
+              </aside>
             </div>
           </article>
         </section>

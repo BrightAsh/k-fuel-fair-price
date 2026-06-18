@@ -7,7 +7,7 @@ const state = {
   regions: [],
   stations: [],
   history: [],
-  externalData: null,
+  trainingCoverage: null,
   geojson: null,
   selectedRegion: null,
   regionDetailEnabled: false,
@@ -68,6 +68,58 @@ const DETAIL_MAP_SIZE = { width: 620, height: 720 };
 const CALLOUT_W = 228;
 const CALLOUT_H = 76;
 const KOREA_LAT_SCALE = 1.0;
+
+const TRAINING_COVERAGE_FALLBACK = {
+  schema_version: "training_data_coverage_v1",
+  generated_at: null,
+  datasets: [
+    {
+      id: "grid_panel_rows",
+      label: "AI 학습 격자 패널 행 수",
+      unit: "행",
+      status: "waiting",
+      rows: 0,
+      date_min: null,
+      date_max: null,
+      path: "ROOT_PATH/그리드/grid.parquet",
+      note: "AI 02 최종 grid.parquet를 시도·날짜별로 집계한 값이 필요합니다.",
+    },
+    {
+      id: "station_count",
+      label: "주유소 입력 수",
+      unit: "개",
+      status: "waiting",
+      rows: 0,
+      date_min: null,
+      date_max: null,
+      path: "data collection/derived_data/station_points.csv",
+      note: "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값이 필요합니다.",
+    },
+    {
+      id: "facility_count",
+      label: "시설 영향력 입력 수",
+      unit: "개",
+      status: "waiting",
+      rows: 0,
+      date_min: null,
+      date_max: null,
+      path: "data collection/derived_data/facility_points.csv",
+      note: "AI 01 시설 좌표 산출물을 시도별로 집계한 값이 필요합니다.",
+    },
+    {
+      id: "land_price_grid_count",
+      label: "공시지가 격자 수",
+      unit: "격자",
+      status: "waiting",
+      rows: 0,
+      date_min: null,
+      date_max: null,
+      path: "data collection/derived_data/official_land_price_grid.csv",
+      note: "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값이 필요합니다.",
+    },
+  ],
+  rows: [],
+};
 
 const CALLOUT_POSITIONS = {
   서울: { side: "left", x: 20, y: 38 },
@@ -405,93 +457,10 @@ function formatCount(value) {
   return Number(value).toLocaleString("ko-KR");
 }
 
-function statusLabel(status) {
-  if (status === "connected") return "연결됨";
-  if (status === "partial") return "부분 연결";
-  if (status === "waiting") return "대기";
-  return "확인 필요";
-}
-
 function dateRangeLabel(minDate, maxDate) {
   if (!minDate && !maxDate) return "-";
   if (minDate && maxDate && minDate !== maxDate) return `${minDate} ~ ${maxDate}`;
   return minDate || maxDate;
-}
-
-function rowsDateExtent(rows) {
-  return dateExtent(rows.map((row) => ({ date: row.date || row.as_of_date })).filter((row) => row.date));
-}
-
-function derivedDataStatus() {
-  const history = historyRows();
-  const historyExtent = rowsDateExtent(history);
-  const nationalDate = state.national?.as_of_date || FALLBACK_NATIONAL.as_of_date;
-  const stationRows = baseStations();
-  const regionRowsData = Array.isArray(state.regions) && state.regions.length ? state.regions : [];
-  const manifestFiles = Array.isArray(state.manifest?.files) ? state.manifest.files : [];
-
-  return [
-    {
-      id: "national_today",
-      label: "전국 가격 요약",
-      status: state.national?.fuels ? "connected" : "waiting",
-      rows: Object.keys(state.national?.fuels || FALLBACK_NATIONAL.fuels).length,
-      date_min: nationalDate,
-      date_max: nationalDate,
-      path: "page/public/data/latest/national_today.json",
-      note: "전국 실제가격, 적정가격, 적정범위, 정책효과를 표시합니다.",
-    },
-    {
-      id: "price_history",
-      label: "기간별 가격 추이",
-      status: history.length ? "connected" : "waiting",
-      rows: history.length,
-      date_min: historyExtent.min,
-      date_max: historyExtent.max,
-      path: "page/public/data/latest/price_history.json",
-      note: "가격 추이 그래프와 가격 요약 CSV 다운로드에 사용합니다.",
-    },
-    {
-      id: "region_today",
-      label: "지역별 요약",
-      status: regionRowsData.length ? "connected" : "waiting",
-      rows: regionRowsData.length,
-      date_min: nationalDate,
-      date_max: nationalDate,
-      path: "page/manual_inputs/region_today.csv",
-      note: "AI 모델 완료 전까지 수동 입력합니다. 없으면 샘플 지역값으로 지도를 그립니다.",
-    },
-    {
-      id: "station_search_index",
-      label: "주유소 검색/주변",
-      status: Array.isArray(state.stations) && state.stations.length ? "connected" : "waiting",
-      rows: stationRows.length,
-      date_min: nationalDate,
-      date_max: nationalDate,
-      path: "page/manual_inputs/station_search_index.csv",
-      note: "검색 탭과 주변 주유소 탭에 사용합니다. 좌표가 있어야 주변 정렬이 가능합니다.",
-    },
-    {
-      id: "ai_model_outputs",
-      label: "AI 적정가격 모델",
-      status: "waiting",
-      rows: 0,
-      date_min: "",
-      date_max: "",
-      path: "ai-model/03_prediction_model_design/outputs/{fuel}/",
-      note: "현재 학습/예측 완료 대기 상태입니다. 완료 후 지역/주유소 적정가격 생성에 연결합니다.",
-    },
-    {
-      id: "manifest",
-      label: "페이지 데이터 묶음",
-      status: manifestFiles.length ? "connected" : "partial",
-      rows: manifestFiles.length,
-      date_min: state.manifest?.as_of_date || nationalDate,
-      date_max: state.manifest?.as_of_date || nationalDate,
-      path: "page/public/data/latest/site_manifest.json",
-      note: "GitHub Pages가 읽는 공개 JSON 목록과 갱신 상태입니다.",
-    },
-  ];
 }
 
 function renderStatus() {
@@ -1132,44 +1101,175 @@ function renderDownloadSummary() {
   count.textContent = `${downloadRows().length.toLocaleString("ko-KR")}개 행`;
 }
 
-function renderDataStatus() {
-  const grid = document.getElementById("external-data-grid");
-  const summary = document.getElementById("data-status-summary");
-  if (!grid) return;
+function trainingCoverageData() {
+  const data = state.trainingCoverage || TRAINING_COVERAGE_FALLBACK;
+  return {
+    ...TRAINING_COVERAGE_FALLBACK,
+    ...data,
+    datasets: Array.isArray(data.datasets) ? data.datasets : TRAINING_COVERAGE_FALLBACK.datasets,
+    rows: Array.isArray(data.rows) ? data.rows : [],
+  };
+}
 
-  const generated = Array.isArray(state.externalData?.datasets) ? state.externalData.datasets : [];
-  const generatedById = new Map(generated.map((item) => [item.id, item]));
-  const baseRows = derivedDataStatus();
-  const baseIds = new Set(baseRows.map((item) => item.id));
-  const rows = [
-    ...baseRows.map((item) => ({ ...item, ...generatedById.get(item.id) })),
-    ...generated.filter((item) => !baseIds.has(item.id)),
-  ];
-  const connected = rows.filter((row) => row.status === "connected").length;
-  const waiting = rows.filter((row) => row.status === "waiting").length;
+function trainingCoverageDatasets() {
+  const data = trainingCoverageData();
+  const fallbackById = new Map(TRAINING_COVERAGE_FALLBACK.datasets.map((item) => [item.id, item]));
+  const seen = new Set();
+  const merged = data.datasets.map((item) => {
+    seen.add(item.id);
+    return { ...fallbackById.get(item.id), ...item };
+  });
+  TRAINING_COVERAGE_FALLBACK.datasets.forEach((item) => {
+    if (!seen.has(item.id)) merged.push(item);
+  });
+  return merged;
+}
 
-  if (summary) summary.textContent = `연결 ${connected}개 · 대기 ${waiting}개`;
+function selectedTrainingDataset() {
+  const select = document.getElementById("training-dataset");
+  return select?.value || trainingCoverageDatasets()[0]?.id || "";
+}
 
-  grid.innerHTML = rows.map((row) => `
-    <article class="data-status-card">
-      <header>
-        <h3>${escapeHtml(row.label)}</h3>
-        <span class="status-pill ${escapeHtml(row.status || "partial")}">${statusLabel(row.status)}</span>
-      </header>
-      <div class="data-metric-row">
-        <div class="data-metric">
-          <span>행 수</span>
-          <strong>${formatCount(row.rows)}</strong>
-        </div>
-        <div class="data-metric">
-          <span>기간</span>
-          <strong>${escapeHtml(dateRangeLabel(row.date_min, row.date_max))}</strong>
-        </div>
-      </div>
-      <p>${escapeHtml(row.note || "")}</p>
-      <p><code>${escapeHtml(row.path || row.expected_path || "-")}</code></p>
-    </article>
-  `).join("");
+function trainingRowsFor(datasetId) {
+  return trainingCoverageData().rows
+    .filter((row) => row.dataset === datasetId)
+    .map((row) => ({
+      ...row,
+      region: canonicalRegionName(row.region),
+      value: numberValue(row.value),
+      date: toIsoDate(row.date) || "",
+    }))
+    .filter((row) => row.region && row.value !== null);
+}
+
+function trainingDatesFor(datasetId) {
+  return [...new Set(trainingRowsFor(datasetId).map((row) => row.date).filter(Boolean))].sort();
+}
+
+function syncTrainingDateOptions(datasetId) {
+  const select = document.getElementById("training-date");
+  if (!select) return;
+  if (select.dataset.datasetId === datasetId) return;
+
+  const dates = trainingDatesFor(datasetId);
+  select.dataset.datasetId = datasetId;
+  select.disabled = dates.length === 0;
+  select.innerHTML = dates.length
+    ? dates.map((date) => `<option value="${escapeHtml(date)}">${escapeHtml(date)}</option>`).join("")
+    : `<option value="">전체</option>`;
+  if (dates.length) select.value = dates[dates.length - 1];
+}
+
+function initializeTrainingCoverageControls() {
+  const select = document.getElementById("training-dataset");
+  if (!select) return;
+  const datasets = trainingCoverageDatasets();
+  const current = select.value;
+  select.innerHTML = datasets.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
+  select.value = datasets.some((item) => item.id === current) ? current : datasets[0]?.id || "";
+  syncTrainingDateOptions(select.value);
+}
+
+function coverageColor(value, minValue, maxValue) {
+  if (!Number.isFinite(value)) return "#eef2f7";
+  if (maxValue <= minValue) return "#2f80ed";
+  const t = Math.max(0, Math.min(1, (value - minValue) / (maxValue - minValue)));
+  const lightness = 88 - t * 46;
+  return `hsl(211 82% ${lightness.toFixed(1)}%)`;
+}
+
+function renderTrainingCoverageMap(rows, dataset) {
+  const svg = document.getElementById("training-data-map");
+  if (!svg) return;
+  svg.innerHTML = "";
+
+  if (!state.geojson?.features?.length) {
+    const text = makeSvgElement("text", { x: "310", y: "370", "text-anchor": "middle", class: "map-empty" });
+    text.textContent = "지도 경계 데이터를 불러오지 못했습니다";
+    svg.append(text);
+    return;
+  }
+
+  const byRegion = new Map();
+  rows.forEach((row) => {
+    byRegion.set(row.region, (byRegion.get(row.region) || 0) + Number(row.value));
+  });
+  const values = [...byRegion.values()].filter((value) => Number.isFinite(value));
+  const minValue = values.length ? Math.min(...values) : 0;
+  const maxValue = values.length ? Math.max(...values) : 0;
+  const project = projectionForBox(state.geojson, { x: 34, y: 24, width: 552, height: 690 }, 22);
+
+  state.geojson.features.forEach((feature) => {
+    const region = canonicalRegionName(feature.properties?.name);
+    const value = byRegion.get(region);
+    const hasValue = Number.isFinite(value);
+    const path = makeSvgElement("path", {
+      d: geometryPath(feature.geometry, project),
+      class: `training-province ${hasValue ? "has-value" : ""}`,
+      fill: hasValue ? coverageColor(value, minValue, maxValue) : "#eef2f7",
+      "aria-label": `${region} ${dataset.label} ${hasValue ? formatCount(value) : "데이터 없음"}`,
+    });
+    const title = makeSvgElement("title");
+    title.textContent = `${region}: ${hasValue ? `${formatCount(value)}${dataset.unit ? ` ${dataset.unit}` : ""}` : "데이터 없음"}`;
+    path.append(title);
+    svg.append(path);
+
+    if (hasValue) {
+      const [cx, cy] = projectedCentroid(feature.geometry, project);
+      const label = makeSvgElement("text", {
+        x: cx.toFixed(1),
+        y: cy.toFixed(1),
+        "text-anchor": "middle",
+        class: "training-map-label",
+      });
+      label.textContent = region;
+      svg.append(label);
+    }
+  });
+
+  if (!values.length) {
+    const text = makeSvgElement("text", { x: "310", y: "370", "text-anchor": "middle", class: "map-empty" });
+    text.textContent = "GitHub에 지역별 AI 학습 데이터 집계가 없습니다";
+    svg.append(text);
+  }
+}
+
+function renderTrainingCoverage() {
+  const datasetId = selectedTrainingDataset();
+  syncTrainingDateOptions(datasetId);
+
+  const dataset = trainingCoverageDatasets().find((item) => item.id === datasetId) || trainingCoverageDatasets()[0] || {};
+  const dateSelect = document.getElementById("training-date");
+  const selectedDate = dateSelect?.value || "";
+  const rows = trainingRowsFor(datasetId).filter((row) => !selectedDate || row.date === selectedDate);
+  const values = rows.map((row) => row.value).filter((value) => Number.isFinite(value));
+  const total = values.reduce((sum, value) => sum + value, 0);
+  const summary = document.getElementById("training-coverage-summary");
+  const stats = document.getElementById("training-coverage-stats");
+  const note = document.getElementById("training-coverage-note");
+  const datasetPeriod = dateRangeLabel(dataset.date_min, dataset.date_max);
+  const dateLabel = selectedDate || (datasetPeriod === "-" ? "전체" : datasetPeriod);
+
+  if (summary) summary.textContent = values.length
+    ? `${dataset.label} · ${dateLabel} · ${values.length}개 시도`
+    : `${dataset.label || "AI 학습 데이터"} · 데이터 없음`;
+
+  if (stats) {
+    stats.innerHTML = `
+      <div><span>시도 수</span><strong>${values.length.toLocaleString("ko-KR")}</strong></div>
+      <div><span>합계</span><strong>${formatCount(total)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}</strong></div>
+      <div><span>기간</span><strong>${escapeHtml(dateRangeLabel(dataset.date_min, dataset.date_max))}</strong></div>
+      <div><span>입력</span><strong>${escapeHtml(dataset.path || "page/manual_inputs/training_data_coverage.csv")}</strong></div>
+    `;
+  }
+
+  if (note) {
+    note.textContent = values.length
+      ? dataset.note || "선택한 학습 데이터의 지역별 분포입니다."
+      : `${dataset.note || "지역별 집계 데이터가 필요합니다"} 현재 GitHub에는 이 지도를 칠할 시도별 학습 데이터 집계가 없습니다.`;
+  }
+
+  renderTrainingCoverageMap(rows, dataset);
 }
 
 function csvCell(value) {
@@ -1283,19 +1383,19 @@ function render() {
   renderNearby();
   renderTrend();
   renderDownloadSummary();
-  renderDataStatus();
+  renderTrainingCoverage();
 }
 
 async function boot() {
   clearRegionHash();
 
-  const [manifest, national, regions, stations, history, externalData, geojson] = await Promise.all([
+  const [manifest, national, regions, stations, history, trainingCoverage, geojson] = await Promise.all([
     loadJson("./public/data/latest/site_manifest.json", {}),
     loadJson("./public/data/latest/national_today.json", FALLBACK_NATIONAL),
     loadJson("./public/data/latest/region_today.json", FALLBACK_REGIONS),
     loadJson("./public/data/latest/station_search_index.json", FALLBACK_STATIONS),
     loadJson("./public/data/latest/price_history.json", []),
-    loadJson("./public/data/latest/external_data_status.json", null),
+    loadJson("./public/data/latest/training_data_coverage.json", TRAINING_COVERAGE_FALLBACK),
     loadJson("./public/assets/korea-provinces.geojson", null),
   ]);
 
@@ -1304,9 +1404,10 @@ async function boot() {
   state.regions = regions;
   state.stations = stations;
   state.history = history;
-  state.externalData = externalData;
+  state.trainingCoverage = trainingCoverage;
   state.geojson = geojson;
   initializeAnalysisControls();
+  initializeTrainingCoverageControls();
 
   document.querySelectorAll(".fuel-button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1349,6 +1450,12 @@ async function boot() {
   ["download-kind", "download-fuel", "download-region", "download-start", "download-end"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", renderDownloadSummary);
   });
+  document.getElementById("training-dataset")?.addEventListener("change", () => {
+    const dateSelect = document.getElementById("training-date");
+    if (dateSelect) dateSelect.dataset.datasetId = "";
+    renderTrainingCoverage();
+  });
+  document.getElementById("training-date")?.addEventListener("change", renderTrainingCoverage);
   document.getElementById("download-csv")?.addEventListener("click", exportCsv);
 
   window.addEventListener("popstate", () => {

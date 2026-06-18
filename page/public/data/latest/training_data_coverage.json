@@ -1,0 +1,52 @@
+{
+  "schema_version": "training_data_coverage_v1",
+  "generated_at": "2026-06-18T00:00:00+09:00",
+  "source": null,
+  "datasets": [
+    {
+      "id": "grid_panel_rows",
+      "label": "AI 학습 격자 패널 행 수",
+      "unit": "행",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "ROOT_PATH/그리드/grid.parquet",
+      "note": "AI 02 최종 grid.parquet를 시도·날짜별로 집계한 값입니다."
+    },
+    {
+      "id": "station_count",
+      "label": "주유소 입력 수",
+      "unit": "개",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "data collection/derived_data/station_points.csv",
+      "note": "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값입니다."
+    },
+    {
+      "id": "facility_count",
+      "label": "시설 영향력 입력 수",
+      "unit": "개",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "data collection/derived_data/facility_points.csv",
+      "note": "AI 01 시설 좌표 산출물을 시도별로 집계한 값입니다."
+    },
+    {
+      "id": "land_price_grid_count",
+      "label": "공시지가 격자 수",
+      "unit": "격자",
+      "status": "waiting",
+      "rows": 0,
+      "date_min": null,
+      "date_max": null,
+      "path": "data collection/derived_data/official_land_price_grid.csv",
+      "note": "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값입니다."
+    }
+  ],
+  "rows": []
+}
