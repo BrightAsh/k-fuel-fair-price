@@ -60,31 +60,31 @@ const REGION_COLORS = {
   제주: "#b98b5f",
 };
 
-const MAP_SIZE = { width: 1040, height: 1180 };
-const MAP_BOUNDS = { x: 248, y: 42, width: 544, height: 1096 };
+const MAP_SIZE = { width: 1040, height: 900 };
+const MAP_BOUNDS = { x: 214, y: 58, width: 612, height: 780 };
 const DETAIL_MAP_SIZE = { width: 620, height: 720 };
-const CALLOUT_W = 220;
-const CALLOUT_H = 70;
-const KOREA_LAT_SCALE = 1.55;
+const CALLOUT_W = 178;
+const CALLOUT_H = 56;
+const KOREA_LAT_SCALE = 1.0;
 
 const CALLOUT_POSITIONS = {
-  서울: { side: "left", x: 24, y: 88 },
-  인천: { side: "left", x: 24, y: 174 },
-  경기: { side: "left", x: 24, y: 260 },
-  충남: { side: "left", x: 24, y: 346 },
-  세종: { side: "left", x: 24, y: 432 },
-  전북: { side: "left", x: 24, y: 518 },
-  광주: { side: "left", x: 24, y: 604 },
-  전남: { side: "left", x: 24, y: 690 },
-  제주: { side: "left", x: 24, y: 1002 },
-  강원: { side: "right", x: 796, y: 112 },
-  충북: { side: "right", x: 796, y: 252 },
-  대전: { side: "right", x: 796, y: 364 },
-  경북: { side: "right", x: 796, y: 476 },
-  대구: { side: "right", x: 796, y: 588 },
-  울산: { side: "right", x: 796, y: 700 },
-  부산: { side: "right", x: 796, y: 812 },
-  경남: { side: "right", x: 796, y: 924 },
+  서울: { side: "left", x: 24, y: 48 },
+  인천: { side: "left", x: 24, y: 118 },
+  경기: { side: "left", x: 24, y: 188 },
+  충남: { side: "left", x: 24, y: 258 },
+  세종: { side: "left", x: 24, y: 328 },
+  전북: { side: "left", x: 24, y: 398 },
+  광주: { side: "left", x: 24, y: 468 },
+  전남: { side: "left", x: 24, y: 538 },
+  제주: { side: "left", x: 24, y: 786 },
+  강원: { side: "right", x: 838, y: 72 },
+  충북: { side: "right", x: 838, y: 184 },
+  대전: { side: "right", x: 838, y: 296 },
+  경북: { side: "right", x: 838, y: 408 },
+  대구: { side: "right", x: 838, y: 520 },
+  울산: { side: "right", x: 838, y: 632 },
+  부산: { side: "right", x: 838, y: 702 },
+  경남: { side: "right", x: 838, y: 772 },
 };
 
 const FALLBACK_NATIONAL = {
@@ -188,11 +188,30 @@ function compactWon(value) {
   return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 0 });
 }
 
+function priceWon(value) {
+  const formatted = compactWon(value);
+  return formatted === "-" ? "-" : `${formatted}원`;
+}
+
+function signedPriceWon(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
+  const numeric = Number(value);
+  const sign = numeric > 0 ? "+" : "";
+  return `${sign}${numeric.toLocaleString("ko-KR", { maximumFractionDigits: 0 })}원`;
+}
+
 function signedWon(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
   const numeric = Number(value);
   const sign = numeric > 0 ? "+" : "";
   return `${sign}${numeric.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}원/L`;
+}
+
+function gapToneClass(gap) {
+  const numeric = Number(gap);
+  if (numeric > 0) return "gap-high";
+  if (numeric < 0) return "gap-low";
+  return "gap-good";
 }
 
 function judgeClass(value, gap) {
@@ -508,8 +527,8 @@ function renderMap() {
     shell.style.borderLeftColor = REGION_COLORS[row.region] || "#102337";
     shell.innerHTML = `
       <strong>${escapeHtml(row.region)}</strong>
-      <span>실제 ${compactWon(metric.actual_price)} · 적정 ${compactWon(metric.fair_price_policy)}</span>
-      <small>${signedWon(metric.gap_policy)}</small>
+      <span>현재가 ${priceWon(metric.actual_price)}</span>
+      <span>적정가 ${priceWon(metric.fair_price_policy)} <em class="${gapToneClass(metric.gap_policy)}">(${signedPriceWon(metric.gap_policy)})</em></span>
     `;
     foreign.append(shell);
     foreign.addEventListener("click", () => openRegionDetail(row.region));

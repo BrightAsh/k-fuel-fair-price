@@ -276,7 +276,7 @@ h2 {
 
 .map-card {
   position: relative;
-  min-height: 1040px;
+  min-height: 840px;
   padding: 22px;
   overflow: hidden;
 }
@@ -352,7 +352,7 @@ h2 {
 .korea-map-wrap {
   position: relative;
   z-index: 1;
-  min-height: 940px;
+  min-height: 700px;
   overflow: hidden;
   border-radius: 8px;
   background:
@@ -364,7 +364,7 @@ h2 {
 #korea-map {
   display: block;
   width: 100%;
-  height: 940px;
+  height: 700px;
 }
 
 .province-path {
@@ -399,7 +399,7 @@ h2 {
 
 .map-callout-shell {
   height: 100%;
-  padding: 8px 9px;
+  padding: 5px 7px;
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(216, 224, 232, 0.98);
   border-left: 5px solid var(--navy);
@@ -433,21 +433,37 @@ h2 {
 }
 
 .map-callout-shell strong {
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 2px;
+  font-size: 12.5px;
   line-height: 1.15;
 }
 
 .map-callout-shell span {
   color: var(--muted);
-  font-size: 10.5px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.28;
+}
+
+.map-callout-shell em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.map-callout-shell em.gap-high {
+  color: var(--red);
+}
+
+.map-callout-shell em.gap-low {
+  color: var(--blue);
+}
+
+.map-callout-shell em.gap-good {
+  color: var(--green);
 }
 
 .map-callout-shell small {
-  margin-top: 4px;
   color: var(--blue);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1.2;
 }
@@ -931,23 +947,24 @@ tbody tr.is-selected td {
   }
 
   .korea-map-wrap {
-    min-height: 760px;
+    min-height: 680px;
   }
 
   #korea-map {
-    height: 760px;
+    height: 680px;
   }
 
   .map-callout-shell {
-    padding: 6px 7px;
+    padding: 5px 6px;
   }
 
-  .map-callout-shell span {
-    display: none;
-  }
-
+  .map-callout-shell span,
   .map-callout-shell small {
-    font-size: 11px;
+    font-size: 10px;
+  }
+
+  .map-callout-shell strong {
+    font-size: 10.5px;
   }
 
   .region-detail-summary {
