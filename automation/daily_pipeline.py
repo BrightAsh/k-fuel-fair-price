@@ -481,6 +481,11 @@ def main() -> int:
     print(f"[PIPELINE] report={report_path}")
     for step in steps:
         print(f"[{step.status}] {step.name} {step.detail}")
+        if step.status == "failed":
+            output_tail = step.data.get("output_tail")
+            if output_tail:
+                print(f"[{step.name} output_tail]")
+                print(output_tail)
 
     failed = [step for step in steps if step.status == "failed"]
     return 1 if failed else 0
