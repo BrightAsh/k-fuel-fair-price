@@ -7,6 +7,7 @@ page/public/data/latest/site_manifest.json
 page/public/data/latest/national_today.json
 page/public/data/latest/region_today.json
 page/public/data/latest/station_search_index.json
+page/public/data/latest/price_history.json
 page/public/assets/korea-provinces.geojson
 ```
 
@@ -107,6 +108,8 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
 }
 ```
 
+`files`에는 기간별 그래프와 다운로드에 쓰는 `price_history.json`도 포함될 수 있습니다.
+
 ### `national_today.json`
 
 ```json
@@ -182,6 +185,26 @@ ai-model/03_prediction_model_design/outputs/{fuel}/{fuel}_test_predictions_2026.
     "gasoline_price": 2010.0,
     "diesel_price": 1980.0,
     "judge_policy": "적정"
+  }
+]
+```
+
+### `price_history.json`
+
+기간별 그래프와 가격 요약 CSV 다운로드에 사용합니다. 현재 자동 생성은 전국 일별 정책 적용 데이터 기준이며, 지역별 시계열이 확정되면 같은 스키마에서 `region` 값을 시도명으로 확장합니다.
+
+```json
+[
+  {
+    "date": "2026-06-09",
+    "region": "전국",
+    "fuel": "gasoline",
+    "actual_price": 2009.98,
+    "fair_price_policy": 2373.07,
+    "band_low_policy": 2363.23,
+    "band_high_policy": 2395.36,
+    "gap_policy": -363.09,
+    "source": "data-analysis/05_policy_application/outputs/휘발유/일별_정책적용_데이터_휘발유.csv"
   }
 ]
 ```

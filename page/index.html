@@ -3,10 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>K-Fuel Fair Price</title>
+    <title>오늘의 적정유가</title>
     <link rel="stylesheet" href="./assets/css/dashboard.css" />
     <script>
       (() => {
+        if (location.hash.startsWith("#region=")) {
+          history.replaceState(null, "", `${location.pathname}${location.search}`);
+        }
+
         const cleanupKey = "kff-pages-sw-cleanup-v1";
         if (!("serviceWorker" in navigator)) return;
 
@@ -42,40 +46,25 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div class="brand-block">
-          <span class="brand-mark">K-Fuel</span>
+        <button id="brand-home" class="brand-block brand-link" type="button" aria-label="메인으로 이동">
+          <span class="brand-mark"><img src="./assets/img/fairfuel-logo.svg" alt="" /></span>
           <div>
             <p>Daily fair price monitor</p>
-            <h1>국내 유가 적정가격</h1>
+            <h1>오늘의 적정유가</h1>
           </div>
-        </div>
+        </button>
 
-        <nav class="top-tabs" aria-label="대시보드 보기">
-          <button class="top-tab is-active" type="button" data-panel="map">오늘</button>
-          <button class="top-tab" type="button" data-panel="regions">지역</button>
-          <button class="top-tab" type="button" data-panel="policy">정책</button>
+        <nav class="top-tabs" aria-label="서비스 메뉴">
+          <button class="top-tab is-active" type="button" data-panel="map">전국 현황</button>
+          <button class="top-tab" type="button" data-panel="nearby">주변 주유소</button>
+          <button class="top-tab" type="button" data-panel="trend">가격 추이</button>
+          <button class="top-tab" type="button" data-panel="download">데이터 다운로드</button>
           <button class="top-tab" type="button" data-panel="search">검색</button>
-          <button class="top-tab" type="button" data-panel="nearby">주변</button>
           <button id="region-detail-tab" class="top-tab region-detail-tab" type="button" data-panel="region-detail">선택지역</button>
         </nav>
-
-        <div class="freshness" aria-live="polite">
-          <span id="freshness-dot" class="freshness-dot"></span>
-          <div>
-            <strong id="data-date">기준일 확인 중</strong>
-            <span id="generated-at">갱신 확인 중</span>
-          </div>
-        </div>
       </header>
 
       <main class="dashboard">
-        <section class="toolbar" aria-label="조회 조건">
-          <label class="global-search">
-            <span>주유소 검색</span>
-            <input id="station-search" type="search" placeholder="지역, 주소, 주유소명" autocomplete="off" />
-          </label>
-        </section>
-
         <section id="panel-map" class="dashboard-panel is-visible">
           <div class="primary-grid">
             <article class="map-card">
@@ -105,12 +94,12 @@
 
               <article class="price-stack">
                 <div class="price-row">
-                  <span>전국 실제 평균</span>
+                  <span>전국 실제 평균(전일 데이터)</span>
                   <strong id="metric-actual">-</strong>
                   <small id="metric-actual-delta">전일 대비 -</small>
                 </div>
                 <div class="price-row accent">
-                  <span>정책 적용 적정가격</span>
+                  <span>오늘 산출 적정가격</span>
                   <strong id="metric-fair">-</strong>
                   <small id="metric-band">적정 범위 -</small>
                 </div>
@@ -119,6 +108,12 @@
                   <strong id="metric-gap">-</strong>
                   <small id="metric-policy">정책효과 -</small>
                 </div>
+              </article>
+
+              <article class="data-note-card">
+                <strong id="as-of-copy">데이터 기준 확인 중</strong>
+                <span id="data-basis-copy">실제가는 전일 공시 가격, 적정가는 오늘 산출 가격입니다.</span>
+                <span id="site-generated-at">갱신 시각 확인 중</span>
               </article>
 
               <article class="policy-card">
@@ -186,41 +181,82 @@
           </div>
         </section>
 
-        <section id="panel-regions" class="dashboard-panel">
+        <section id="panel-trend" class="dashboard-panel">
           <article class="data-card">
             <div class="section-heading">
               <div>
-                <p>Regional table</p>
-                <h2>지역별 가격표</h2>
+                <p>Price history</p>
+                <h2>기간별 가격 추이</h2>
               </div>
-              <span>정책 적용 기준</span>
+              <span id="trend-summary">전체기간 · 전국</span>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>지역</th>
-                    <th>실제</th>
-                    <th>적정</th>
-                    <th>차이</th>
-                    <th>판정</th>
-                  </tr>
-                </thead>
-                <tbody id="region-table"></tbody>
-              </table>
+            <div class="filter-bar" aria-label="가격 추이 조건">
+              <label>
+                <span>유종</span>
+                <select id="trend-fuel">
+                  <option value="gasoline">휘발유</option>
+                  <option value="diesel">경유</option>
+                </select>
+              </label>
+              <label>
+                <span>지역</span>
+                <select id="trend-region"></select>
+              </label>
+              <label>
+                <span>시작일</span>
+                <input id="trend-start" type="date" />
+              </label>
+              <label>
+                <span>종료일</span>
+                <input id="trend-end" type="date" />
+              </label>
             </div>
+            <div class="chart-shell">
+              <svg id="price-trend-chart" viewBox="0 0 920 420" role="img" aria-label="실제 가격과 적정 가격 추이"></svg>
+            </div>
+            <p id="trend-note" class="panel-note">가격 추이 데이터를 확인하는 중입니다.</p>
           </article>
         </section>
 
-        <section id="panel-policy" class="dashboard-panel">
+        <section id="panel-download" class="dashboard-panel">
           <article class="data-card">
             <div class="section-heading">
               <div>
-                <p>Policy effect</p>
-                <h2>정책 적용 요약</h2>
+                <p>Download</p>
+                <h2>데이터 다운로드</h2>
               </div>
+              <span id="download-count">조건을 선택하세요</span>
             </div>
-            <div id="policy-detail-grid" class="policy-detail-grid"></div>
+            <div class="filter-bar" aria-label="다운로드 조건">
+              <label>
+                <span>데이터</span>
+                <select id="download-kind">
+                  <option value="price">가격 요약</option>
+                  <option value="station">주유소 검색 인덱스</option>
+                </select>
+              </label>
+              <label>
+                <span>유종</span>
+                <select id="download-fuel">
+                  <option value="gasoline">휘발유</option>
+                  <option value="diesel">경유</option>
+                </select>
+              </label>
+              <label>
+                <span>지역</span>
+                <select id="download-region"></select>
+              </label>
+              <label>
+                <span>시작일</span>
+                <input id="download-start" type="date" />
+              </label>
+              <label>
+                <span>종료일</span>
+                <input id="download-end" type="date" />
+              </label>
+              <button id="download-csv" class="primary-action" type="button">CSV 다운로드</button>
+            </div>
+            <p class="panel-note">현재가는 전일 공시 가격입니다. 적정가격은 t-1~t-28 데이터를 입력해 t일 기준으로 산출한 값입니다.</p>
           </article>
         </section>
 
@@ -233,6 +269,10 @@
               </div>
               <span id="search-count">검색어를 입력하세요</span>
             </div>
+            <label class="search-box">
+              <span>검색어</span>
+              <input id="station-search" type="search" placeholder="주유소명, 주소, 지역, 브랜드" autocomplete="off" />
+            </label>
             <div id="station-results" class="station-results"></div>
           </article>
         </section>

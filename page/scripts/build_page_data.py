@@ -162,6 +162,49 @@ def build_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
     }
 
 
+def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    cutoff = pd.Timestamp(as_of_date) if as_of_date else None
+
+    for fuel, cfg in FUEL_CONFIG.items():
+        path = repo_root / cfg["policy_csv"]
+        if not path.exists():
+            continue
+
+        df = read_csv(path)
+        date_col = find_col(df, ["date", "날짜", "일자"])
+        actual_col = find_col(df, ["국내유가_원L", "actual_price", "actual_gross_full"])
+        fair_col = find_col(df, ["적정가격_정책적용_원L", "fair_price_policy"])
+        low_col = find_col(df, ["적정범위_정책적용_하한_원L", "band_low_policy"])
+        high_col = find_col(df, ["적정범위_정책적용_상한_원L", "band_high_policy"])
+
+        if date_col is None:
+            continue
+
+        work = df.copy()
+        work[date_col] = pd.to_datetime(work[date_col], errors="coerce")
+        work = work.dropna(subset=[date_col]).sort_values(date_col)
+        if cutoff is not None:
+            work = work[work[date_col] <= cutoff]
+
+        for _, row in work.iterrows():
+            actual = to_float(row.get(actual_col)) if actual_col else None
+            fair = to_float(row.get(fair_col)) if fair_col else None
+            rows.append({
+                "date": pd.Timestamp(row[date_col]).strftime("%Y-%m-%d"),
+                "region": "전국",
+                "fuel": fuel,
+                "actual_price": actual,
+                "fair_price_policy": fair,
+                "band_low_policy": to_float(row.get(low_col)) if low_col else None,
+                "band_high_policy": to_float(row.get(high_col)) if high_col else None,
+                "gap_policy": actual - fair if actual is not None and fair is not None else None,
+                "source": str(cfg["policy_csv"]),
+            })
+
+    return rows
+
+
 def build_region(repo_root: Path) -> list[dict[str, Any]]:
     path = repo_root / "page/manual_inputs/region_today.csv"
     if not path.exists():
@@ -227,6 +270,7 @@ def main() -> None:
     national = build_national(repo_root, args.as_of_date)
     region = build_region(repo_root)
     stations = build_station_index(repo_root)
+    history = build_price_history(repo_root, args.as_of_date)
 
     manifest = {
         "schema_version": "page_data_v1",
@@ -237,6 +281,7 @@ def main() -> None:
             "national_today.json",
             "region_today.json",
             "station_search_index.json",
+            "price_history.json",
         ],
         "assets": [
             "korea-provinces.geojson",
@@ -251,11 +296,13 @@ def main() -> None:
     write_json(output_dir / "national_today.json", national)
     write_json(output_dir / "region_today.json", region)
     write_json(output_dir / "station_search_index.json", stations)
+    write_json(output_dir / "price_history.json", history)
     write_json(output_dir / "site_manifest.json", manifest)
 
     print(f"[SAVE] {output_dir}")
     print(f"[INFO] as_of_date={manifest['as_of_date']} freshness={manifest['freshness']}")
     print(f"[INFO] regions={len(region):,} stations={len(stations):,}")
+    print(f"[INFO] history={len(history):,}")
 
 
 if __name__ == "__main__":

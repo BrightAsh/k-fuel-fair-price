@@ -6,7 +6,8 @@
   "files": [
     "national_today.json",
     "region_today.json",
-    "station_search_index.json"
+    "station_search_index.json",
+    "price_history.json"
   ],
   "assets": [
     "korea-provinces.geojson"
