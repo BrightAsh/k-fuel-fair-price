@@ -373,34 +373,38 @@ h2 {
   stroke-width: 1.2;
   vector-effect: non-scaling-stroke;
   cursor: pointer;
-  transition: opacity 160ms ease, stroke-width 160ms ease, filter 160ms ease;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 160ms ease, transform 180ms ease, filter 180ms ease;
 }
 
 .province-path:hover,
 .province-path.is-selected {
   opacity: 1;
-  stroke: #102337;
-  stroke-width: 2.6;
-  filter: drop-shadow(0 12px 18px rgba(16, 35, 55, 0.22));
+  stroke: rgba(255, 255, 255, 0.98);
+  stroke-width: 1.2;
+  transform: translateY(-7px);
+  filter: drop-shadow(0 14px 18px rgba(16, 35, 55, 0.28));
 }
 
 .map-connector {
   fill: none;
-  stroke: rgba(76, 90, 109, 0.5);
-  stroke-width: 1.25;
+  stroke: rgba(0, 0, 0, 0.78);
+  stroke-width: 1.35;
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
 
 .map-connector.is-selected {
-  stroke: #102337;
-  stroke-width: 2.2;
+  stroke: #000;
+  stroke-width: 1.9;
 }
 
 .map-callout-shell {
   height: 100%;
   padding: 7px 9px;
-  background: rgba(255, 255, 255, 0.94);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(247, 250, 254, 0.97));
   border: 1px solid rgba(216, 224, 232, 0.98);
   border-left: 5px solid var(--navy);
   border-radius: 6px;
@@ -412,8 +416,10 @@ h2 {
 
 .map-callout-shell:hover,
 .map-callout-shell.is-selected {
-  border-color: #102337;
-  box-shadow: 0 16px 32px rgba(16, 35, 55, 0.22);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(240, 246, 255, 0.99));
+  border-color: rgba(93, 111, 132, 0.58);
+  box-shadow: 0 16px 32px rgba(16, 35, 55, 0.2);
 }
 
 .map-callout-shell.is-selected {

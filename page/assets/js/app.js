@@ -451,8 +451,7 @@ function connectorPath(anchor, callout) {
   const startY = callout.y + CALLOUT_H / 2;
   const endX = anchor[0];
   const endY = anchor[1];
-  const midX = isLeft ? startX + 72 : startX - 72;
-  return `M${startX.toFixed(1)} ${startY.toFixed(1)} C${midX.toFixed(1)} ${startY.toFixed(1)}, ${midX.toFixed(1)} ${endY.toFixed(1)}, ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+  return `M${startX.toFixed(1)} ${startY.toFixed(1)} L${endX.toFixed(1)} ${endY.toFixed(1)}`;
 }
 
 function renderMap() {
@@ -541,7 +540,7 @@ function renderMap() {
     calloutLayer.append(foreign);
   });
 
-  svg.append(connectorLayer, provinceLayer, calloutLayer);
+  svg.append(provinceLayer, connectorLayer, calloutLayer);
 }
 
 function selectedFeature() {
