@@ -754,6 +754,12 @@ function activatePanel(name) {
   });
 }
 
+function clearRegionHash() {
+  if (location.hash.startsWith("#region=")) {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  }
+}
+
 function clearRegionSelection(updateUrl = true) {
   state.selectedRegion = null;
   state.regionDetailEnabled = false;
@@ -765,12 +771,10 @@ function clearRegionSelection(updateUrl = true) {
   renderRegions();
   renderMap();
 
-  if (updateUrl && location.hash.startsWith("#region=")) {
-    history.replaceState(null, "", `${location.pathname}${location.search}`);
-  }
+  if (updateUrl) clearRegionHash();
 }
 
-function openRegionDetail(region, updateUrl = true) {
+function openRegionDetail(region) {
   if (!region) return;
   state.selectedRegion = canonicalRegionName(region);
   state.regionDetailEnabled = true;
@@ -779,20 +783,7 @@ function openRegionDetail(region, updateUrl = true) {
   renderMap();
   renderRegionDetail();
   activatePanel("region-detail");
-  if (updateUrl) {
-    const encoded = encodeURIComponent(state.selectedRegion);
-    history.pushState({ region: state.selectedRegion }, "", `#region=${encoded}`);
-  }
-}
-
-function parseRegionHash() {
-  const match = location.hash.match(/^#region=(.+)$/);
-  if (!match) return null;
-  try {
-    return canonicalRegionName(decodeURIComponent(match[1]));
-  } catch {
-    return null;
-  }
+  clearRegionHash();
 }
 
 function render() {
@@ -821,12 +812,7 @@ async function boot() {
   state.regions = regions;
   state.stations = stations;
   state.geojson = geojson;
-
-  const hashRegion = parseRegionHash();
-  if (hashRegion && REGION_ORDER.includes(hashRegion)) {
-    state.selectedRegion = hashRegion;
-    state.regionDetailEnabled = true;
-  }
+  clearRegionHash();
 
   document.querySelectorAll(".fuel-button").forEach((button) => {
     button.addEventListener("click", () => {
@@ -858,13 +844,8 @@ async function boot() {
   document.getElementById("nearby-radius").addEventListener("change", renderNearby);
 
   window.addEventListener("popstate", () => {
-    const region = parseRegionHash();
-    if (region && REGION_ORDER.includes(region)) {
-      openRegionDetail(region, false);
-    } else {
-      clearRegionSelection(false);
-      activatePanel("map");
-    }
+    clearRegionSelection(false);
+    activatePanel("map");
   });
 
   render();
