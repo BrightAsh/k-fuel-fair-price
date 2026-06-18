@@ -1,0 +1,103 @@
+dataset,date,region,value,unit,label
+diesel_latest_station_count,2026-06-10,강원,607,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,경기,2169,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,경남,976,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,경북,1119,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,대구,326,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,대전,196,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,부산,331,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,서울,398,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,울산,216,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,인천,300,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,전남,808,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,전북,777,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,제주,189,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-10,충북,651,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-11,광주,196,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-11,세종,64,개,최신 경유 가격 주유소 수
+diesel_latest_station_count,2026-06-11,충남,926,개,최신 경유 가격 주유소 수
+diesel_price_observations,2026-06-10,강원,4418078,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,경기,15378117,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,경남,7448102,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,경북,8260772,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,대구,2479699,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,대전,1639172,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,부산,2716316,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,서울,3544051,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,울산,1654788,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,인천,2258790,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,전남,5651826,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,전북,5734610,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,제주,1254156,건,경유 가격 관측 수
+diesel_price_observations,2026-06-10,충북,4356727,건,경유 가격 관측 수
+diesel_price_observations,2026-06-11,광주,1838397,건,경유 가격 관측 수
+diesel_price_observations,2026-06-11,세종,307357,건,경유 가격 관측 수
+diesel_price_observations,2026-06-11,충남,6521272,건,경유 가격 관측 수
+facility_count,2026-06-11,강릉시,1,개,시설 영향력 입력 수
+facility_count,2026-06-11,강원,32,개,시설 영향력 입력 수
+facility_count,2026-06-11,경기,166,개,시설 영향력 입력 수
+facility_count,2026-06-11,경남,48,개,시설 영향력 입력 수
+facility_count,2026-06-11,경북,69,개,시설 영향력 입력 수
+facility_count,2026-06-11,광주,16,개,시설 영향력 입력 수
+facility_count,2026-06-11,대구,20,개,시설 영향력 입력 수
+facility_count,2026-06-11,대전,22,개,시설 영향력 입력 수
+facility_count,2026-06-11,부산,31,개,시설 영향력 입력 수
+facility_count,2026-06-11,서울,77,개,시설 영향력 입력 수
+facility_count,2026-06-11,울산,19,개,시설 영향력 입력 수
+facility_count,2026-06-11,인천,24,개,시설 영향력 입력 수
+facility_count,2026-06-11,전남,43,개,시설 영향력 입력 수
+facility_count,2026-06-11,전북,52,개,시설 영향력 입력 수
+facility_count,2026-06-11,제주,15,개,시설 영향력 입력 수
+facility_count,2026-06-11,충남,61,개,시설 영향력 입력 수
+facility_count,2026-06-11,충북,44,개,시설 영향력 입력 수
+gasoline_latest_station_count,2026-06-10,강원,605,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,경기,2166,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,경남,970,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,경북,1113,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,대구,326,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,대전,195,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,부산,328,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,서울,398,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,울산,215,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,인천,300,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,전남,800,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,전북,773,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,제주,189,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-10,충북,647,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-11,광주,196,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-11,세종,64,개,최신 휘발유 가격 주유소 수
+gasoline_latest_station_count,2026-06-11,충남,919,개,최신 휘발유 가격 주유소 수
+gasoline_price_observations,2026-06-10,강원,4389729,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,경기,15333645,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,경남,7415181,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,경북,8200463,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,대구,2477755,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,대전,1638018,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,부산,2708680,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,서울,3544843,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,울산,1650002,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,인천,2254425,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,전남,5606226,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,전북,5697533,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,제주,1253273,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-10,충북,4323773,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-11,광주,1837316,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-11,세종,306916,건,휘발유 가격 관측 수
+gasoline_price_observations,2026-06-11,충남,6487236,건,휘발유 가격 관측 수
+station_count,2026-06-11,강원,612,개,주유소 입력 수
+station_count,2026-06-11,경기,2189,개,주유소 입력 수
+station_count,2026-06-11,경남,1014,개,주유소 입력 수
+station_count,2026-06-11,경북,1157,개,주유소 입력 수
+station_count,2026-06-11,광주,198,개,주유소 입력 수
+station_count,2026-06-11,대구,351,개,주유소 입력 수
+station_count,2026-06-11,대전,202,개,주유소 입력 수
+station_count,2026-06-11,부산,343,개,주유소 입력 수
+station_count,2026-06-11,서울,414,개,주유소 입력 수
+station_count,2026-06-11,세종,65,개,주유소 입력 수
+station_count,2026-06-11,울산,219,개,주유소 입력 수
+station_count,2026-06-11,인천,309,개,주유소 입력 수
+station_count,2026-06-11,전남,808,개,주유소 입력 수
+station_count,2026-06-11,전북,783,개,주유소 입력 수
+station_count,2026-06-11,제주,190,개,주유소 입력 수
+station_count,2026-06-11,충남,947,개,주유소 입력 수
+station_count,2026-06-11,충북,667,개,주유소 입력 수
