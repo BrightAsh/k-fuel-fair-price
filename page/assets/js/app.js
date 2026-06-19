@@ -936,6 +936,43 @@ function chartPath(points) {
   return points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
 }
 
+function contiguousSeries(rows, hasValue) {
+  const series = [];
+  let current = [];
+
+  rows.forEach((row, index) => {
+    if (hasValue(row)) {
+      current.push({ row, index });
+      return;
+    }
+    if (current.length) series.push(current);
+    current = [];
+  });
+
+  if (current.length) series.push(current);
+  return series;
+}
+
+function actualRangeTone(row) {
+  const actual = numberValue(row.actual_price);
+  const low = numberValue(row.band_low_policy);
+  const high = numberValue(row.band_high_policy);
+
+  if (actual === null || low === null || high === null) return "normal";
+  if (actual > high) return "over";
+  if (actual < low) return "under";
+  return "normal";
+}
+
+function actualSegmentTone(leftRow, rightRow) {
+  const left = actualRangeTone(leftRow);
+  const right = actualRangeTone(rightRow);
+
+  if (left === right) return left;
+  if (right !== "normal") return right;
+  return left;
+}
+
 function drawTrendChart(rows) {
   const svg = document.getElementById("price-trend-chart");
   if (!svg) return;
@@ -950,7 +987,7 @@ function drawTrendChart(rows) {
 
   const width = 920;
   const height = 420;
-  const margin = { left: 74, right: 30, top: 30, bottom: 62 };
+  const margin = { left: 74, right: 30, top: 48, bottom: 62 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
   const values = rows.flatMap((row) => [
@@ -982,28 +1019,40 @@ function drawTrendChart(rows) {
     svg.append(label);
   }
 
-  const bandRows = rows.filter((row) => numberValue(row.band_low_policy) !== null && numberValue(row.band_high_policy) !== null);
-  if (bandRows.length === rows.length) {
-    const upper = rows.map((row, index) => [xFor(index), yFor(row.band_high_policy)]);
-    const lower = rows.map((row, index) => [xFor(index), yFor(row.band_low_policy)]).reverse();
+  contiguousSeries(
+    rows,
+    (row) => numberValue(row.band_low_policy) !== null && numberValue(row.band_high_policy) !== null,
+  ).forEach((segment) => {
+    if (segment.length < 2) return;
+    const upper = segment.map(({ row, index }) => [xFor(index), yFor(row.band_high_policy)]);
+    const lower = segment.map(({ row, index }) => [xFor(index), yFor(row.band_low_policy)]).reverse();
     const bandPath = `${chartPath(upper)} L${lower.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L")} Z`;
     svg.append(makeSvgElement("path", { d: bandPath, class: "chart-band" }));
+  });
+
+  contiguousSeries(rows, (row) => numberValue(row.fair_price_policy) !== null).forEach((segment) => {
+    if (segment.length < 2) return;
+    const points = segment.map(({ row, index }) => [xFor(index), yFor(row.fair_price_policy)]);
+    svg.append(makeSvgElement("path", { d: chartPath(points), class: "chart-line-fair" }));
+  });
+
+  for (let index = 1; index < rows.length; index += 1) {
+    const left = rows[index - 1];
+    const right = rows[index];
+    const leftActual = numberValue(left.actual_price);
+    const rightActual = numberValue(right.actual_price);
+    if (leftActual === null || rightActual === null) continue;
+
+    const tone = actualSegmentTone(left, right);
+    const points = [
+      [xFor(index - 1), yFor(leftActual)],
+      [xFor(index), yFor(rightActual)],
+    ];
+    svg.append(makeSvgElement("path", {
+      d: chartPath(points),
+      class: `chart-line-actual chart-line-actual-${tone}`,
+    }));
   }
-
-  const actualPoints = rows
-    .map((row, index) => [xFor(index), numberValue(row.actual_price)])
-    .filter((point) => point[1] !== null)
-    .map(([x, value]) => [x, yFor(value)]);
-  const fairPoints = rows
-    .map((row, index) => [xFor(index), numberValue(row.fair_price_policy)])
-    .filter((point) => point[1] !== null)
-    .map(([x, value]) => [x, yFor(value)]);
-
-  if (actualPoints.length > 1) svg.append(makeSvgElement("path", { d: chartPath(actualPoints), class: "chart-line-actual" }));
-  if (fairPoints.length > 1) svg.append(makeSvgElement("path", { d: chartPath(fairPoints), class: "chart-line-fair" }));
-
-  actualPoints.forEach(([x, y]) => svg.append(makeSvgElement("circle", { cx: x, cy: y, r: "4", class: "chart-dot-actual" })));
-  fairPoints.forEach(([x, y]) => svg.append(makeSvgElement("circle", { cx: x, cy: y, r: "4", class: "chart-dot-fair" })));
 
   const firstDate = rows[0]?.date || "";
   const lastDate = rows[rows.length - 1]?.date || "";
@@ -1017,14 +1066,19 @@ function drawTrendChart(rows) {
   });
 
   [
-    { x: width - 245, y: 28, color: "chart-dot-actual", text: "전일 실제가격" },
-    { x: width - 125, y: 28, color: "chart-dot-fair", text: "오늘 적정가격" },
+    { x: width - 365, y: 26, className: "chart-line-actual chart-line-actual-normal", text: "전일 실제가격" },
+    { x: width - 230, y: 26, className: "chart-line-fair", text: "오늘 적정가격" },
   ].forEach((item) => {
-    svg.append(makeSvgElement("circle", { cx: item.x, cy: item.y - 4, r: "5", class: item.color }));
-    const text = makeSvgElement("text", { x: item.x + 10, y: item.y, class: "chart-label" });
+    svg.append(makeSvgElement("line", { x1: item.x, y1: item.y - 4, x2: item.x + 28, y2: item.y - 4, class: item.className }));
+    const text = makeSvgElement("text", { x: item.x + 36, y: item.y, class: "chart-label" });
     text.textContent = item.text;
     svg.append(text);
   });
+
+  svg.append(makeSvgElement("rect", { x: width - 96, y: 14, width: "26", height: "12", rx: "3", class: "chart-legend-band" }));
+  const bandText = makeSvgElement("text", { x: width - 62, y: 26, class: "chart-label" });
+  bandText.textContent = "적정가격대";
+  svg.append(bandText);
 }
 
 function renderTrend() {
