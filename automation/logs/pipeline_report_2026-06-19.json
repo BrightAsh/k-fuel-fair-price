@@ -1,0 +1,172 @@
+{
+  "schema_version": "daily_pipeline_report_v1",
+  "generated_at": "2026-06-20T04:56:32+09:00",
+  "start_date": "2026-06-18",
+  "end_date": "2026-06-19",
+  "steps": [
+    {
+      "name": "inspect:crude",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/crude/crude_20080102_20260617.csv",
+        "date_min": null,
+        "date_max": null,
+        "dated_rows": 0
+      }
+    },
+    {
+      "name": "inspect:retail_avg",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080415_20260617.csv",
+        "date_min": "2008-04-15",
+        "date_max": "2026-06-17",
+        "dated_rows": 6636
+      }
+    },
+    {
+      "name": "inspect:brand_gasoline",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080415_20260617.csv",
+        "date_min": "2008-04-15",
+        "date_max": "2026-06-17",
+        "dated_rows": 6636
+      }
+    },
+    {
+      "name": "inspect:brand_diesel",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080415_20260617.csv",
+        "date_min": "2008-04-15",
+        "date_max": "2026-06-17",
+        "dated_rows": 6636
+      }
+    },
+    {
+      "name": "inspect:fx_usdkrw",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/fx_usdkrw/fx_usdkrw_20080102_20260617.csv",
+        "date_min": "2008-01-02",
+        "date_max": "2026-06-17",
+        "dated_rows": 4568
+      }
+    },
+    {
+      "name": "inspect:intl_products",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260617.csv",
+        "date_min": null,
+        "date_max": null,
+        "dated_rows": 0
+      }
+    },
+    {
+      "name": "inspect:intl_product_diesel_0001",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260617.csv",
+        "date_min": null,
+        "date_max": null,
+        "dated_rows": 0
+      }
+    },
+    {
+      "name": "inspect:gasoline_tax_trend",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/fuel_tax_trend/gasoline_tax_trend_20080101_20260610.xls"
+      }
+    },
+    {
+      "name": "inspect:diesel_tax_trend",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/fuel_tax_trend/diesel_tax_trend_20080101_20260610.xls"
+      }
+    },
+    {
+      "name": "inspect:refinery_weekly_supply",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/refinery_weekly_supply/refinery_weekly_supply_prices_by_product_20080507_20260528.csv",
+        "date_min": null,
+        "date_max": null,
+        "dated_rows": 0
+      }
+    },
+    {
+      "name": "inspect:korea_fuel_tax_price_policies",
+      "status": "available",
+      "detail": "",
+      "data": {
+        "path": "data-analysis/00_data_collection/outputs/z_pa_policy/korea_fuel_tax_price_policies.csv",
+        "date_min": null,
+        "date_max": null,
+        "dated_rows": 0
+      }
+    },
+    {
+      "name": "collect",
+      "status": "completed",
+      "detail": "",
+      "data": {
+        "returncode": 0,
+        "output_tail": "[completed] fx_usdkrw rows=2 \n[completed] crude rows=1 \n[completed] intl_products rows=2 \n[completed] retail_avg rows=2 \n[completed] brand_price rows=4 \n[completed] fuel_tax_trend rows=66 \n[completed] refinery_weekly_supply rows=0 \n"
+      }
+    },
+    {
+      "name": "merge_incoming",
+      "status": "skipped",
+      "detail": "no matching incoming files",
+      "data": {}
+    },
+    {
+      "name": "preprocess",
+      "status": "completed",
+      "detail": "",
+      "data": {
+        "returncode": 0,
+        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6639 cols=44\n"
+      }
+    },
+    {
+      "name": "ai_input",
+      "status": "waiting",
+      "detail": "AI input generation is intentionally not run in this workflow until the heavy grid/model path is fixed for Actions.",
+      "data": {
+        "expected_grid": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/03_target_dataset_build/outputs"
+      }
+    },
+    {
+      "name": "ai_model",
+      "status": "waiting",
+      "detail": "AI model output ingestion will run after model outputs are produced.",
+      "data": {
+        "expected_outputs": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/04_prediction_model_training/outputs"
+      }
+    },
+    {
+      "name": "page_build",
+      "status": "completed",
+      "detail": "",
+      "data": {
+        "returncode": 0,
+        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=17 stations=10,468\n[INFO] history=235,382\n"
+      }
+    }
+  ]
+}

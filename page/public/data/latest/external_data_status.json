@@ -1,6 +1,6 @@
 {
   "schema_version": "external_data_status_v1",
-  "generated_at": "2026-06-19T10:43:19+09:00",
+  "generated_at": "2026-06-20T04:56:30+09:00",
   "datasets": [
     {
       "id": "national_today",
@@ -16,9 +16,9 @@
       "id": "price_history",
       "label": "기간별 가격 추이",
       "status": "connected",
-      "rows": 235380,
+      "rows": 235382,
       "date_min": "2008-04-15",
-      "date_max": "2026-06-17",
+      "date_max": "2026-06-18",
       "path": "page/public/data/latest/price_history.json",
       "note": "자동 갱신 시 기존 파일과 병합해 날짜별 이력을 누적합니다."
     },

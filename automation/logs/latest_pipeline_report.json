@@ -1,15 +1,15 @@
 {
   "schema_version": "daily_pipeline_report_v1",
-  "generated_at": "2026-06-19T09:08:49+09:00",
-  "start_date": "2026-06-12",
-  "end_date": "2026-06-17",
+  "generated_at": "2026-06-20T04:56:32+09:00",
+  "start_date": "2026-06-18",
+  "end_date": "2026-06-19",
   "steps": [
     {
       "name": "inspect:crude",
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/crude/crude_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/crude/crude_20080102_20260617.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -20,10 +20,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080415_20260617.csv",
         "date_min": "2008-04-15",
-        "date_max": "2026-06-09",
-        "dated_rows": 6630
+        "date_max": "2026-06-17",
+        "dated_rows": 6636
       }
     },
     {
@@ -31,10 +31,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080415_20260617.csv",
         "date_min": "2008-04-15",
-        "date_max": "2026-06-09",
-        "dated_rows": 6630
+        "date_max": "2026-06-17",
+        "dated_rows": 6636
       }
     },
     {
@@ -42,10 +42,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080415_20260617.csv",
         "date_min": "2008-04-15",
-        "date_max": "2026-06-09",
-        "dated_rows": 6630
+        "date_max": "2026-06-17",
+        "dated_rows": 6636
       }
     },
     {
@@ -53,10 +53,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/fx_usdkrw/fx_usdkrw_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/fx_usdkrw/fx_usdkrw_20080102_20260617.csv",
         "date_min": "2008-01-02",
-        "date_max": "2026-06-10",
-        "dated_rows": 4564
+        "date_max": "2026-06-17",
+        "dated_rows": 4568
       }
     },
     {
@@ -64,7 +64,7 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260617.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -75,7 +75,7 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260610.csv",
+        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260617.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -102,7 +102,7 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/refinery_weekly_supply/refinery_weekly_supply_prices_by_product_20080101_20260611.csv",
+        "path": "data-analysis/00_data_collection/outputs/refinery_weekly_supply/refinery_weekly_supply_prices_by_product_20080507_20260528.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -125,7 +125,7 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[completed] fx_usdkrw rows=4 \n[completed] crude rows=4 \n[completed] intl_products rows=6 \n[completed] retail_avg rows=6 \n[completed] brand_price rows=12 \n[completed] fuel_tax_trend rows=66 \n[completed] refinery_weekly_supply rows=0 \n"
+        "output_tail": "[completed] fx_usdkrw rows=2 \n[completed] crude rows=1 \n[completed] intl_products rows=2 \n[completed] retail_avg rows=2 \n[completed] brand_price rows=4 \n[completed] fuel_tax_trend rows=66 \n[completed] refinery_weekly_supply rows=0 \n"
       }
     },
     {
@@ -140,7 +140,7 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6638 cols=44\n"
+        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6639 cols=44\n"
       }
     },
     {
@@ -165,7 +165,7 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=17 stations=10,468\n[INFO] history=235,368\n"
+        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=17 stations=10,468\n[INFO] history=235,382\n"
       }
     }
   ]

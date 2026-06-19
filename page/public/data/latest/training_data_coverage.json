@@ -1,6 +1,6 @@
 {
   "schema_version": "training_data_coverage_v1",
-  "generated_at": "2026-06-19T10:43:19+09:00",
+  "generated_at": "2026-06-20T04:56:30+09:00",
   "source": "page/manual_inputs/training_data_coverage.csv",
   "datasets": [
     {
