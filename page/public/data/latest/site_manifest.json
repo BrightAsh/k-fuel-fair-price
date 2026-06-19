@@ -1,7 +1,7 @@
 {
   "schema_version": "page_data_v1",
   "as_of_date": "2026-06-09",
-  "generated_at": "2026-06-19T09:07:12+09:00",
+  "generated_at": "2026-06-19T10:41:46+09:00",
   "freshness": "stale",
   "files": [
     "national_today.json",
@@ -15,7 +15,7 @@
     "korea-provinces.geojson"
   ],
   "source": {
-    "national": "data-analysis/05_policy_application/outputs",
+    "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
     "region": "page/manual_inputs/region_today.csv",
     "station": "page/manual_inputs/station_search_index.csv"
   }
