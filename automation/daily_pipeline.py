@@ -348,38 +348,34 @@ def run_collection(repo_root: Path, enabled: bool, start_date: date, end_date: d
             "already up to date",
             {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()},
         )
-    runner = repo_root / "automation" / "run_notebook.py"
-    notebook = repo_root / "data-analysis" / "00_data_collection" / "00_data_collection.ipynb"
-    if not runner.exists():
-        return StepResult("collect", "skipped", "automation/run_notebook.py missing")
-    if not notebook.exists():
-        return StepResult("collect", "skipped", "data-analysis 00 collection notebook missing")
+    script = repo_root / "automation" / "collect_sources.py"
+    if not script.exists():
+        return StepResult("collect", "skipped", "automation/collect_sources.py missing")
     return run_command(
         "collect",
-        [sys.executable, str(runner), str(notebook), "--repo-root", str(repo_root)],
+        [
+            sys.executable,
+            str(script),
+            "--repo-root",
+            str(repo_root),
+            "--start-date",
+            start_date.isoformat(),
+            "--end-date",
+            end_date.isoformat(),
+        ],
         repo_root,
-        env={
-            "KFF_COLLECT_START_DATE": start_date.isoformat(),
-            "KFF_COLLECT_END_DATE": end_date.isoformat(),
-            "KFF_RUN_COLLECTION": "true",
-            "KFF_RUN_STATION_DOWNLOAD": os.getenv("KFF_RUN_STATION_DOWNLOAD", "false"),
-            "KFF_RUN_FACILITY": os.getenv("KFF_RUN_FACILITY", "false"),
-            "KFF_RUN_METADATA_GEOCODE": os.getenv("KFF_RUN_METADATA_GEOCODE", "false"),
-            "KFF_RUN_LAND_PRICE": os.getenv("KFF_RUN_LAND_PRICE", "false"),
-        },
     )
 
 
 def run_preprocessing(repo_root: Path, enabled: bool) -> StepResult:
     if not enabled:
         return StepResult("preprocess", "skipped", "disabled")
-    runner = repo_root / "automation" / "run_notebook.py"
-    notebook = repo_root / "data-analysis" / "01_data_preprocessing" / "01_data_preprocessing.ipynb"
-    if not runner.exists():
-        return StepResult("preprocess", "skipped", "automation/run_notebook.py missing")
+    script = repo_root / "automation" / "preprocess_sources.py"
+    if not script.exists():
+        return StepResult("preprocess", "skipped", "automation/preprocess_sources.py missing")
     return run_command(
         "preprocess",
-        [sys.executable, str(runner), str(notebook), "--repo-root", str(repo_root)],
+        [sys.executable, str(script), "--repo-root", str(repo_root)],
         repo_root,
     )
 
@@ -396,8 +392,8 @@ def run_page_build(repo_root: Path, enabled: bool, as_of_date: date | None) -> S
 
 def run_ai_placeholders(repo_root: Path) -> list[StepResult]:
     results: list[StepResult] = []
-    grid = repo_root / "ai-model" / "02_grid_dataset" / "outputs"
-    model_outputs = repo_root / "ai-model" / "03_prediction_model_design" / "outputs"
+    grid = repo_root / "ai-model" / "03_target_dataset_build" / "outputs"
+    model_outputs = repo_root / "ai-model" / "04_prediction_model_training" / "outputs"
     results.append(
         StepResult(
             "ai_input",
