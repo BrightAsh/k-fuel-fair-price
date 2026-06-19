@@ -1,19 +1,325 @@
 [
-  {"region":"강원","diesel":{"actual_price":2012.9,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":607},"gasoline":{"actual_price":2018.9,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":605}},
-  {"region":"경기","diesel":{"actual_price":2003.7,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":2169},"gasoline":{"actual_price":2009.3,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":2166}},
-  {"region":"경남","diesel":{"actual_price":1999.2,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":976},"gasoline":{"actual_price":2002.2,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":970}},
-  {"region":"경북","diesel":{"actual_price":1998.2,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":1119},"gasoline":{"actual_price":2004,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":1113}},
-  {"region":"광주","diesel":{"actual_price":1997.1,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-11","station_count":196},"gasoline":{"actual_price":2000.9,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-11","station_count":196}},
-  {"region":"대구","diesel":{"actual_price":1984.2,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":326},"gasoline":{"actual_price":1990.4,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":326}},
-  {"region":"대전","diesel":{"actual_price":1996.2,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":196},"gasoline":{"actual_price":1998.5,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":195}},
-  {"region":"부산","diesel":{"actual_price":1990.1,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":331},"gasoline":{"actual_price":1995.4,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":328}},
-  {"region":"서울","diesel":{"actual_price":2040.1,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":398},"gasoline":{"actual_price":2050.9,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":398}},
-  {"region":"세종","diesel":{"actual_price":2003.5,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-11","station_count":64},"gasoline":{"actual_price":2005.5,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-11","station_count":64}},
-  {"region":"울산","diesel":{"actual_price":1992.8,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":216},"gasoline":{"actual_price":1993.4,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":215}},
-  {"region":"인천","diesel":{"actual_price":2002.8,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":300},"gasoline":{"actual_price":2006.8,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":300}},
-  {"region":"전남","diesel":{"actual_price":2011.3,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":808},"gasoline":{"actual_price":2014.8,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":800}},
-  {"region":"전북","diesel":{"actual_price":2002.4,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":777},"gasoline":{"actual_price":2006.3,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":773}},
-  {"region":"제주","diesel":{"actual_price":2019.3,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":189},"gasoline":{"actual_price":2027.3,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":189}},
-  {"region":"충남","diesel":{"actual_price":2009,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-11","station_count":926},"gasoline":{"actual_price":2014.6,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-11","station_count":919}},
-  {"region":"충북","diesel":{"actual_price":2010.5,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":651},"gasoline":{"actual_price":2015.4,"fair_price_policy":null,"band_low_policy":null,"band_high_policy":null,"gap_policy":null,"judge_policy":null,"source_date":"2026-06-10","station_count":647}}
+  {
+    "region": "강원",
+    "diesel": {
+      "actual_price": 2012.9,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2018.9,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "경기",
+    "diesel": {
+      "actual_price": 2003.7,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2009.3,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "경남",
+    "diesel": {
+      "actual_price": 1999.2,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2002.2,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "경북",
+    "diesel": {
+      "actual_price": 1998.2,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2004.0,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "광주",
+    "diesel": {
+      "actual_price": 1997.1,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2000.9,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "대구",
+    "diesel": {
+      "actual_price": 1984.2,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 1990.4,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "대전",
+    "diesel": {
+      "actual_price": 1996.2,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 1998.5,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "부산",
+    "diesel": {
+      "actual_price": 1990.1,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 1995.4,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "서울",
+    "diesel": {
+      "actual_price": 2040.1,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2050.9,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "세종",
+    "diesel": {
+      "actual_price": 2003.5,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2005.5,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "울산",
+    "diesel": {
+      "actual_price": 1992.8,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 1993.4,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "인천",
+    "diesel": {
+      "actual_price": 2002.8,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2006.8,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "전남",
+    "diesel": {
+      "actual_price": 2011.3,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2014.8,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "전북",
+    "diesel": {
+      "actual_price": 2002.4,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2006.3,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "제주",
+    "diesel": {
+      "actual_price": 2019.3,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2027.3,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "충남",
+    "diesel": {
+      "actual_price": 2009.0,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2014.6,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  },
+  {
+    "region": "충북",
+    "diesel": {
+      "actual_price": 2010.5,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    },
+    "gasoline": {
+      "actual_price": 2015.4,
+      "fair_price_policy": null,
+      "band_low_policy": null,
+      "band_high_policy": null,
+      "gap_policy": null,
+      "judge_policy": null
+    }
+  }
 ]
