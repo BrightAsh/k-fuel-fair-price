@@ -15,12 +15,16 @@ FUEL_CONFIG = {
     "gasoline": {
         "label": "휘발유",
         "policy_csv": Path("data-analysis/05_policy_application/outputs/휘발유/일별_정책적용_데이터_휘발유.csv"),
+        "preprocessed_actual_col": "보통휘발유_평균",
     },
     "diesel": {
         "label": "경유",
         "policy_csv": Path("data-analysis/05_policy_application/outputs/경유/일별_정책적용_데이터_경유.csv"),
+        "preprocessed_actual_col": "자동차용경유_평균",
     },
 }
+
+PREPROCESSED_DAILY_PATH = Path("data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv")
 
 TRAINING_COVERAGE_DATASETS = {
     "grid_panel_rows": {
@@ -121,6 +125,61 @@ def previous_row(df: pd.DataFrame, current_date: pd.Timestamp) -> pd.Series | No
     return work.iloc[-1]
 
 
+def load_preprocessed_daily(repo_root: Path, as_of_date: str | None) -> pd.DataFrame | None:
+    path = repo_root / PREPROCESSED_DAILY_PATH
+    if not path.exists():
+        return None
+
+    df = read_csv(path)
+    date_col = find_col(df, ["date", "날짜", "일자"])
+    if date_col is None:
+        return None
+
+    work = df.copy()
+    work[date_col] = pd.to_datetime(work[date_col], errors="coerce")
+    work = work.dropna(subset=[date_col]).sort_values(date_col)
+    if as_of_date:
+        work = work[work[date_col] <= pd.Timestamp(as_of_date)]
+    return work if len(work) else None
+
+
+def add_preprocessed_national_history(
+    repo_root: Path,
+    as_of_date: str | None,
+    by_key: dict[tuple[str, str, str], dict[str, Any]],
+) -> None:
+    work = load_preprocessed_daily(repo_root, as_of_date)
+    if work is None:
+        return
+
+    date_col = find_col(work, ["date", "날짜", "일자"])
+    if date_col is None:
+        return
+
+    for fuel, cfg in FUEL_CONFIG.items():
+        actual_col = find_col(work, [cfg["preprocessed_actual_col"]])
+        if actual_col is None:
+            continue
+
+        for _, row in work.iterrows():
+            actual = to_float(row.get(actual_col))
+            if actual is None:
+                continue
+
+            item = {
+                "date": pd.Timestamp(row[date_col]).strftime("%Y-%m-%d"),
+                "region": "전국",
+                "fuel": fuel,
+                "actual_price": actual,
+                "fair_price_policy": None,
+                "band_low_policy": None,
+                "band_high_policy": None,
+                "gap_policy": None,
+                "source": str(PREPROCESSED_DAILY_PATH),
+            }
+            by_key[(item["date"], item["region"], item["fuel"])] = item
+
+
 def extract_national_fuel(repo_root: Path, fuel: str, as_of_date: str | None) -> tuple[str, dict[str, Any]]:
     cfg = FUEL_CONFIG[fuel]
     path = repo_root / cfg["policy_csv"]
@@ -192,6 +251,8 @@ def build_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
 def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[str, Any]]:
     by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
     cutoff = pd.Timestamp(as_of_date) if as_of_date else None
+
+    add_preprocessed_national_history(repo_root, as_of_date, by_key)
 
     for fuel, cfg in FUEL_CONFIG.items():
         path = repo_root / cfg["policy_csv"]
@@ -551,7 +612,7 @@ def main() -> None:
             "korea-provinces.geojson",
         ],
         "source": {
-            "national": "data-analysis/05_policy_application/outputs",
+            "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
             "region": "page/manual_inputs/region_today.csv" if region else None,
             "station": "page/manual_inputs/station_search_index.csv" if stations else None,
         },
