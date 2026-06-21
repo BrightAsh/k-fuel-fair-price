@@ -1,116 +1,81 @@
 # AI Model
 
-전국 평균 유가 분석 결과를 주유소/격자 단위 예측 문제로 확장하는 폴더입니다. 데이터 수집 실행 노트북은 이 폴더에서 제거했고, 현재 AI 모델 단계는 `data-analysis/00_data_collection/outputs/`의 수집 산출물과 `data-analysis` 분석 산출물을 입력으로 사용합니다.
+`ai-model`은 전국 단위 적정가격 분석을 주유소/격자 단위 데이터로 확장하는 영역입니다. 목표는 전국 평균 가격 하나가 아니라, 500m 격자별로 “이 위치에서의 적정가격은 얼마인가”를 표현하는 것입니다.
+
+## 핵심 흐름
+
+```text
+주유소 가격/위치/속성
++ 시설 영향권
++ 공시지가
++ 전국 500m land grid
+    -> 일별 격자 패널
+    -> 전국 정책 적용 적정가격과 결합
+    -> 격자별 적정가격 target
+    -> AI 모델 성능 검토
+```
 
 ## 단계 구조
 
-| 단계 | 폴더 | 역할 | 주요 산출물 |
-|---|---|---|---|
-| 01 | `01_derived_features/` | 격자화 전 데이터 준비. 주유소 좌표/속성 이력, 시설 좌표, 공시지가 격자, 전국 land grid 생성 | `data-analysis/00_data_collection/outputs/derived_data/*.csv`, `korea_land_grid_500m.parquet` |
-| 02 | `02_spatial_grid_build/` | 01 산출물과 주유소 가격 원자료를 결합해 최종 일별 500m 격자 패널 생성 | `ROOT_PATH/그리드/grid.parquet` |
-| 03 | `03_target_dataset_build/` | `data-analysis/05`의 전국 적정가격을 격자별 spread와 결합해 target dataset 생성 | `outputs/grid_target.parquet` |
-| 04 | `04_prediction_model_training/` | 03 target dataset으로 격자별 적정가격 예측 LSTM 학습/test | validation/test 예측, checkpoint, 최종 모델 |
+| 단계 | 역할 | 핵심 산출물 또는 결론 |
+|---|---|---|
+| `01_derived_features` | 격자화 전 주유소, 시설, 공시지가, land grid 파생 데이터 생성 | 좌표 유효 주유소 27,830개, 시설 740개, 공시지가 격자 396,185행 |
+| `02_spatial_grid_build` | 일별 500m 격자 패널 생성 | 63,800,291행, 12,338개 격자 |
+| `03_target_dataset_build` | 전국 적정가격을 격자 spread와 결합해 target dataset 생성 | 휘발유 target 59,613,708행, 경유 target 45,487,926행 |
+| `04_prediction_model_training` | 격자별 적정가격 예측 모델 학습 및 검토 | 첫 LSTM은 baseline보다 낮아 구조 재설계 필요 |
 
-## 입력 경로 원칙
+## Target 설계
 
-AI Model 단계도 원천 수집 산출물은 00 단계 출력인 `ROOT_PATH/data-analysis/00_data_collection/outputs/`을 기준으로 읽습니다.
-
-```python
-ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
-DATA_COLLECTION_PATH = ROOT_PATH + "data-analysis/00_data_collection/outputs/"
-DERIVED_DATA_PATH = DATA_COLLECTION_PATH + "derived_data/"
-```
-
-수동 수집 데이터는 `z_pa_` 접두어 폴더에 둡니다.
+AI 03은 전국 적정가격을 그대로 모든 격자에 복사하지 않습니다. 각 격자가 전국 평균보다 비싼지 싼지를 나타내는 실제 가격 spread를 보존합니다.
 
 ```text
-data-analysis/00_data_collection/outputs/z_pa_facility/facility_data.csv
-data-analysis/00_data_collection/outputs/z_pa_policy/korea_fuel_tax_price_policies.csv
+national_actual_price_grid(t)
+  = grid panel에서 유종별 station_count로 가중평균한 전국 실제 가격
+
+grid_actual_spread(t)
+  = grid_actual_price(t) - national_actual_price_grid(t)
+
+grid_fair_price_target(t)
+  = national_fair_price_policy(t) + grid_actual_spread(t)
 ```
 
-대용량 주유소 가격 원자료는 아래 구조를 기대합니다. GitHub 100MB 제한을 넘는 지역/유종 파일은 `{fuel}.parts/`로 열 기준 분할해 보관합니다.
+이 구조는 `data-analysis/05`의 전국 정책 적용 적정가격을 anchor로 두고, 공간적 가격 차이를 격자 단위로 얹는 방식입니다.
+
+## 현재 모델 검토
+
+AI 04의 첫 모델은 28일 시계열 변화량, 전날 상태값, 격자 context를 입력으로 받아 `grid_fair_price_target`을 예측하도록 설계했습니다. 학습 target은 전일 실제 가격 대비 오늘 적정가격 변화량입니다.
 
 ```text
-data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/gasoline.csv
-data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/diesel.csv
-data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/gasoline.parts/
-data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/diesel.parts/
-data-analysis/00_data_collection/outputs/gas_station_prices_by_region/{region}/metadata.json
+fair_price_delta_target
+  = grid_fair_price_target(t) - actual_grid_price(t-1)
 ```
 
-## 단계 간 데이터 흐름
+학습은 끝까지 완료되었지만, 성능은 최종 운영 모델로 쓰기 어렵습니다.
 
-```text
-data-analysis/00_data_collection/outputs/gas_station_prices_by_region
-data-analysis/00_data_collection/outputs/z_pa_facility
-data-analysis/00_data_collection/outputs/official_land_price 또는 derived_data/official_land_price_grid.csv
-        |
-        v
-01_derived_features
-        |
-        v
-data-analysis/00_data_collection/outputs/derived_data/
-        |
-        v
-02_spatial_grid_build
-        |
-        v
-ROOT_PATH/그리드/grid.parquet
-        |
-        v
-03_target_dataset_build
-        |
-        v
-ai-model/03_target_dataset_build/outputs/grid_target.parquet
-        |
-        v
-04_prediction_model_training
-```
-
-## 현재 확인된 실행 결과
-
-AI 01 노트북 최종 출력 기준입니다.
-
-| 산출물 | 행 | 열 | 비고 |
-|---|---:|---:|---|
-| `national_daily_features.csv` | 6,736 | 21 | 2008-01-01 ~ 2026-06-10 |
-| `station_location_history.csv` | 28,171 | 9 | 주유소 위치 이력 |
-| `station_attribute_history.csv` | 153,625 | 8 | 브랜드/셀프 여부 등 속성 이력 |
-| `station_latest_profile.csv` | 28,828 | 17 | 최신 주유소 프로필. 좌표 결측 포함 |
-| `station_points.csv` | 27,830 | 11 | 유효 좌표 주유소 포인트 |
-| `facility_points.csv` | 797 | 12 | 시설 원자료 좌표 결과. 좌표 결측 포함 |
-| `facility_location_data_final.csv` | 740 | 4 | 유효 좌표 시설 포인트 |
-| `official_land_price_grid.csv` | 396,185 | 12 | 공시지가 snapshot별 500m 격자 |
-| `korea_land_grid_500m.parquet` | 별도 parquet | - | 전국 500m land grid |
-
-AI 01 좌표 QC 결과는 다음과 같습니다.
-
-| 구분 | 전체 행 | lon/lat 결측 | 숫자 좌표 범위 이탈 | 유효 좌표 |
+| 유종 | best epoch | validation LSTM WMAE | validation 전일가격 baseline WMAE | 2026 test WMAE |
 |---|---:|---:|---:|---:|
-| 주유소 | 28,828 | 415 | 0 | 28,413 |
-| 시설 | 797 | 57 | 0 | 740 |
+| 휘발유 | 4 | 19.318원/L | 15.211원/L | 231.790원/L |
+| 경유 | 4 | 19.422원/L | 14.807원/L | 518.133원/L |
 
-주유소 유효 좌표 28,413행은 최신 프로필 기준이며, `station_points.csv`는 같은 `station_id` 중복을 제거해 27,830행으로 저장됩니다.
+문제는 모델이 전국 적정가격 레벨까지 직접 외삽하려 한다는 점입니다. 2026년 3월 이후 전국 적정가격 target이 급격히 상승하는 구간에서 예측은 실제 유가 흐름 근처에 머물러 큰 오차가 발생했습니다.
 
-AI 02 노트북 최종 출력 기준 `grid.parquet` 요약입니다.
+따라서 다음 모델 방향은 다음과 같습니다.
 
-| 파일 | 크기 | 행 | 격자 수 | 기간 |
-|---|---:|---:|---:|---|
-| `ROOT_PATH/그리드/grid.parquet` | 1,893.63 MB | 63,800,291 | 12,338 | 2008-04-15 ~ 2026-06-11 |
+```text
+data-analysis/05가 오늘 전국 정책 적용 적정가격을 제공
+AI 모델은 격자별 spread 또는 지역 보정값을 예측
+최종 격자 적정가격 = 전국 적정가격 + 예측 spread
+```
 
-## 주의할 점
+이 방향은 전국 레벨 가격 판단과 공간 보정 문제를 분리하므로 현재 결과보다 안정적인 구조입니다.
 
-- 기존 원본 코드의 `DATA_PATH`, `preprocessed_data/additional_data`, `data collection/{dataset}/final/` 참조는 과거 구조입니다. 새 구조에서는 `data-analysis/00_data_collection/outputs/{dataset}/` 또는 `data-analysis/00_data_collection/outputs/derived_data/` 기준으로 읽습니다.
-- 01 단계에서 좌표가 비어 있는 주유소/시설은 숫자 좌표가 잘못된 것이 아니라 lon/lat 자체가 없는 경우입니다.
-- 02 단계의 최종 산출물은 `grid.parquet` 하나입니다. 중간 parquet는 `/content/kff_spatial_grid_build_tmp`에 만들고 마지막에 삭제합니다.
-- 03 단계는 `grid.parquet`을 덮어쓰지 않고 별도 `grid_target.parquet`을 만듭니다.
-- 04 단계는 `grid_target.parquet`을 읽어 학습하며, 2026년 이후 데이터는 학습에 사용하지 않고 test로만 사용합니다.
+## 산출물 해석 기준
 
-## 하위 README
+| 단계 | 산출물 | 해석 |
+|---|---|---|
+| 01 | `station_points`, `facility_points`, `official_land_price_grid`, `korea_land_grid_500m` | 격자 feature의 재료 |
+| 02 | `grid.parquet` | 날짜 x 격자 단위 실제 가격/공간 feature 패널 |
+| 03 | `grid_target.parquet` | AI 학습용 격자별 적정가격 target dataset |
+| 04 | validation/test 예측, checkpoint, summary | 현재 모델 구조의 성능 한계 확인 자료 |
 
-| 문서 | 내용 |
-|---|---|
-| `01_derived_features/README.md` | 01 입력 파일, 좌표 보강 방식, 산출물별 역할, QC 결과 |
-| `02_spatial_grid_build/README.md` | 02 최종 격자 패널 생성 로직, 스키마, 최종 출력 |
-| `03_target_dataset_build/README.md` | 03 target dataset 정의, 공식, 입력/출력 |
-| `04_prediction_model_training/README.md` | 04 학습 데이터 정의, split, cache, 모델 설계, 산출물 |
+세부 코드 로직, 컬럼, 수치, 결과 해석은 각 단계 README에 정리합니다.

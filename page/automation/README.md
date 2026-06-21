@@ -2,18 +2,18 @@
 
 웹 페이지 운영 자동화 설계 공간입니다.
 
-실제 GitHub Actions 실행 파일은 레포 루트의 `.github/workflows/`에 있습니다. 이 폴더는 자동화 단계, 필요한 secret, 실행 순서를 설명하는 문서 공간으로 둡니다.
+GitHub Actions 자동화의 역할과 책임을 정리하는 문서입니다. 자동화는 분석/AI 산출물을 웹 공개용 JSON으로 바꾸고, 정적 페이지 배포를 갱신하는 데 초점을 둡니다.
 
-## Current Jobs
+## 현재 자동화
 
-| Workflow | 역할 | 위치 |
-|---|---|---|
-| `Refresh Page Data` | 웹용 JSON 생성 후 변경 시 commit | `.github/workflows/page-data-refresh.yml` |
-| `Deploy GitHub Pages` | `page/` 폴더를 GitHub Pages로 배포 | `.github/workflows/page-deploy.yml` |
+| Workflow | 역할 |
+|---|---|
+| `Refresh Page Data` | 분석/AI 산출물을 웹용 JSON으로 변환하고 변경분을 반영 |
+| `Deploy GitHub Pages` | 정적 대시보드를 GitHub Pages로 배포 |
 
-## Future Jobs
+## 확장 방향
 
-원천 데이터 수집까지 GitHub Actions로 옮길 경우 아래 job을 추가합니다.
+향후 자동화 범위를 넓히면 아래 단계까지 하나의 운영 흐름으로 묶을 수 있습니다.
 
 ```text
 collect_source_data
@@ -23,5 +23,5 @@ build_page_data
 deploy_page
 ```
 
-현재는 AI 모델 03 학습과 대용량 parquet 처리가 무거우므로, 수집/모델 실행은 Colab 또는 로컬에서 먼저 안정화하고, `page`는 최종 웹용 JSON 갱신부터 자동화합니다.
+현재 자동화의 우선순위는 무거운 분석/학습 전체를 다시 생성하는 것이 아니라, 이미 생성된 핵심 산출물을 안정적으로 웹 데이터로 변환하는 것입니다.
 

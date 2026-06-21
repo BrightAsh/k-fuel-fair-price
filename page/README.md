@@ -1,74 +1,48 @@
 # Page
 
-GitHub Pages로 공개할 일일 유가 적정가격 대시보드 영역입니다.
+`page`는 분석과 AI 모델 결과를 사용자가 볼 수 있는 대시보드로 표현하는 영역입니다. 원천 데이터나 학습용 대용량 parquet를 직접 노출하지 않고, 검증된 산출물을 웹 표시용 요약 데이터로 바꿔 사용합니다.
 
-이 폴더는 AI 모델 원본 parquet나 학습 산출물 전체를 직접 서빙하지 않습니다. `data-analysis`와 `ai-model` 결과를 웹용 JSON으로 얇게 변환한 뒤, 정적 페이지가 그 JSON만 읽습니다.
+## 핵심 역할
 
-## 폴더 구조
+| 영역 | 역할 |
+|---|---|
+| 요약 카드 | 오늘 기준 실제 가격, 정책 적용 적정가격, 가격 차이를 빠르게 확인 |
+| 지도 | 지역/격자별 적정가격 차이와 데이터 coverage를 공간적으로 표시 |
+| 추세 차트 | 실제 가격과 적정가격의 기간별 흐름 비교 |
+| 주유소 검색 | 위치 기반 주유소 목록과 가격 판단 결과를 탐색 |
+| 데이터 공개 | 사용자가 조건별 요약 데이터를 내려받을 수 있게 제공 |
+
+## 데이터 흐름
 
 ```text
-page/
-  index.html                     # GitHub Pages 첫 화면
-  .nojekyll                      # GitHub Pages 정적 파일 그대로 배포
-
-  assets/
-    css/dashboard.css            # 화면 스타일
-    js/app.js                    # 데이터 로드/렌더링
-
-  public/
-    assets/                      # 지도 이미지, 로고 등 공개 정적 자산
-    data/latest/                 # 매일 갱신되는 웹용 JSON
-
-  scripts/
-    build_page_data.py           # 분석/AI 산출물을 웹용 JSON으로 변환
-
-  manual_inputs/
-    README.md                    # 사용자가 수동으로 넣어야 하는 웹 보조 파일 설명
-
-  docs/
-    data_contract.md             # page가 기대하는 입력/출력 포맷
-    automation_plan.md           # GitHub Actions 자동화 설계
-    user_inputs_needed.md        # 사용자가 준비해야 하는 파일/secret
+data-analysis 결과
+  + ai-model 결과
+  -> 웹 표시용 JSON
+  -> 대시보드 지도/차트/카드
 ```
 
-GitHub Actions 워크플로는 GitHub가 인식해야 하므로 레포 루트의 `.github/workflows/`에 둡니다.
+웹 페이지는 분석 판단을 새로 계산하지 않습니다. 적정가격, 정책 적용 여부, 격자 target, 모델 예측 결과는 각각 data-analysis와 ai-model 단계에서 만들어지고, page는 그 결과를 사용자에게 이해 가능한 형태로 보여주는 역할입니다.
 
 ## 화면 방향
 
-첫 화면은 매일 들어와 바로 보는 운영 대시보드입니다.
+첫 화면은 “오늘의 국내 유가가 국제유가 대비 어느 정도 적정한가”를 바로 볼 수 있어야 합니다.
 
-- 오늘 기준 전국 휘발유/경유 적정가격
-- 실제가격, 정책 적용 적정가격, 적정 범위, 판정
-- 지역별 요약과 지도 이미지
-- 위치 기반 주변 주유소 전체 목록
-- 전체 기간 기본값의 지역/유종별 가격 추이
-- 기간/지역/유종 조건의 데이터 다운로드
-- 지역/주유소 검색
-- AI 학습 데이터 지역별 분포 지도
+| 화면 요소 | 설명 |
+|---|---|
+| 전국 요약 | 휘발유/경유 실제 가격, 적정가격, 차이, 판정 |
+| 지역 비교 | 시도별 가격 차이와 적정/과소/과대 구간 |
+| 격자 지도 | 500m 격자 단위 target 또는 예측 결과 |
+| 가격 추세 | 국제 가격 반영 후 적정가격과 실제 가격의 장기 흐름 |
+| 데이터 현황 | 학습/분석에 사용된 격자, 주유소, 시설, 공시지가 coverage |
 
-## 데이터 갱신 원칙
+## 하위 문서
 
-매일 새벽 자동화는 전날까지 수집된 데이터를 기준으로 `page/public/data/latest/*.json`을 갱신합니다.
+| 문서 | 내용 |
+|---|---|
+| `manual_inputs/README.md` | 자동 산출 전 임시로 보강할 수 있는 공개용 입력 데이터의 의미 |
+| `public/assets/README.md` | 공개 화면에 쓰는 이미지/정적 자산의 역할 |
+| `automation/README.md` | 분석/AI 결과를 웹 데이터로 갱신하는 자동화 역할 |
 
-기본 제안 시각은 한국시간 03:00입니다. 다만 원천 데이터 업로드가 늦는 데이터셋이 있으면 07:00 재시도 스케줄을 함께 두는 쪽이 안전합니다.
+## 프로젝트 내 위치
 
-가격 추이는 `page/public/data/latest/price_history.json`을 누적 이력으로 사용합니다. 자동 갱신 스크립트는 기존 JSON과 새 산출물을 `date + region + fuel` 기준으로 병합하므로, 나중에 강제 수집으로 빈 날짜를 채워도 기존 날짜는 보존됩니다.
-
-## 사용자가 넣는 파일
-
-웹 공개용 수동 입력은 `page/manual_inputs/`에 넣습니다.
-
-```text
-page/manual_inputs/region_today.csv
-page/manual_inputs/station_search_index.csv
-page/manual_inputs/price_history.csv
-page/manual_inputs/training_data_coverage.csv
-```
-
-- `region_today.csv`: 지역별 오늘 표시용 요약입니다. AI 모델 완료 전까지 수동 보강 파일로 사용합니다.
-- `station_search_index.csv`: 주유소 검색과 주변 주유소 탭에 쓰는 공개 인덱스입니다. 위치 기반 목록은 반경 안의 주유소를 거리순으로 모두 표시합니다.
-- `price_history.csv`: 비어 있는 기간을 수동/강제 수집 결과로 보강하는 파일입니다.
-- `training_data_coverage.csv`: `데이터 현황` 탭의 AI 학습 데이터 히트맵용 시도별 집계 파일입니다.
-
-파일별 컬럼은 `page/manual_inputs/README.md`와 `page/docs/data_contract.md`에 정리합니다.
-
+`page`는 최종 표현 계층입니다. 분석 로직은 `data-analysis`, AI target과 모델 학습은 `ai-model`, 사용자 화면 구성은 `page`가 맡습니다.

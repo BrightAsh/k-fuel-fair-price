@@ -10,6 +10,6 @@ korea-provinces.geojson
 
 - 용도: 첫 화면의 대한민국 시도별 가격 지도
 - 출처: `southkorea/southkorea-maps`의 KOSTAT 2013 province GeoJSON
-- 원본 경로: `kostat/2013/json/skorea_provinces_geo_simple.json`
+- 원본 파일: KOSTAT 2013 province 단순 경계 GeoJSON
 
 나중에 더 최신 행정구역 경계가 필요하면 같은 스키마의 GeoJSON으로 이 파일만 교체하면 됩니다.

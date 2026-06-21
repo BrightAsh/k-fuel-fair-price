@@ -2,98 +2,61 @@
 
 [사이트 바로가기](https://brightash.github.io/k-fuel-fair-price/)
 
-국제 석유가격 대비 국내 유가의 적정성을 분석하고, 그 결과를 AI 모델용 격자 데이터와 예측 모델로 확장하는 저장소입니다.
+국제 석유제품 가격과 국내 유가의 관계를 분석해 전국 단위 적정가격을 만들고, 이를 격자 단위 AI 데이터로 확장하는 프로젝트입니다. 핵심은 “오늘 가격이 비싼가?”를 단순 실제가격 비교가 아니라 국제가격 반영 시차, 유류세 정책, 지역별 가격 spread를 함께 고려해 판단하는 것입니다.
 
-이 README는 전체 구조를 빠르게 이해하기 위한 문서입니다. 단계별 상세 입력, 처리 로직, 출력 파일, 주요 수치는 각 하위 폴더의 `README.md`에 정리되어 있습니다. 웹페이지 구축 관련 문서는 이 정리 범위에서 제외했습니다.
-
-## 전체 흐름
+## 핵심 아이디어
 
 ```text
-data-analysis/00_data_collection/outputs
-  -> data-analysis/01~05
-  -> ai-model/01_derived_features
-  -> ai-model/02_spatial_grid_build
-  -> ai-model/03_target_dataset_build
-  -> ai-model/04_prediction_model_training
+국제 제품가격
+  -> 국내 가격 반영 시차 추정
+  -> 전국 정책 미반영 적정가격 산정
+  -> 유류세 정책 적용 적정가격 산정
+  -> 격자별 가격 spread 결합
+  -> 격자별 적정가격 target 및 AI 모델 검토
 ```
+
+전국 단위 적정가격은 `data-analysis`에서 만들고, 격자 단위 확장은 `ai-model`에서 수행합니다. 웹 대시보드는 이 결과를 사용자가 볼 수 있는 형태로 요약합니다.
+
+## 주요 결론
+
+| 항목 | 휘발유 | 경유 |
+|---|---:|---:|
+| 선택 국제 benchmark | 휘발유 92RON | 경유 0.001 |
+| 소비자가격 평균 반영 시차 | 약 20일 | 약 23일 |
+| 정유사 세전가격 평균 반영 시차 | 약 8주 | 약 6주 |
+| 정책 미반영 적정가격 평균 | 1,726.984원/L | 1,556.227원/L |
+| 정책 적용 적정가격 평균 | 1,675.475원/L | 1,494.740원/L |
+| 정책 적용 판정 가능일 | 5,979일 | 4,567일 |
+
+유류세 인하 기간에는 정책 미반영 기준으로 실제가격이 적정가격보다 낮게 보이는 날이 많습니다. 따라서 최종 판정에서는 유류세 인하분을 적정가격과 적정범위에 반영합니다.
 
 ## 폴더 역할
 
-| 폴더 | 역할 | 현재 상태 |
+| 폴더 | 역할 | 문서 깊이 |
 |---|---|---|
-| `data-analysis/` | 전국 단위 유가 적정성 분석 | 00~05 산출물과 README 정리 완료 |
-| `ai-model/` | 주유소/시설/격자 기반 AI 모델 데이터와 학습 코드 | 01~02 격자 입력, 03 target dataset, 04 학습 코드 |
-| `page/` | GitHub Pages 대시보드와 자동화 | 이번 README 정리 대상 제외 |
+| `data-analysis/` | 전국 단위 benchmark, 시차, 적정가격, 정책 적용 분석 | 단계별 README에 모델식, 수치, 산출물 상세 |
+| `ai-model/` | 주유소/시설/공시지가 기반 격자 데이터와 AI target/model 검토 | 단계별 README에 feature, target, 학습 결과 상세 |
+| `page/` | 분석 결과를 공개 대시보드로 보여주는 정적 웹 영역 | 웹 데이터 계약과 화면 구성 중심 |
 
-## Data Analysis 요약
+## 단계 요약
 
-`data-analysis`는 원천 데이터 준비 상태를 확인한 뒤, 전국 일별 통합 데이터, benchmark 선택, 시차 분석, 정책 미반영 적정가격, 정책 적용 판정을 순서대로 생성합니다.
-
-| 단계 | 폴더 | 핵심 산출물 |
-|---|---|---|
-| 00 | `data-analysis/00_data_collection` | 자동/수동 수집 산출물 보관, 원천 데이터 manifest |
-| 01 | `data-analysis/01_data_preprocessing` | `outputs/분석용일별통합데이터.csv` |
-| 02 | `data-analysis/02_benchmark_selection` | `outputs/stage0_selected_benchmarks.csv` |
-| 03 | `data-analysis/03_lag_analysis` | 유종/층위별 `analysis_summary.csv`, `impulse_response_path.csv` |
-| 04 | `data-analysis/04_fair_price_model` | `*_production_predictions_full_calendar.csv` |
-| 05 | `data-analysis/05_policy_application` | 정책 적용 일별 데이터, 판정 요약, 정유사 최고가격제 점검표 |
-
-주요 결론은 다음과 같습니다.
-
-| 항목 | 휘발유 | 경유 |
-|---|---|---|
-| 선택 benchmark | `휘발유92RON_원리터` | `경유0.001_원리터` |
-| 소비자가격 평균 반영 시차 | 약 20일 | 약 23일 |
-| 정유사 세전가격 평균 반영 시차 | 약 8주 | 약 6주 |
-| 정책 미반영 운영 CSV 행 | 6,630 | 6,630 |
-| 정책 적용 판정 가능일 | 5,979 | 4,567 |
-
-## AI Model 요약
-
-`ai-model`은 전국 평균 분석을 주유소/격자 단위 예측 문제로 확장합니다.
-
-| 단계 | 폴더 | 핵심 산출물 또는 역할 |
-|---|---|---|
-| 01 | `ai-model/01_derived_features` | 주유소 좌표/속성 이력, 시설 좌표, 공시지가 격자, 전국 500m land grid |
-| 02 | `ai-model/02_spatial_grid_build` | 최종 학습 입력 `ROOT_PATH/그리드/grid.parquet` |
-| 03 | `ai-model/03_target_dataset_build` | `data-analysis/05`의 전국 적정가격을 격자 spread와 결합한 `grid_target.parquet` 생성 |
-| 04 | `ai-model/04_prediction_model_training` | `grid_target.parquet` 기반 격자별 적정가격 예측 LSTM 학습/test 코드 |
-
-AI 02 최종 노트북 출력 기준 `grid.parquet`는 63,800,291행, 12,338개 격자, 2008-04-15 ~ 2026-06-11 기간을 포함합니다. 이 파일은 대용량이라 레포에 포함하지 않고 Colab/Drive 또는 로컬 실행 환경에서 관리합니다.
-
-## 경로 원칙
-
-Colab 기준 기본 루트는 아래입니다.
-
-```python
-ROOT_PATH = "/content/drive/MyDrive/Data_analysis/The appropriateness of domestic oil prices compared to international oil prices/산업부/"
-DATA_COLLECTION_PATH = ROOT_PATH + "data-analysis/00_data_collection/outputs/"
-```
-
-각 데이터셋 폴더에는 최종 사용 파일만 남기고 `raw/`, `final/`, `logs/` 하위 폴더는 제거했습니다. 예를 들어 `crude/final/crude_*.csv`가 아니라 `crude/crude_*.csv`를 직접 읽습니다. 과거 구조였던 `ROOT_PATH/data/` fallback 또는 `preprocessed_data/additional_data` 기준 경로는 새 코드에서 사용하지 않는 방향으로 정리했습니다.
-
-수동 수집 데이터는 폴더명 앞에 `z_pa_`를 붙입니다.
-
-```text
-data-analysis/00_data_collection/outputs/z_pa_policy/korea_fuel_tax_price_policies.csv
-data-analysis/00_data_collection/outputs/z_pa_facility/facility_data.csv
-```
-
-## 실행 순서
-
-1. `data-analysis/00_data_collection/outputs/`에 자동 수집 산출물과 수동 수집 파일을 준비합니다.
-2. `data-analysis/00_data_collection`으로 필수 입력 존재 여부를 점검합니다.
-3. `data-analysis/01_data_preprocessing`부터 `05_policy_application`까지 순서대로 실행합니다.
-4. `ai-model/01_derived_features`로 주유소/시설/공시지가/격자 전처리 산출물을 만듭니다.
-5. `ai-model/02_spatial_grid_build`로 최종 `grid.parquet`을 만듭니다.
-6. `ai-model/03_target_dataset_build`에서 `grid.parquet`과 `data-analysis/05` 산출물을 결합해 `grid_target.parquet`을 만듭니다.
-7. `ai-model/04_prediction_model_training`에서 `grid_target.parquet` 기반 모델을 학습합니다.
-
-## 자세한 문서
-
-| 문서 | 내용 |
+| 단계 | 내용 |
 |---|---|
-| `data-analysis/README.md` | 전국 단위 분석 전체 요약과 핵심 수치 |
-| `data-analysis/*/README.md` | 단계별 입력, 처리 로직, 산출물, 해석 |
-| `ai-model/README.md` | AI 모델 파이프라인 전체 요약 |
-| `ai-model/*/README.md` | AI 단계별 입력, 출력, 스키마, 학습 설계 |
+| `data-analysis/00` | 필요한 원천 데이터가 분석 가능한 형태로 준비되어 있는지 점검 |
+| `data-analysis/01` | 국제가격, 환율, 국내가격, 세금, 정유사 가격을 일별 통합 |
+| `data-analysis/02` | 휘발유/경유별 국제 benchmark 선택 |
+| `data-analysis/03` | 국제제품가격이 국내가격에 반영되는 시차와 IRF 추정 |
+| `data-analysis/04` | 정책 미반영 전국 적정가격과 적정범위 산정 |
+| `data-analysis/05` | 유류세 인하와 정유사 최고가격제를 반영한 최종 정책 적용 판정 |
+| `ai-model/01` | 주유소, 시설, 공시지가, 전국 500m land grid 파생 데이터 생성 |
+| `ai-model/02` | 일별 500m 격자 패널 생성 |
+| `ai-model/03` | 전국 적정가격과 격자 spread를 결합해 격자별 target dataset 생성 |
+| `ai-model/04` | 격자별 적정가격 예측 모델 학습 및 성능 검토 |
+
+## 현재 AI 해석
+
+AI 03의 target dataset은 정상적으로 생성되었습니다. `grid_target.parquet`은 63,800,291행, 12,338개 격자를 포함하며 휘발유 target 59,613,708행, 경유 target 45,487,926행을 생성했습니다.
+
+AI 04의 첫 LSTM 학습은 완주했지만 최종 모델로 쓰기에는 부족합니다. validation에서 단순 “전일 가격 유지” baseline보다 낮은 성능을 보였고, 2026년 test에서는 전국 적정가격 레벨 변화가 큰 구간에서 오차가 크게 확대되었습니다. 따라서 다음 모델 방향은 전국 적정가격 레벨을 AI가 직접 외삽하게 하기보다, `data-analysis/05`의 전국 적정가격을 anchor로 두고 AI는 격자별 spread 또는 지역 보정값을 예측하는 구조가 더 타당합니다.
+
+자세한 근거와 수치는 `ai-model/04_prediction_model_training/README.md`에 정리합니다.

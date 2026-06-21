@@ -1,55 +1,37 @@
 # Automation
 
-이 폴더는 매일 실행할 데이터 파이프라인을 관리합니다.
+이 폴더는 원천 데이터와 공개용 페이지 데이터를 주기적으로 갱신하기 위한 자동화 아이디어를 정리하는 공간입니다. 핵심은 분석/AI 산출물을 매번 사람이 손으로 옮기지 않고, 검증된 산출물만 웹사이트가 읽을 수 있는 형태로 변환하는 것입니다.
 
-## 현재 기준
+## 역할
 
-`data-analysis/00_data_collection/00_data_collection.ipynb`는 원천 데이터 수집 방식과 포맷을 정리한 기준 파일입니다. 운영 자동화는 이 노트북을 그대로 실행하지 않고, 검증된 수집 방식과 산출물 포맷만 `automation/collect_sources.py`와 `automation/preprocess_sources.py`로 옮겨 실행합니다.
+| 영역 | 목적 |
+|---|---|
+| 원천 데이터 갱신 | 새로 들어온 가격, 환율, 국제 제품가격, 정책 자료를 기존 분석 입력과 같은 구조로 정리 |
+| 분석 산출물 갱신 | data-analysis 결과가 바뀌었을 때 공개용 summary로 변환 |
+| AI 산출물 갱신 | target dataset, 모델 성능표, 예측 결과를 웹에서 사용할 수 있는 데이터로 정리 |
+| 페이지 데이터 갱신 | 지도/차트/카드가 읽는 JSON 산출물을 최신 상태로 유지 |
 
-수집 대상은 아래 원천 산출물입니다.
+## 처리 개념
 
-- `crude/crude_*.csv`
-- `retail_avg/retail_avg_*.csv`
-- `brand_price/brand_gasoline_*.csv`
-- `brand_price/brand_diesel_*.csv`
-- `fx_usdkrw/fx_usdkrw_*.csv`
-- `intl_products/intl_products_*.csv`
-- `intl_products/intl_product_diesel(0.001)_*.csv`
-- `fuel_tax_trend/gasoline_tax_trend_*.xls`
-- `fuel_tax_trend/diesel_tax_trend_*.xls`
-- `refinery_weekly_supply/refinery_weekly_supply_prices_by_product_*.csv`
-- `z_pa_policy/korea_fuel_tax_price_policies.csv`
+```text
+원천 데이터 확인
+  -> 분석 입력 갱신
+  -> 분석/AI 산출물 검증
+  -> 웹 공개용 데이터 변환
+  -> 변경분 반영
+```
 
-## 실행 흐름
+자동화는 분석 로직을 새로 정의하는 단계가 아닙니다. 이미 정리된 분석 기준과 AI 산출물을 반복 가능하게 갱신하는 보조 계층입니다.
 
-`daily_pipeline.py`는 아래 순서로 실행됩니다.
+## 데이터 갱신 원칙
 
-1. 기존 수집 산출물 상태와 날짜 범위를 점검합니다.
-2. `collect_sources.py`가 0번 파일의 수집 방식에 맞춰 자동 수집 대상 데이터를 수집하고 기존 CSV에 날짜 기준으로 병합합니다.
-3. `automation/incoming/{dataset}/`에 추가 파일이 있으면 기존 outputs CSV에 날짜 기준으로 병합합니다.
-4. 옵션이 켜져 있으면 `preprocess_sources.py`가 01번 전처리의 최종 포맷에 맞춰 `분석용일별통합데이터.csv`를 재생성합니다.
-5. AI 입력/모델 단계는 현재 Actions에서 바로 돌리지 않고 waiting 상태로 로그를 남깁니다.
-6. 대시보드 JSON을 다시 생성합니다.
-7. `automation/logs/latest_pipeline_report.json`에 실행 결과를 저장합니다.
+| 원칙 | 설명 |
+|---|---|
+| 기존 산출물 우선 | 검증된 기존 산출물을 기준으로 새 데이터만 덧붙입니다. |
+| 날짜 기준 병합 | 가격/환율/제품가격처럼 일별 구조를 가진 데이터는 날짜를 기준으로 중복을 정리합니다. |
+| 대용량 입력 분리 | 주유소별 대용량 가격 자료는 별도 산출물로 관리하고, 웹에는 요약/격자 결과만 전달합니다. |
+| 공개 데이터 최소화 | 웹사이트는 원천 대용량 데이터가 아니라 지도와 차트에 필요한 결과만 사용합니다. |
 
-## GitHub Actions
+## 다음 단계 연결
 
-`.github/workflows/daily-data-pipeline.yml`이 이 파이프라인을 실행합니다.
-
-- schedule: 매일 03:00 KST, 07:00 KST 재시도
-- manual: `workflow_dispatch`에서 `start_date`, `end_date`를 지정해 강제 실행 가능
-
-기존 `page-data-refresh.yml`은 같은 시간대에 페이지 JSON만 갱신하던 워크플로입니다. 새 파이프라인이 페이지 데이터 갱신까지 포함하므로, 중복 커밋 충돌을 피하기 위해 수동 실행만 남겨둡니다.
-
-현재 secrets 기준으로 사용하는 값:
-
-- `BOK_ECOS_API_KEY`
-- `GEOCODER_TOKEN`
-- `KAKAO_REST_API_KEY`
-- `NAVER_MAPS_CLIENT_ID`
-- `NAVER_MAPS_CLIENT_SECRET`
-- `VWORLD_API_KEY`
-
-OPINET 전국 단위 데이터는 현재 코드에서 OPINET CSV/HTML 다운로드 URL을 사용하므로 OPINET key가 필요하지 않습니다. `OPINET_CERTKEY`는 코드에 자리만 남아 있고 현재 자동수집 경로에서는 사용하지 않습니다.
-
-주유소 지역별 가격 다운로드는 Selenium/브라우저 다운로드 방식이라 현재 일일 GitHub Actions 자동 수집에서 제외합니다. 대용량 개별 주유소 파일은 수동/별도 경로로 갱신한 뒤 필요한 경우 page 및 AI 입력 데이터에 반영합니다.
+자동화 결과는 `page`의 공개용 데이터와 연결됩니다. 다만 프로젝트의 핵심 판단은 data-analysis의 적정가격 산출과 ai-model의 격자 target/model 산출물에 있으며, automation은 그 결과를 안정적으로 갱신하는 역할입니다.

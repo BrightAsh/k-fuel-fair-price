@@ -1,25 +1,26 @@
 # Incoming Collection Files
 
-이 폴더는 자동 수집기가 아직 연결되지 않은 데이터셋을 강제로 보강할 때 사용합니다.
+이 폴더는 자동 수집으로 바로 연결되지 않은 자료를 임시로 받아 기존 분석 입력과 합치는 완충 공간입니다. 새 데이터가 들어왔을 때 중요한 기준은 “파일을 어디에 두는가”보다 “기존 데이터와 같은 날짜/컬럼 의미로 해석 가능한가”입니다.
 
-추가 수집 파일을 아래 구조로 넣고 `Daily Data Pipeline` 워크플로를 수동 실행하면, CSV 파일은 날짜 컬럼 기준으로 기존 `data-analysis/00_data_collection/outputs/{dataset}/` 파일에 병합됩니다.
+## 역할
 
-```text
-automation/incoming/{dataset}/{same_filename_pattern}.csv
-```
+| 역할 | 설명 |
+|---|---|
+| 보강 데이터 수용 | 자동 수집 범위 밖의 원천 자료를 추가 입력으로 받습니다. |
+| 기존 입력과 병합 | 날짜 기준으로 기존 분석 입력과 중복을 정리합니다. |
+| 수동 자료 추적 | 정책 자료처럼 사람이 확인해야 하는 입력의 반영 여부를 남깁니다. |
 
-예시:
+## 데이터 기준
 
-```text
-automation/incoming/crude/crude_20260611_20260617.csv
-automation/incoming/retail_avg/retail_avg_20260611_20260617.csv
-automation/incoming/brand_price/brand_gasoline_20260611_20260617.csv
-automation/incoming/brand_price/brand_diesel_20260611_20260617.csv
-automation/incoming/fx_usdkrw/fx_usdkrw_20260611_20260617.csv
-automation/incoming/intl_products/intl_products_20260611_20260617.csv
-automation/incoming/intl_products/intl_product_diesel(0.001)_20260611_20260617.csv
-automation/incoming/refinery_weekly_supply/refinery_weekly_supply_prices_by_product_20260611_20260617.csv
-automation/incoming/z_pa_policy/korea_fuel_tax_price_policies.csv
-```
+| 데이터 | 확인할 내용 |
+|---|---|
+| 원유/제품가격 | 날짜, 가격 단위, 유종 구분 |
+| 환율 | 기준 통화와 날짜 |
+| 전국 평균 가격 | 유종, 소비자 가격 기준 |
+| 브랜드 가격 | 유종과 브랜드 구분 |
+| 정유사 공급 가격 | 주간 기준일과 유종 |
+| 정책 자료 | 적용 기간, 정책 유형, 유종별 영향 |
 
-`.xls` 파일은 자동 병합하지 않고 리포트에 skipped로 남깁니다. 해당 파일은 기존 outputs 파일을 교체하거나, 나중에 전용 병합 로직을 추가해야 합니다.
+## 해석
+
+incoming 자료는 최종 분석 결과가 아닙니다. 새 원천 데이터가 기존 분석 기준에 맞게 들어올 수 있는지 확인하기 위한 임시 입력이며, 실제 의미 있는 산출물은 data-analysis와 ai-model 단계에서 다시 계산된 결과입니다.

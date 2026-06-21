@@ -1,32 +1,28 @@
-# gas_station_prices_by_region
+# Gas Station Prices By Region
 
-This folder stores the station-level daily price matrix from Opinet.
+이 데이터셋은 주유소별 일별 가격을 지역 단위로 정리한 대용량 입력입니다. data-analysis의 전국 평균 분석과 달리, ai-model에서는 이 자료를 사용해 개별 주유소 가격을 500m 격자 가격으로 집계합니다.
 
-Only the final usable files are tracked in Git. The original `raw/` folder is
-intentionally not included because it is too large for the repository.
+## 데이터 의미
 
-Most region/fuel files are stored as regular CSV files:
+| 단위 | 설명 |
+|---|---|
+| 행 | 날짜 |
+| 열 | 주유소 식별자 |
+| 값 | 해당 날짜의 주유소별 휘발유 또는 경유 가격 |
 
-```text
-{region}/gasoline.csv
-{region}/diesel.csv
-```
+## 사용 목적
 
-Files that exceed GitHub's 100 MB single-file limit are split by station-id
-columns and stored as parts:
+| 단계 | 사용 방식 |
+|---|---|
+| AI 01 | 주유소 위치/속성 이력과 연결할 후보 station id 제공 |
+| AI 02 | 날짜별 주유소 가격을 500m 격자 평균 가격과 유종별 station count로 집계 |
+| AI 03 | 격자 실제 가격에 시차 적용 및 적정가격 target 결합 |
+| AI 04 | 격자별 전날까지의 가격 시계열을 입력 feature로 사용 |
 
-```text
-{region}/gasoline.parts/
-  manifest.json
-  part-000.csv
-  part-001.csv
-```
+## 보관 방식
 
-Each part keeps the `date` column and a disjoint subset of station-id columns.
-To reconstruct the original wide matrix, read the parts in `manifest.json`
-order and join them by `date`.
+일부 지역/유종 조합은 파일 크기가 매우 커서 station id 열 기준으로 분할 보관됩니다. 분할은 데이터 의미를 바꾸지 않으며, 같은 날짜 행을 기준으로 다시 합치면 원래의 wide matrix 구조가 됩니다.
 
-At the time this dataset was added, the split files were:
+## 해석 주의
 
-- `경기/gasoline.parts/`
-- `경기/diesel.parts/`
+이 자료는 그대로 적정가격을 뜻하지 않습니다. 개별 주유소 실제 판매 가격이며, 프로젝트의 target은 이 가격을 격자화한 뒤 data-analysis에서 계산한 전국 적정가격/정책 적용 결과와 결합해 만들어집니다.
