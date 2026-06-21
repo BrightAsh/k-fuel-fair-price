@@ -1,0 +1,3 @@
+﻿fuel,label,best_epoch,model_path,metadata_path,validation_best_price_weighted_mae,test_2026_price_weighted_mae
+gasoline,gasoline,4,C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\model\gasoline_grid_fair_price_delta_lstm.pt,C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_model_metadata.json,19.318023429731277,231.79040832327712
+diesel,diesel,4,C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\diesel_grid_fair_price_delta_lstm.pt,C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_model_metadata.json,19.42152020619214,518.1332746460747
