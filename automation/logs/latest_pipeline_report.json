@@ -1,6 +1,6 @@
 {
   "schema_version": "daily_pipeline_report_v1",
-  "generated_at": "2026-06-22T16:19:44+09:00",
+  "generated_at": "2026-06-22T17:07:36+09:00",
   "start_date": "2026-06-20",
   "end_date": "2026-06-21",
   "steps": [
@@ -164,30 +164,30 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[CONFIG]\nrepo_root          = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price\nstate_path         = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet\nweb_dir            = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web\nstation_price_root = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/gas_station_prices_by_region\nsource_date_filter = None ~ 2026-06-21\ntarget_date_filter = None ~ None\nfuels              = gasoline, diesel\ndevice             = cpu\n[STATE] recent incomplete dates checked; no new date or grid-coverage gain found\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input_manifest.json size=2,266\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/operational_dataset_manifest.json size=4,361\n[DONE] status=no_new_target_dates, predictions=0, state=306,169->306,169, elapsed=19.2s\n",
+        "output_tail": "[CONFIG]\nrepo_root          = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price\nstate_path         = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet\nweb_dir            = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web\nstation_price_root = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/gas_station_prices_by_region\nsource_date_filter = None ~ 2026-06-21\ntarget_date_filter = None ~ None\nfuels              = gasoline, diesel\ndevice             = cpu\n[STATE] recent incomplete dates checked; no new date or grid-coverage gain found\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input_manifest.json size=2,266\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/operational_dataset_manifest.json size=4,361\n[DONE] status=no_new_target_dates, predictions=0, state=306,169->306,169, elapsed=17.4s\n",
         "recent_model_input": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
           "exists": true,
           "size": 8224224,
-          "mtime": "2026-06-22T16:16:31+09:00"
+          "mtime": "2026-06-22T17:04:29+09:00"
         },
         "web_region_today": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
           "exists": true,
           "size": 3051,
-          "mtime": "2026-06-22T16:16:31+09:00"
+          "mtime": "2026-06-22T17:04:29+09:00"
         },
         "web_price_history_region": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
           "exists": true,
           "size": 19273880,
-          "mtime": "2026-06-22T16:16:31+09:00"
+          "mtime": "2026-06-22T17:04:29+09:00"
         },
         "manifest": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/operational_dataset_manifest.json",
           "exists": true,
           "size": 4361,
-          "mtime": "2026-06-22T16:18:53+09:00"
+          "mtime": "2026-06-22T17:06:45+09:00"
         }
       }
     },
