@@ -1,7 +1,7 @@
 {
   "schema_version": "daily_pipeline_report_v1",
-  "generated_at": "2026-06-20T07:43:34+09:00",
-  "start_date": "2026-06-20",
+  "generated_at": "2026-06-22T13:09:20+09:00",
+  "start_date": "2026-06-18",
   "end_date": "2026-06-19",
   "steps": [
     {
@@ -121,11 +121,11 @@
     },
     {
       "name": "collect",
-      "status": "skipped",
-      "detail": "already up to date",
+      "status": "completed",
+      "detail": "",
       "data": {
-        "start_date": "2026-06-20",
-        "end_date": "2026-06-19"
+        "returncode": 0,
+        "output_tail": "[completed] fx_usdkrw rows=2 \n[completed] crude rows=2 \n[completed] intl_products rows=2 \n[completed] retail_avg rows=2 \n[completed] brand_price rows=4 \n[completed] fuel_tax_trend rows=66 \n[completed] refinery_weekly_supply rows=0 \n"
       }
     },
     {
@@ -140,23 +140,33 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6639 cols=44\n"
+        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6640 cols=44\n"
       }
     },
     {
-      "name": "ai_input",
+      "name": "ai_target_dataset",
       "status": "waiting",
-      "detail": "AI input generation is intentionally not run in this workflow until the heavy grid/model path is fixed for Actions.",
+      "detail": "AI 02 grid.parquet is missing; using existing grid_target if available.",
       "data": {
-        "expected_grid": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/03_target_dataset_build/outputs"
+        "grid": {
+          "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/02_spatial_grid_build/outputs/grid.parquet",
+          "exists": false
+        },
+        "target_dataset": {
+          "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/03_target_dataset_build/outputs/grid_target.parquet",
+          "exists": false
+        }
       }
     },
     {
-      "name": "ai_model",
+      "name": "ai_full_grid_prediction",
       "status": "waiting",
-      "detail": "AI model output ingestion will run after model outputs are produced.",
+      "detail": "required AI prediction inputs are missing",
       "data": {
-        "expected_outputs": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/04_prediction_model_training/outputs"
+        "missing": [
+          "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/03_target_dataset_build/outputs/grid_target.parquet"
+        ],
+        "output_dir": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/05_full_grid_prediction_for_web/outputs"
       }
     },
     {
@@ -165,7 +175,7 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=17 stations=10,468\n[INFO] history=235,382\n"
+        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=17 stations=10,468\n[INFO] history=235,384\n"
       }
     }
   ]

@@ -2,7 +2,7 @@
   "schema_version": "source_collection_v1",
   "start_date": "2026-06-18",
   "end_date": "2026-06-19",
-  "generated_at": "2026-06-19T19:55:06",
+  "generated_at": "2026-06-22T04:08:11",
   "results": [
     {
       "name": "fx_usdkrw",
@@ -18,12 +18,12 @@
     {
       "name": "crude",
       "status": "completed",
-      "rows": 1,
+      "rows": 2,
       "detail": "",
       "files": {
         "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/raw/opinet_crude_raw_20260618_20260619.csv",
         "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/final/crude_20260618_20260619.csv",
-        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/crude_20080102_20260618.csv"
+        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/crude_20080102_20260619.csv"
       }
     },
     {
