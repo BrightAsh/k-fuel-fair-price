@@ -1179,6 +1179,15 @@ function selectedTrainingDataset() {
   return select?.value || trainingCoverageDatasets()[0]?.id || "";
 }
 
+function defaultTrainingDatasetId(datasets, current) {
+  if (datasets.some((item) => item.id === current) && trainingRowsFor(current).length > 0) {
+    return current;
+  }
+  const firstDatasetWithRows = datasets.find((item) => trainingRowsFor(item.id).length > 0);
+  if (firstDatasetWithRows) return firstDatasetWithRows.id;
+  return datasets.some((item) => item.id === current) ? current : datasets[0]?.id || "";
+}
+
 function trainingRowsFor(datasetId) {
   return trainingCoverageData().rows
     .filter((row) => row.dataset === datasetId)
@@ -1215,7 +1224,7 @@ function initializeTrainingCoverageControls() {
   const datasets = trainingCoverageDatasets();
   const current = select.value;
   select.innerHTML = datasets.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
-  select.value = datasets.some((item) => item.id === current) ? current : datasets[0]?.id || "";
+  select.value = defaultTrainingDatasetId(datasets, current);
   syncTrainingDateOptions(select.value);
 }
 
