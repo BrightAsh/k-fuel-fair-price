@@ -380,6 +380,101 @@ def run_preprocessing(repo_root: Path, enabled: bool) -> StepResult:
     )
 
 
+def wide_csv_max_date(path: Path) -> date | None:
+    encodings = ["utf-8-sig", "utf-8", "cp949", "euc-kr"]
+    last_error: Exception | None = None
+    for encoding in encodings:
+        try:
+            max_dt: date | None = None
+            with path.open("r", encoding=encoding, newline="") as f:
+                reader = csv.reader(f)
+                next(reader, None)
+                for row in reader:
+                    if not row:
+                        continue
+                    parsed = parse_date(row[0])
+                    if parsed:
+                        max_dt = parsed if max_dt is None or parsed > max_dt else max_dt
+            return max_dt
+        except UnicodeDecodeError as exc:
+            last_error = exc
+            continue
+    if last_error:
+        raise last_error
+    return None
+
+
+def infer_station_price_start(repo_root: Path, fallback_start: date, fallback_end: date) -> date:
+    station_root = repo_root / "data-analysis" / "00_data_collection" / "outputs" / "gas_station_prices_by_region"
+    latest_dates: list[date] = []
+    if station_root.exists():
+        for path in station_root.glob("*/gasoline.csv"):
+            max_dt = wide_csv_max_date(path)
+            if max_dt:
+                latest_dates.append(max_dt)
+        for path in station_root.glob("*/diesel.csv"):
+            max_dt = wide_csv_max_date(path)
+            if max_dt:
+                latest_dates.append(max_dt)
+    if not latest_dates:
+        return fallback_start
+    next_missing = min(latest_dates) + timedelta(days=1)
+    return min(fallback_start, next_missing, fallback_end)
+
+
+def run_station_price_collection(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> StepResult:
+    if not enabled:
+        return StepResult("collect_station_prices", "skipped", "disabled")
+    effective_start = infer_station_price_start(repo_root, start_date, end_date)
+    if effective_start > end_date:
+        return StepResult(
+            "collect_station_prices",
+            "skipped",
+            "already up to date",
+            {
+                "requested_start_date": start_date.isoformat(),
+                "effective_start_date": effective_start.isoformat(),
+                "end_date": end_date.isoformat(),
+            },
+        )
+    script = repo_root / "automation" / "collect_station_prices.py"
+    if not script.exists():
+        return StepResult("collect_station_prices", "skipped", "automation/collect_station_prices.py missing")
+
+    cmd = [
+        sys.executable,
+        str(script),
+        "--repo-root",
+        str(repo_root),
+        "--start-date",
+        effective_start.isoformat(),
+        "--end-date",
+        end_date.isoformat(),
+        "--regions",
+        os.environ.get("KFF_STATION_REGIONS", "all"),
+    ]
+    if os.environ.get("KFF_STATION_HEADLESS", "true").lower() in {"0", "false", "no"}:
+        cmd.append("--no-headless")
+    if os.environ.get("KFF_STATION_OVERWRITE_DOWNLOADS", "").lower() in {"1", "true", "yes"}:
+        cmd.append("--overwrite-downloads")
+    sigun_filter = os.environ.get("KFF_STATION_SIGUN_FILTER", "").strip()
+    if sigun_filter:
+        cmd.extend(["--sigun-filter", sigun_filter])
+
+    result = run_command("collect_station_prices", cmd, repo_root)
+    output_root = repo_root / "data-analysis" / "00_data_collection" / "outputs" / "gas_station_prices_by_region"
+    result.data.update(
+        {
+            "station_report": path_signature(repo_root / "automation" / "logs" / "latest_station_price_collection_report.json"),
+            "station_output_root": path_signature(output_root),
+            "requested_start_date": start_date.isoformat(),
+            "effective_start_date": effective_start.isoformat(),
+            "end_date": end_date.isoformat(),
+        }
+    )
+    return result
+
+
 def run_page_build(repo_root: Path, enabled: bool, as_of_date: date | None) -> StepResult:
     if not enabled:
         return StepResult("page_build", "skipped", "disabled")
@@ -678,6 +773,11 @@ def main() -> int:
     else:
         steps.append(run_collection(repo_root, True, start_date, end_date))
     steps.extend(merge_incoming_files(repo_root))
+    station_enabled = (
+        not args.skip_collection
+        and os.environ.get("KFF_RUN_STATION_DOWNLOAD", "").lower() in {"1", "true", "yes"}
+    )
+    steps.append(run_station_price_collection(repo_root, station_enabled, start_date, end_date))
     steps.append(run_preprocessing(repo_root, args.run_preprocessing))
     if args.run_ai or args.include_ai_placeholders:
         steps.extend(run_ai_pipeline(repo_root, True, start_date, end_date))

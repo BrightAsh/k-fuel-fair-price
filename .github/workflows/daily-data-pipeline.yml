@@ -55,7 +55,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pandas numpy requests ipython xlrd openpyxl lxml duckdb pyarrow pyproj torch
+          python -m pip install pandas numpy requests ipython xlrd openpyxl lxml duckdb pyarrow pyproj selenium torch
 
       - name: Run collection and preprocessing pipeline
         env:
@@ -65,7 +65,7 @@ jobs:
           NAVER_MAPS_CLIENT_ID: ${{ secrets.NAVER_MAPS_CLIENT_ID }}
           NAVER_MAPS_CLIENT_SECRET: ${{ secrets.NAVER_MAPS_CLIENT_SECRET }}
           VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
-          KFF_RUN_STATION_DOWNLOAD: "false"
+          KFF_RUN_STATION_DOWNLOAD: "true"
           KFF_RUN_FACILITY: "false"
           KFF_RUN_METADATA_GEOCODE: "false"
           KFF_RUN_LAND_PRICE: "false"
