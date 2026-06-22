@@ -16,6 +16,13 @@ on:
         required: false
         default: true
         type: boolean
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/daily-data-pipeline.yml"
+      - "automation/*.py"
+      - "page/scripts/**"
+      - "ai-model/05_full_grid_prediction_for_web/*.py"
   schedule:
     # 03:00 KST daily
     - cron: "0 18 * * *"
@@ -67,6 +74,9 @@ jobs:
             --build-page
             --run-ai
           )
+          if [ "${{ github.event_name }}" = "push" ]; then
+            args+=(--skip-collection)
+          fi
           if [ -n "${{ inputs.start_date }}" ]; then
             args+=(--start-date "${{ inputs.start_date }}")
           fi
