@@ -1,6 +1,6 @@
 {
   "schema_version": "external_data_status_v1",
-  "generated_at": "2026-06-20T07:43:32+09:00",
+  "generated_at": "2026-06-22T11:26:37+09:00",
   "datasets": [
     {
       "id": "national_today",
@@ -59,7 +59,7 @@
       "rows": 0,
       "date_min": null,
       "date_max": null,
-      "path": "ai-model/03_prediction_model_design/outputs/{fuel}/",
+      "path": "ai-model/05_full_grid_prediction_for_web/outputs/",
       "note": "학습 완료 후 지역/주유소 적정가격과 예측 이력을 생성합니다."
     }
   ]
