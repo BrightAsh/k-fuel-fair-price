@@ -34,6 +34,31 @@ falls back to stage 05 outputs only when stage 06 has not been produced yet.
 not a replacement for the full training dataset. If it becomes larger than GitHub's practical file
 size limit, rerun this stage with fewer state days or keep the file out of Git.
 
+## Daily Operation
+
+`daily_operational_prediction.py` is the GitHub Actions path. It does not need the full
+`grid_target.parquet`.
+
+It uses:
+
+- committed AI 04 model files
+- `outputs/inference_state/recent_model_input.parquet`
+- the latest individual station price CSVs under `data-analysis/00_data_collection/outputs/gas_station_prices_by_region`
+- `data-analysis/00_data_collection/outputs/derived_data/station_points.csv`
+
+The script appends newly available station-price dates to the compact inference state, rebuilds the
+28-day input sequence per grid, predicts the next-day fair price, and rewrites the web CSVs. In other
+words, if the latest station price date is `D`, the web can show fair prices for `D+1`.
+
+The latest source date must also have enough grid coverage. A partial date is held back by default
+until its grid count reaches at least 80% of the recent daily median, so the web page does not switch
+to a map where many regions are missing.
+
+Important limitation: the current repository can run daily inference automatically once station price
+files are updated, but the public automation does not yet guarantee fresh individual station-price
+collection by itself. If those source files do not advance, the model cannot honestly create a newer
+daily fair-price map.
+
 ## Run
 
 ```powershell
@@ -48,11 +73,21 @@ Then rebuild the page JSON:
 python page/scripts/build_page_data.py
 ```
 
-The intended production flow is:
+The full local build flow is:
 
 ```text
 05 full-grid prediction
   -> 06 operational dataset package
+  -> page JSON build
+  -> GitHub Pages deploy
+```
+
+The daily GitHub Actions flow is:
+
+```text
+latest station price files
+  -> daily_operational_prediction.py
+  -> 06 web CSVs + rolling inference state
   -> page JSON build
   -> GitHub Pages deploy
 ```

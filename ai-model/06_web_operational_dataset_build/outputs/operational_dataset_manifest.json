@@ -1,37 +1,63 @@
 {
-  "schema_version": "web_operational_dataset_v1",
-  "created_at": "2026-06-22T14:29:38+09:00",
-  "history_years": 10,
-  "as_of_date": "2026-06-09",
-  "source_stage5_output_dir": "ai-model/05_full_grid_prediction_for_web/outputs",
+  "schema_version": "web_operational_dataset_v2",
+  "created_at": "2026-06-22T15:32:02+09:00",
+  "as_of_date": "2026-06-11",
+  "source": "ai-model/06_web_operational_dataset_build/daily_operational_prediction.py",
+  "status": "no_new_target_dates",
+  "daily_prediction": {
+    "state_rows_before": 306169,
+    "state_rows_after": 306169,
+    "appended_state_rows": 0,
+    "prediction_rows": 0,
+    "target_date_min": null,
+    "target_date_max": "2026-06-11",
+    "latest_feature_date": "2026-06-11",
+    "model_meta": {
+      "status": "no_new_target_dates",
+      "target_start": "2026-06-12",
+      "target_end": "2026-06-11",
+      "device": "cpu",
+      "coverage": {
+        "latest_raw_feature_date": "2026-06-11",
+        "latest_complete_feature_date": "2026-06-10",
+        "latest_raw_grid_rows": 1041,
+        "recent_median_grid_rows": 8968.5,
+        "min_coverage_ratio": 0.8,
+        "min_required_grid_rows": 7174.8,
+        "safe_target_end": "2026-06-11",
+        "complete_feature_date_count": 34
+      }
+    },
+    "operational_limit": "Daily predictions advance only as far as the latest available individual station price date plus one day. If station price files are not updated, the web output is rebuilt from the existing latest state."
+  },
   "outputs": {
     "web_price_history_region": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
       "exists": true,
-      "bytes": 19410924,
-      "mb": 18.512,
-      "modified_at": "2026-06-22T14:29:34+09:00"
+      "bytes": 19405353,
+      "mb": 18.506,
+      "modified_at": "2026-06-22T15:16:30+09:00"
     },
     "web_region_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
       "exists": true,
-      "bytes": 3094,
+      "bytes": 3088,
       "mb": 0.003,
-      "modified_at": "2026-06-22T14:29:34+09:00"
+      "modified_at": "2026-06-22T15:16:30+09:00"
     },
     "web_national_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv",
       "exists": true,
-      "bytes": 251,
+      "bytes": 249,
       "mb": 0.0,
-      "modified_at": "2026-06-22T14:29:34+09:00"
+      "modified_at": "2026-06-22T15:16:30+09:00"
     },
     "web_latest_grid_predictions": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
       "exists": true,
-      "bytes": 2245802,
-      "mb": 2.142,
-      "modified_at": "2026-06-22T14:29:34+09:00"
+      "bytes": 2598733,
+      "mb": 2.478,
+      "modified_at": "2026-06-22T15:16:31+09:00"
     },
     "grid_region_lookup": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/grid_region_lookup.csv",
@@ -40,31 +66,58 @@
       "mb": 0.27,
       "modified_at": "2026-06-22T14:29:34+09:00"
     },
+    "station_grid_lookup": {
+      "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/station_grid_lookup.csv",
+      "exists": true,
+      "bytes": 1933841,
+      "mb": 1.844,
+      "modified_at": "2026-06-22T15:12:59+09:00"
+    },
     "inference_state": {
-      "status": "ready",
       "manifest": {
         "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input_manifest.json",
         "exists": true,
-        "bytes": 2057,
+        "bytes": 2341,
         "mb": 0.002,
-        "modified_at": "2026-06-22T14:29:38+09:00"
+        "modified_at": "2026-06-22T15:32:02+09:00"
       },
       "data": {
         "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
         "exists": true,
-        "bytes": 6583429,
-        "mb": 6.278,
-        "modified_at": "2026-06-22T14:29:38+09:00"
+        "bytes": 8224224,
+        "mb": 7.843,
+        "modified_at": "2026-06-22T15:30:14+09:00"
       }
     }
   },
-  "row_counts": {
-    "history": 131508,
-    "today": 36,
-    "regions": 18,
-    "fuels": [
-      "diesel",
-      "gasoline"
-    ]
+  "files_changed_this_run": {
+    "web_price_history_region": {
+      "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
+      "exists": true,
+      "bytes": 19405353,
+      "mb": 18.506,
+      "modified_at": "2026-06-22T15:16:30+09:00"
+    },
+    "web_region_today": {
+      "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+      "exists": true,
+      "bytes": 3088,
+      "mb": 0.003,
+      "modified_at": "2026-06-22T15:16:30+09:00"
+    },
+    "web_national_today": {
+      "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv",
+      "exists": true,
+      "bytes": 249,
+      "mb": 0.0,
+      "modified_at": "2026-06-22T15:16:30+09:00"
+    },
+    "web_latest_grid_predictions": {
+      "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
+      "exists": true,
+      "bytes": 2598733,
+      "mb": 2.478,
+      "modified_at": "2026-06-22T15:16:31+09:00"
+    }
   }
 }

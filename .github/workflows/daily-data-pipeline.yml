@@ -55,7 +55,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pandas numpy requests ipython xlrd openpyxl lxml duckdb pyarrow torch
+          python -m pip install pandas numpy requests ipython xlrd openpyxl lxml duckdb pyarrow pyproj torch
 
       - name: Run collection and preprocessing pipeline
         env:
@@ -69,6 +69,7 @@ jobs:
           KFF_RUN_FACILITY: "false"
           KFF_RUN_METADATA_GEOCODE: "false"
           KFF_RUN_LAND_PRICE: "false"
+          KFF_RUN_FULL_AI: "false"
         run: |
           args=(
             --repo-root .

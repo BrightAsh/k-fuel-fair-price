@@ -482,6 +482,63 @@ def run_ai_full_grid_prediction(repo_root: Path, enabled: bool, start_date: date
     return result
 
 
+def run_ai_daily_operational_prediction(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> StepResult:
+    if not enabled:
+        return StepResult("ai_daily_operational_prediction", "skipped", "disabled")
+
+    script = repo_root / "ai-model" / "06_web_operational_dataset_build" / "daily_operational_prediction.py"
+    state_path = repo_root / "ai-model" / "06_web_operational_dataset_build" / "outputs" / "inference_state" / "recent_model_input.parquet"
+    gasoline_model = repo_root / "ai-model" / "04_prediction_model_training" / "outputs" / "gasoline" / "model" / "gasoline_grid_fair_price_delta_lstm.pt"
+    diesel_model = repo_root / "ai-model" / "04_prediction_model_training" / "outputs" / "diesel" / "model" / "diesel_grid_fair_price_delta_lstm.pt"
+    station_points = repo_root / "data-analysis" / "00_data_collection" / "outputs" / "derived_data" / "station_points.csv"
+
+    required = [script, state_path, gasoline_model, diesel_model, station_points]
+    missing = [path for path in required if not path.exists()]
+    if missing:
+        return StepResult(
+            "ai_daily_operational_prediction",
+            "waiting",
+            "required operational AI inputs are missing",
+            {"missing": [str(path) for path in missing]},
+        )
+
+    cmd = [
+        sys.executable,
+        str(script),
+        "--repo-root",
+        str(repo_root),
+        "--source-end-date",
+        end_date.isoformat(),
+        "--device",
+        os.environ.get("KFF_AI_DEVICE", "cpu"),
+        "--history-years",
+        os.environ.get("KFF_WEB_HISTORY_YEARS", "10"),
+        "--state-days",
+        os.environ.get("KFF_INFERENCE_STATE_DAYS", "45"),
+        "--min-feature-coverage-ratio",
+        os.environ.get("KFF_MIN_FEATURE_COVERAGE_RATIO", "0.80"),
+    ]
+    batch_size = os.environ.get("KFF_AI_BATCH_SIZE")
+    if batch_size:
+        cmd.extend(["--batch-size", batch_size])
+    fuel = os.environ.get("KFF_AI_FUEL")
+    if fuel in {"gasoline", "diesel"}:
+        cmd.extend(["--fuel", fuel])
+
+    result = run_command("ai_daily_operational_prediction", cmd, repo_root)
+    stage6_output = repo_root / "ai-model" / "06_web_operational_dataset_build" / "outputs"
+    web_output = stage6_output / "web"
+    result.data.update(
+        {
+            "recent_model_input": path_signature(state_path),
+            "web_region_today": path_signature(web_output / "web_region_today.csv"),
+            "web_price_history_region": path_signature(web_output / "web_price_history_region.csv"),
+            "manifest": path_signature(stage6_output / "operational_dataset_manifest.json"),
+        }
+    )
+    return result
+
+
 def run_ai_operational_dataset(repo_root: Path, enabled: bool) -> StepResult:
     if not enabled:
         return StepResult("ai_operational_dataset", "skipped", "disabled")
@@ -545,9 +602,20 @@ def run_ai_operational_dataset(repo_root: Path, enabled: bool) -> StepResult:
 def run_ai_pipeline(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> list[StepResult]:
     if not enabled:
         return [StepResult("ai_pipeline", "skipped", "disabled")]
+    run_full_ai = os.environ.get("KFF_RUN_FULL_AI", "").lower() in {"1", "true", "yes"}
+    if not run_full_ai:
+        return [
+            StepResult("ai_target_dataset", "skipped", "daily automation uses committed operational inference state"),
+            StepResult("ai_full_grid_prediction", "skipped", "daily automation uses committed operational inference state"),
+            run_ai_daily_operational_prediction(repo_root, True, start_date, end_date),
+        ]
     results = [run_ai_target_dataset(repo_root, True)]
-    results.append(run_ai_full_grid_prediction(repo_root, True, start_date, end_date))
-    results.append(run_ai_operational_dataset(repo_root, True))
+    full_result = run_ai_full_grid_prediction(repo_root, True, start_date, end_date)
+    results.append(full_result)
+    if full_result.status == "completed":
+        results.append(run_ai_operational_dataset(repo_root, True))
+    else:
+        results.append(run_ai_daily_operational_prediction(repo_root, True, start_date, end_date))
     return results
 
 

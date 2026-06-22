@@ -1,10 +1,9 @@
 {
-  "schema_version": "recent_model_input_state_v1",
+  "schema_version": "recent_model_input_state_v2",
   "status": "ready",
-  "warning": null,
-  "created_at": "2026-06-22T14:29:38+09:00",
-  "source": "ai-model/03_target_dataset_build/outputs/grid_target.parquet",
-  "state_days": 35,
+  "created_at": "2026-06-22T15:32:02+09:00",
+  "source": "operational rolling inference state",
+  "state_days": 45,
   "date_min": "2026-05-08",
   "date_max": "2026-06-11",
   "rows": 306169,
@@ -53,14 +52,24 @@
     "station_neighbor_influence",
     "storage_influence"
   ],
+  "last_update": {
+    "appended_grid_day_rows": 0,
+    "station_grid_lookup": {
+      "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/station_grid_lookup.csv",
+      "exists": true,
+      "bytes": 1933841,
+      "mb": 1.844,
+      "modified_at": "2026-06-22T15:12:59+09:00"
+    }
+  },
   "files": {
     "recent_model_input": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
       "exists": true,
-      "bytes": 6583429,
-      "mb": 6.278,
-      "modified_at": "2026-06-22T14:29:38+09:00"
+      "bytes": 8224224,
+      "mb": 7.843,
+      "modified_at": "2026-06-22T15:30:14+09:00"
     }
   },
-  "use": "This is a compact recent panel for operational inference experiments. The full historical grid_target.parquet remains a local-only training/build artifact."
+  "use": "Rolling 500m-grid model input state used by daily_operational_prediction.py. It intentionally replaces the local-only full grid_target.parquet in GitHub Actions."
 }
