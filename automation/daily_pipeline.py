@@ -390,28 +390,108 @@ def run_page_build(repo_root: Path, enabled: bool, as_of_date: date | None) -> S
     return run_command("page_build", cmd, repo_root)
 
 
-def run_ai_placeholders(repo_root: Path) -> list[StepResult]:
-    results: list[StepResult] = []
-    grid = repo_root / "ai-model" / "03_target_dataset_build" / "outputs"
-    model_outputs = repo_root / "ai-model" / "04_prediction_model_training" / "outputs"
-    results.append(
-        StepResult(
-            "ai_input",
-            "waiting",
-            "AI input generation is intentionally not run in this workflow until the heavy grid/model path is fixed for Actions.",
-            {"expected_grid": str(grid)},
+def path_signature(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"path": str(path), "exists": False}
+    stat = path.stat()
+    return {
+        "path": str(path),
+        "exists": True,
+        "size": int(stat.st_size),
+        "mtime": datetime.fromtimestamp(stat.st_mtime, KST).isoformat(timespec="seconds"),
+    }
+
+
+def run_ai_target_dataset(repo_root: Path, enabled: bool) -> StepResult:
+    if not enabled:
+        return StepResult("ai_target_dataset", "skipped", "disabled")
+
+    script = repo_root / "ai-model" / "03_target_dataset_build" / "03_target_dataset_build.py"
+    grid_path = repo_root / "ai-model" / "02_spatial_grid_build" / "outputs" / "grid.parquet"
+    target_path = repo_root / "ai-model" / "03_target_dataset_build" / "outputs" / "grid_target.parquet"
+
+    if not script.exists():
+        return StepResult("ai_target_dataset", "skipped", "ai-model/03_target_dataset_build/03_target_dataset_build.py missing")
+    if not grid_path.exists():
+        status = "skipped" if target_path.exists() else "waiting"
+        detail = "AI 02 grid.parquet is missing; using existing grid_target if available."
+        return StepResult(
+            "ai_target_dataset",
+            status,
+            detail,
+            {"grid": path_signature(grid_path), "target_dataset": path_signature(target_path)},
         )
-    )
-    results.append(
-        StepResult(
-            "ai_model",
+
+    result = run_command("ai_target_dataset", [sys.executable, str(script)], repo_root)
+    result.data.update({"grid": path_signature(grid_path), "target_dataset": path_signature(target_path)})
+    return result
+
+
+def run_ai_full_grid_prediction(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> StepResult:
+    if not enabled:
+        return StepResult("ai_full_grid_prediction", "skipped", "disabled")
+
+    script = repo_root / "ai-model" / "05_full_grid_prediction_for_web" / "predict_full_grid_for_web.py"
+    target_dataset = repo_root / "ai-model" / "03_target_dataset_build" / "outputs" / "grid_target.parquet"
+    output_dir = repo_root / "ai-model" / "05_full_grid_prediction_for_web" / "outputs"
+    gasoline_model = repo_root / "ai-model" / "04_prediction_model_training" / "outputs" / "gasoline" / "model" / "gasoline_grid_fair_price_delta_lstm.pt"
+    diesel_model = repo_root / "ai-model" / "04_prediction_model_training" / "outputs" / "diesel" / "model" / "diesel_grid_fair_price_delta_lstm.pt"
+
+    required = [script, target_dataset, gasoline_model, diesel_model]
+    missing = [path for path in required if not path.exists()]
+    if missing:
+        return StepResult(
+            "ai_full_grid_prediction",
             "waiting",
-            "AI model output ingestion will run after model outputs are produced.",
-            {"expected_outputs": str(model_outputs)},
+            "required AI prediction inputs are missing",
+            {"missing": [str(path) for path in missing], "output_dir": str(output_dir)},
         )
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        sys.executable,
+        str(script),
+        "--target-dataset",
+        str(target_dataset),
+        "--output-dir",
+        str(output_dir),
+        "--fuel",
+        "all",
+        "--start-date",
+        start_date.isoformat(),
+        "--end-date",
+        end_date.isoformat(),
+        "--device",
+        os.environ.get("KFF_AI_DEVICE", "cpu"),
+    ]
+    batch_size = os.environ.get("KFF_AI_BATCH_SIZE")
+    if batch_size:
+        cmd.extend(["--batch-size", batch_size])
+    threads = os.environ.get("KFF_AI_THREADS")
+    if threads:
+        cmd.extend(["--threads", threads])
+
+    result = run_command("ai_full_grid_prediction", cmd, repo_root)
+    result.data.update(
+        {
+            "target_dataset": path_signature(target_dataset),
+            "web_region_today": path_signature(output_dir / "web_region_today.csv"),
+            "web_price_history_region": path_signature(output_dir / "web_price_history_region.csv"),
+        }
     )
+    return result
+
+
+def run_ai_pipeline(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> list[StepResult]:
+    if not enabled:
+        return [StepResult("ai_pipeline", "skipped", "disabled")]
+    results = [run_ai_target_dataset(repo_root, True)]
+    results.append(run_ai_full_grid_prediction(repo_root, True, start_date, end_date))
     return results
 
+
+def run_ai_placeholders(repo_root: Path) -> list[StepResult]:
+    return run_ai_pipeline(repo_root, True, today_kst() - timedelta(days=1), today_kst() - timedelta(days=1))
 
 def write_report(repo_root: Path, steps: list[StepResult], start_date: date, end_date: date) -> Path:
     report_dir = repo_root / "automation" / "logs"
@@ -450,7 +530,8 @@ def main() -> int:
     parser.add_argument("--skip-collection", action="store_true")
     parser.add_argument("--run-preprocessing", action="store_true")
     parser.add_argument("--build-page", action="store_true")
-    parser.add_argument("--include-ai-placeholders", action="store_true")
+    parser.add_argument("--run-ai", action="store_true")
+    parser.add_argument("--include-ai-placeholders", action="store_true", help="Deprecated alias for --run-ai")
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -469,8 +550,8 @@ def main() -> int:
         steps.append(run_collection(repo_root, True, start_date, end_date))
     steps.extend(merge_incoming_files(repo_root))
     steps.append(run_preprocessing(repo_root, args.run_preprocessing))
-    if args.include_ai_placeholders:
-        steps.extend(run_ai_placeholders(repo_root))
+    if args.run_ai or args.include_ai_placeholders:
+        steps.extend(run_ai_pipeline(repo_root, True, start_date, end_date))
     steps.append(run_page_build(repo_root, args.build_page, end_date))
     report_path = write_report(repo_root, steps, start_date, end_date)
 

@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pandas numpy requests ipython xlrd openpyxl lxml
+          python -m pip install pandas numpy requests ipython xlrd openpyxl lxml duckdb pyarrow torch
 
       - name: Run collection and preprocessing pipeline
         env:
@@ -65,7 +65,7 @@ jobs:
           args=(
             --repo-root .
             --build-page
-            --include-ai-placeholders
+            --run-ai
           )
           if [ -n "${{ inputs.start_date }}" ]; then
             args+=(--start-date "${{ inputs.start_date }}")
@@ -80,12 +80,14 @@ jobs:
 
       - name: Commit pipeline outputs
         run: |
-          if git diff --quiet -- \
+          changed_paths="$(git status --porcelain -- \
             automation/logs \
             data-analysis/00_data_collection/outputs \
             data-analysis/01_data_preprocessing/outputs \
             page/manual_inputs \
-            page/public/data/latest; then
+            page/public/data/latest \
+            ai-model/05_full_grid_prediction_for_web)"
+          if [ -z "$changed_paths" ]; then
             echo "No pipeline changes."
             exit 0
           fi
@@ -96,7 +98,8 @@ jobs:
             data-analysis/00_data_collection/outputs \
             data-analysis/01_data_preprocessing/outputs \
             page/manual_inputs \
-            page/public/data/latest
+            page/public/data/latest \
+            ai-model/05_full_grid_prediction_for_web
           git commit -m "Run daily data pipeline"
           git pull --rebase origin main
           git push

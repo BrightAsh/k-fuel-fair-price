@@ -25,6 +25,7 @@ FUEL_CONFIG = {
 }
 
 PREPROCESSED_DAILY_PATH = Path("data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv")
+AI_WEB_OUTPUT_DIR = Path("ai-model/05_full_grid_prediction_for_web/outputs")
 
 TRAINING_COVERAGE_DATASETS = {
     "grid_panel_rows": {
@@ -79,6 +80,103 @@ def to_float(value: Any) -> float | None:
     except Exception:
         return None
 
+def weighted_average(values: pd.Series, weights: pd.Series) -> float | None:
+    v = pd.to_numeric(values, errors="coerce")
+    w = pd.to_numeric(weights, errors="coerce").fillna(0)
+    mask = v.notna() & w.gt(0)
+    if not mask.any():
+        return to_float(v.mean())
+    return float((v[mask] * w[mask]).sum() / w[mask].sum())
+
+
+def judge_from_prices(actual: float | None, low: float | None, high: float | None, fair: float | None = None) -> str | None:
+    if actual is None:
+        return None
+    if high is not None and actual > high:
+        return "비쌈"
+    if low is not None and actual < low:
+        return "저렴"
+    if low is not None and high is not None:
+        return "적정"
+    if fair is not None and actual > fair:
+        return "비쌈"
+    if fair is not None and actual < fair:
+        return "저렴"
+    return "적정"
+
+
+def ai_web_path(repo_root: Path, filename: str) -> Path:
+    return repo_root / AI_WEB_OUTPUT_DIR / filename
+
+
+def read_ai_web_csv(repo_root: Path, filename: str, as_of_date: str | None = None) -> pd.DataFrame | None:
+    path = ai_web_path(repo_root, filename)
+    if not path.exists():
+        return None
+    df = read_csv(path)
+    date_col = "date" if "date" in df.columns else "source_date" if "source_date" in df.columns else None
+    if date_col:
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+        df = df.dropna(subset=[date_col]).sort_values(date_col)
+        if as_of_date:
+            df = df[df[date_col] <= pd.Timestamp(as_of_date)]
+    return df
+
+
+def build_ai_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any] | None:
+    df = read_ai_web_csv(repo_root, "web_region_today.csv", as_of_date)
+    if df is None or df.empty:
+        return None
+
+    date_col = "source_date" if "source_date" in df.columns else "date" if "date" in df.columns else None
+    if date_col:
+        latest_date = df[date_col].max()
+        df = df[df[date_col] == latest_date]
+        resolved_date = pd.Timestamp(latest_date).strftime("%Y-%m-%d")
+    else:
+        resolved_date = as_of_date
+
+    fuels: dict[str, Any] = {}
+    for fuel, cfg in FUEL_CONFIG.items():
+        part = df[df["fuel"].astype(str).str.strip() == fuel].copy() if "fuel" in df.columns else pd.DataFrame()
+        if part.empty:
+            continue
+        weights = part["station_count"] if "station_count" in part.columns else pd.Series([1] * len(part), index=part.index)
+        actual = weighted_average(part.get("actual_price", pd.Series(dtype=float)), weights)
+        fair = weighted_average(part.get("fair_price_policy", pd.Series(dtype=float)), weights)
+        low = weighted_average(part.get("band_low_policy", pd.Series(dtype=float)), weights)
+        high = weighted_average(part.get("band_high_policy", pd.Series(dtype=float)), weights)
+        fuels[fuel] = {
+            "label": cfg["label"],
+            "actual_price": actual,
+            "actual_delta_1d": None,
+            "fair_price_policy": fair,
+            "band_low_policy": low,
+            "band_high_policy": high,
+            "gap_policy": actual - fair if actual is not None and fair is not None else None,
+            "judge_policy": judge_from_prices(actual, low, high, fair),
+            "policy_effect": None,
+            "source": str(AI_WEB_OUTPUT_DIR / "web_region_today.csv"),
+        }
+
+    if not fuels:
+        return None
+
+    freshness = "fresh"
+    if resolved_date:
+        age_days = (datetime.now(KST).date() - pd.Timestamp(resolved_date).date()).days
+        freshness = "fresh" if age_days <= 1 else "stale"
+
+    return {
+        "schema_version": "national_today_v1",
+        "as_of_date": resolved_date,
+        "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
+        "freshness": freshness,
+        "fuels": fuels,
+        "policies": [],
+        "errors": {},
+        "source": "ai-model/05_full_grid_prediction_for_web/outputs/web_region_today.csv",
+    }
 
 def judge_from_row(row: pd.Series) -> str | None:
     inside_col = next((col for col in row.index if str(col).strip() == "정책적용_inside"), None)
@@ -217,6 +315,9 @@ def extract_national_fuel(repo_root: Path, fuel: str, as_of_date: str | None) ->
 
 
 def build_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
+    ai_national = build_ai_national(repo_root, as_of_date)
+    if ai_national is not None:
+        return ai_national
     generated_at = datetime.now(KST).isoformat(timespec="seconds")
     fuels: dict[str, Any] = {}
     dates: list[str] = []
@@ -319,6 +420,34 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
                 "band_high_policy": to_float(row.get("band_high_policy")),
                 "gap_policy": gap,
                 "source": "page/manual_inputs/price_history.csv",
+            }
+            by_key[(item["date"], item["region"], item["fuel"])] = item
+
+    ai_history = read_ai_web_csv(repo_root, "web_price_history_region.csv", as_of_date)
+    if ai_history is not None and not ai_history.empty:
+        for _, row in ai_history.iterrows():
+            date = pd.to_datetime(row.get("date"), errors="coerce")
+            if pd.isna(date):
+                continue
+            fuel = str(row.get("fuel", "")).strip()
+            region = str(row.get("region", "")).strip()
+            if not region or fuel not in FUEL_CONFIG:
+                continue
+            actual = to_float(row.get("actual_price"))
+            fair = to_float(row.get("fair_price_policy"))
+            gap = to_float(row.get("gap_policy"))
+            if gap is None and actual is not None and fair is not None:
+                gap = actual - fair
+            item = {
+                "date": pd.Timestamp(date).strftime("%Y-%m-%d"),
+                "region": region,
+                "fuel": fuel,
+                "actual_price": actual,
+                "fair_price_policy": fair,
+                "band_low_policy": to_float(row.get("band_low_policy")),
+                "band_high_policy": to_float(row.get("band_high_policy")),
+                "gap_policy": gap,
+                "source": "ai-model/05_full_grid_prediction_for_web/outputs/web_price_history_region.csv",
             }
             by_key[(item["date"], item["region"], item["fuel"])] = item
 
@@ -446,9 +575,10 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
     station_input = repo_root / "page/manual_inputs/station_search_index.csv"
     region_input = repo_root / "page/manual_inputs/region_today.csv"
     manual_history_input = repo_root / "page/manual_inputs/price_history.csv"
-    ai_gasoline_dir = repo_root / "ai-model/03_prediction_model_design/outputs/gasoline"
-    ai_diesel_dir = repo_root / "ai-model/03_prediction_model_design/outputs/diesel"
-    ai_exists = ai_gasoline_dir.exists() or ai_diesel_dir.exists()
+    ai_output_dir = repo_root / AI_WEB_OUTPUT_DIR
+    ai_today_input = ai_output_dir / "web_region_today.csv"
+    ai_history_input = ai_output_dir / "web_price_history_region.csv"
+    ai_exists = ai_today_input.exists() or ai_history_input.exists()
 
     return {
         "schema_version": "external_data_status_v1",
@@ -477,11 +607,11 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
             {
                 "id": "region_today",
                 "label": "지역별 요약",
-                "status": "connected" if region_input.exists() and region else "waiting",
+                "status": "connected" if (ai_today_input.exists() or region_input.exists()) and region else "waiting",
                 "rows": len(region),
                 "date_min": national_date,
                 "date_max": national_date,
-                "path": "page/manual_inputs/region_today.csv",
+                "path": "ai-model/05_full_grid_prediction_for_web/outputs/web_region_today.csv" if ai_today_input.exists() else "page/manual_inputs/region_today.csv",
                 "note": "AI 모델 완료 전까지 수동 입력합니다.",
             },
             {
@@ -508,10 +638,10 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
                 "id": "ai_model_outputs",
                 "label": "AI 적정가격 모델",
                 "status": "connected" if ai_exists else "waiting",
-                "rows": 0,
+                "rows": (csv_row_count(ai_today_input) or 0) + (csv_row_count(ai_history_input) or 0),
                 "date_min": None,
                 "date_max": None,
-                "path": "ai-model/03_prediction_model_design/outputs/{fuel}/",
+                "path": "ai-model/05_full_grid_prediction_for_web/outputs/",
                 "note": "학습 완료 후 지역/주유소 적정가격과 예측 이력을 생성합니다.",
             },
         ],
@@ -519,7 +649,9 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
 
 
 def build_region(repo_root: Path) -> list[dict[str, Any]]:
-    path = repo_root / "page/manual_inputs/region_today.csv"
+    ai_path = ai_web_path(repo_root, "web_region_today.csv")
+    manual_path = repo_root / "page/manual_inputs/region_today.csv"
+    path = ai_path if ai_path.exists() else manual_path
     if not path.exists():
         return []
 
@@ -530,17 +662,25 @@ def build_region(repo_root: Path) -> list[dict[str, Any]]:
         fuel = str(row.get("fuel", "")).strip()
         if not region or fuel not in FUEL_CONFIG:
             continue
+        actual = to_float(row.get("actual_price"))
+        fair = to_float(row.get("fair_price_policy"))
+        low = to_float(row.get("band_low_policy"))
+        high = to_float(row.get("band_high_policy"))
+        source_date_value = row.get("source_date") if pd.notna(row.get("source_date")) else row.get("date") if pd.notna(row.get("date")) else None
+        source_date = None if source_date_value is None else pd.Timestamp(source_date_value).strftime("%Y-%m-%d")
         rows.setdefault(region, {"region": region})
         rows[region][fuel] = {
-            "actual_price": to_float(row.get("actual_price")),
-            "fair_price_policy": to_float(row.get("fair_price_policy")),
-            "band_low_policy": to_float(row.get("band_low_policy")),
-            "band_high_policy": to_float(row.get("band_high_policy")),
-            "gap_policy": to_float(row.get("gap_policy")),
-            "judge_policy": row.get("judge_policy") if pd.notna(row.get("judge_policy")) else None,
+            "actual_price": actual,
+            "fair_price_policy": fair,
+            "band_low_policy": low,
+            "band_high_policy": high,
+            "gap_policy": to_float(row.get("gap_policy")) if pd.notna(row.get("gap_policy")) else (actual - fair if actual is not None and fair is not None else None),
+            "judge_policy": row.get("judge_policy") if pd.notna(row.get("judge_policy")) else judge_from_prices(actual, low, high, fair),
+            "source_date": source_date,
+            "station_count": to_float(row.get("station_count")),
+            "source": str(path.relative_to(repo_root)),
         }
     return list(rows.values())
-
 
 def build_station_index(repo_root: Path) -> list[dict[str, Any]]:
     path = repo_root / "page/manual_inputs/station_search_index.csv"
@@ -613,7 +753,7 @@ def main() -> None:
         ],
         "source": {
             "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
-            "region": "page/manual_inputs/region_today.csv" if region else None,
+            "region": "ai-model/05_full_grid_prediction_for_web/outputs/web_region_today.csv" if (repo_root / AI_WEB_OUTPUT_DIR / "web_region_today.csv").exists() else "page/manual_inputs/region_today.csv" if region else None,
             "station": "page/manual_inputs/station_search_index.csv" if stations else None,
         },
     }
