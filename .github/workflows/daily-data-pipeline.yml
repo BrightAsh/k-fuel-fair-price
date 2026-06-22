@@ -66,6 +66,7 @@ jobs:
           NAVER_MAPS_CLIENT_SECRET: ${{ secrets.NAVER_MAPS_CLIENT_SECRET }}
           VWORLD_API_KEY: ${{ secrets.VWORLD_API_KEY }}
           KFF_RUN_STATION_DOWNLOAD: "true"
+          KFF_STATION_DOWNLOAD_TIMEOUT: "120"
           KFF_RUN_FACILITY: "false"
           KFF_RUN_METADATA_GEOCODE: "false"
           KFF_RUN_LAND_PRICE: "false"

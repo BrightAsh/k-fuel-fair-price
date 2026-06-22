@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import deque
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -317,22 +318,30 @@ def run_command(name: str, cmd: list[str], cwd: Path, env: dict[str, str] | None
         merged_env = os.environ.copy()
         if env:
             merged_env.update(env)
-        completed = subprocess.run(
+        print(f"[RUN] {name}: {' '.join(cmd)}", flush=True)
+        process = subprocess.Popen(
             cmd,
             cwd=str(cwd),
             env=merged_env,
-            check=False,
             text=True,
             encoding="utf-8",
             errors="replace",
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        status = "completed" if completed.returncode == 0 else "failed"
+        tail: deque[str] = deque(maxlen=6000)
+        assert process.stdout is not None
+        for line in process.stdout:
+            print(line, end="", flush=True)
+            tail.extend(line)
+        returncode = process.wait()
+        output_tail = "".join(tail)
+        print(f"[DONE] {name}: returncode={returncode}", flush=True)
+        status = "completed" if returncode == 0 else "failed"
         return StepResult(
             name,
             status,
-            data={"returncode": completed.returncode, "output_tail": completed.stdout[-6000:]},
+            data={"returncode": returncode, "output_tail": output_tail},
         )
     except FileNotFoundError as exc:
         return StepResult(name, "skipped", f"command not found: {exc}")
@@ -457,6 +466,9 @@ def run_station_price_collection(repo_root: Path, enabled: bool, start_date: dat
         cmd.append("--no-headless")
     if os.environ.get("KFF_STATION_OVERWRITE_DOWNLOADS", "").lower() in {"1", "true", "yes"}:
         cmd.append("--overwrite-downloads")
+    download_timeout = os.environ.get("KFF_STATION_DOWNLOAD_TIMEOUT", "").strip()
+    if download_timeout:
+        cmd.extend(["--download-timeout", download_timeout])
     sigun_filter = os.environ.get("KFF_STATION_SIGUN_FILTER", "").strip()
     if sigun_filter:
         cmd.extend(["--sigun-filter", sigun_filter])
