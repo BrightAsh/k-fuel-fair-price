@@ -482,11 +482,72 @@ def run_ai_full_grid_prediction(repo_root: Path, enabled: bool, start_date: date
     return result
 
 
+def run_ai_operational_dataset(repo_root: Path, enabled: bool) -> StepResult:
+    if not enabled:
+        return StepResult("ai_operational_dataset", "skipped", "disabled")
+
+    script = repo_root / "ai-model" / "06_web_operational_dataset_build" / "06_web_operational_dataset_build.py"
+    stage5_output = repo_root / "ai-model" / "05_full_grid_prediction_for_web" / "outputs"
+    stage6_output = repo_root / "ai-model" / "06_web_operational_dataset_build" / "outputs"
+    stage5_history = stage5_output / "web_price_history_region.csv"
+    stage5_today = stage5_output / "web_region_today.csv"
+    stage6_history = stage6_output / "web" / "web_price_history_region.csv"
+    stage6_today = stage6_output / "web" / "web_region_today.csv"
+
+    if not script.exists():
+        return StepResult("ai_operational_dataset", "skipped", "ai-model/06_web_operational_dataset_build/06_web_operational_dataset_build.py missing")
+
+    if not (stage5_history.exists() and stage5_today.exists()):
+        if stage6_history.exists() and stage6_today.exists():
+            return StepResult(
+                "ai_operational_dataset",
+                "skipped",
+                "stage 5 outputs are missing; using existing stage 06 operational data",
+                {
+                    "web_region_today": path_signature(stage6_today),
+                    "web_price_history_region": path_signature(stage6_history),
+                },
+            )
+        return StepResult(
+            "ai_operational_dataset",
+            "waiting",
+            "stage 5 web outputs are missing",
+            {
+                "stage5_web_region_today": path_signature(stage5_today),
+                "stage5_web_price_history_region": path_signature(stage5_history),
+            },
+        )
+
+    cmd = [
+        sys.executable,
+        str(script),
+        "--repo-root",
+        str(repo_root),
+        "--history-years",
+        os.environ.get("KFF_WEB_HISTORY_YEARS", "10"),
+        "--state-days",
+        os.environ.get("KFF_INFERENCE_STATE_DAYS", "35"),
+    ]
+    if os.environ.get("KFF_SKIP_INFERENCE_STATE", "").lower() in {"1", "true", "yes"}:
+        cmd.append("--skip-inference-state")
+
+    result = run_command("ai_operational_dataset", cmd, repo_root)
+    result.data.update(
+        {
+            "web_region_today": path_signature(stage6_today),
+            "web_price_history_region": path_signature(stage6_history),
+            "manifest": path_signature(stage6_output / "operational_dataset_manifest.json"),
+        }
+    )
+    return result
+
+
 def run_ai_pipeline(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> list[StepResult]:
     if not enabled:
         return [StepResult("ai_pipeline", "skipped", "disabled")]
     results = [run_ai_target_dataset(repo_root, True)]
     results.append(run_ai_full_grid_prediction(repo_root, True, start_date, end_date))
+    results.append(run_ai_operational_dataset(repo_root, True))
     return results
 
 

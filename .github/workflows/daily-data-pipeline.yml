@@ -23,6 +23,7 @@ on:
       - "automation/*.py"
       - "page/scripts/**"
       - "ai-model/05_full_grid_prediction_for_web/*.py"
+      - "ai-model/06_web_operational_dataset_build/*.py"
   schedule:
     # 03:00 KST daily
     - cron: "0 18 * * *"
@@ -96,7 +97,8 @@ jobs:
             data-analysis/01_data_preprocessing/outputs \
             page/manual_inputs \
             page/public/data/latest \
-            ai-model/05_full_grid_prediction_for_web)"
+            ai-model/05_full_grid_prediction_for_web \
+            ai-model/06_web_operational_dataset_build)"
           if [ -z "$changed_paths" ]; then
             echo "No pipeline changes."
             exit 0
@@ -109,7 +111,8 @@ jobs:
             data-analysis/01_data_preprocessing/outputs \
             page/manual_inputs \
             page/public/data/latest \
-            ai-model/05_full_grid_prediction_for_web
+            ai-model/05_full_grid_prediction_for_web \
+            ai-model/06_web_operational_dataset_build
           git commit -m "Run daily data pipeline"
           git pull --rebase origin main
           git push

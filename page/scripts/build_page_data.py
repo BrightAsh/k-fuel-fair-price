@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
@@ -25,7 +26,10 @@ FUEL_CONFIG = {
 }
 
 PREPROCESSED_DAILY_PATH = Path("data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv")
-AI_WEB_OUTPUT_DIR = Path("ai-model/05_full_grid_prediction_for_web/outputs")
+AI_WEB_OUTPUT_DIRS = [
+    Path("ai-model/06_web_operational_dataset_build/outputs/web"),
+    Path("ai-model/05_full_grid_prediction_for_web/outputs"),
+]
 
 TRAINING_COVERAGE_DATASETS = {
     "grid_panel_rows": {
@@ -80,6 +84,43 @@ def to_float(value: Any) -> float | None:
     except Exception:
         return None
 
+
+def to_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    text = str(value).strip()
+    return text or None
+
+
+def clean_json_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): clean_json_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [clean_json_value(item) for item in value]
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        try:
+            return clean_json_value(value.item())
+        except Exception:
+            pass
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return value
+
+
 def weighted_average(values: pd.Series, weights: pd.Series) -> float | None:
     v = pd.to_numeric(values, errors="coerce")
     w = pd.to_numeric(weights, errors="coerce").fillna(0)
@@ -106,7 +147,19 @@ def judge_from_prices(actual: float | None, low: float | None, high: float | Non
 
 
 def ai_web_path(repo_root: Path, filename: str) -> Path:
-    return repo_root / AI_WEB_OUTPUT_DIR / filename
+    for rel_dir in AI_WEB_OUTPUT_DIRS:
+        path = repo_root / rel_dir / filename
+        if path.exists():
+            return path
+    return repo_root / AI_WEB_OUTPUT_DIRS[0] / filename
+
+
+def ai_web_source(repo_root: Path, filename: str) -> str:
+    path = ai_web_path(repo_root, filename)
+    try:
+        return str(path.relative_to(repo_root)).replace("\\", "/")
+    except ValueError:
+        return str(path).replace("\\", "/")
 
 
 def read_ai_web_csv(repo_root: Path, filename: str, as_of_date: str | None = None) -> pd.DataFrame | None:
@@ -127,6 +180,7 @@ def build_ai_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]
     df = read_ai_web_csv(repo_root, "web_region_today.csv", as_of_date)
     if df is None or df.empty:
         return None
+    source = ai_web_source(repo_root, "web_region_today.csv")
 
     date_col = "source_date" if "source_date" in df.columns else "date" if "date" in df.columns else None
     if date_col:
@@ -156,7 +210,7 @@ def build_ai_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]
             "gap_policy": actual - fair if actual is not None and fair is not None else None,
             "judge_policy": judge_from_prices(actual, low, high, fair),
             "policy_effect": None,
-            "source": str(AI_WEB_OUTPUT_DIR / "web_region_today.csv"),
+            "source": source,
         }
 
     if not fuels:
@@ -175,7 +229,7 @@ def build_ai_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]
         "fuels": fuels,
         "policies": [],
         "errors": {},
-        "source": "ai-model/05_full_grid_prediction_for_web/outputs/web_region_today.csv",
+        "source": source,
     }
 
 def judge_from_row(row: pd.Series) -> str | None:
@@ -393,7 +447,8 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
             by_key[(item["date"], item["region"], item["fuel"])] = item
 
     manual_path = repo_root / "page/manual_inputs/price_history.csv"
-    if manual_path.exists():
+    ai_history_available = ai_web_path(repo_root, "web_price_history_region.csv").exists()
+    if manual_path.exists() and not ai_history_available:
         df = read_csv(manual_path)
         for _, row in df.iterrows():
             date = pd.to_datetime(row.get("date") or row.get("as_of_date"), errors="coerce")
@@ -425,30 +480,35 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
 
     ai_history = read_ai_web_csv(repo_root, "web_price_history_region.csv", as_of_date)
     if ai_history is not None and not ai_history.empty:
-        for _, row in ai_history.iterrows():
-            date = pd.to_datetime(row.get("date"), errors="coerce")
-            if pd.isna(date):
-                continue
-            fuel = str(row.get("fuel", "")).strip()
-            region = str(row.get("region", "")).strip()
-            if not region or fuel not in FUEL_CONFIG:
-                continue
-            actual = to_float(row.get("actual_price"))
-            fair = to_float(row.get("fair_price_policy"))
-            gap = to_float(row.get("gap_policy"))
-            if gap is None and actual is not None and fair is not None:
-                gap = actual - fair
-            item = {
-                "date": pd.Timestamp(date).strftime("%Y-%m-%d"),
-                "region": region,
-                "fuel": fuel,
-                "actual_price": actual,
-                "fair_price_policy": fair,
-                "band_low_policy": to_float(row.get("band_low_policy")),
-                "band_high_policy": to_float(row.get("band_high_policy")),
-                "gap_policy": gap,
-                "source": "ai-model/05_full_grid_prediction_for_web/outputs/web_price_history_region.csv",
-            }
+        ai_history_source = ai_web_source(repo_root, "web_price_history_region.csv")
+        work = ai_history.copy()
+        work["date"] = pd.to_datetime(work.get("date"), errors="coerce")
+        work["fuel"] = work.get("fuel", "").astype(str).str.strip()
+        work["region"] = work.get("region", "").astype(str).str.strip()
+        work = work.dropna(subset=["date"])
+        work = work[work["fuel"].isin(FUEL_CONFIG) & work["region"].ne("")]
+        for col in ["actual_price", "fair_price_policy", "band_low_policy", "band_high_policy", "gap_policy"]:
+            if col not in work.columns:
+                work[col] = pd.NA
+            work[col] = pd.to_numeric(work[col], errors="coerce")
+        work["gap_policy"] = work["gap_policy"].where(
+            work["gap_policy"].notna(),
+            work["actual_price"] - work["fair_price_policy"],
+        )
+        work["date"] = work["date"].dt.strftime("%Y-%m-%d")
+        work["source"] = ai_history_source
+        keep = [
+            "date",
+            "region",
+            "fuel",
+            "actual_price",
+            "fair_price_policy",
+            "band_low_policy",
+            "band_high_policy",
+            "gap_policy",
+            "source",
+        ]
+        for item in work[keep].where(pd.notna(work[keep]), None).to_dict("records"):
             by_key[(item["date"], item["region"], item["fuel"])] = item
 
     return sorted(by_key.values(), key=lambda item: (item["date"], item["region"], item["fuel"]))
@@ -494,6 +554,26 @@ def history_extent(rows: list[dict[str, Any]]) -> tuple[str | None, str | None]:
     if not dates:
         return None, None
     return dates[0], dates[-1]
+
+
+def trim_history(rows: list[dict[str, Any]], as_of_date: str | None, history_years: int) -> list[dict[str, Any]]:
+    if history_years <= 0 or not rows:
+        return rows
+
+    dates = [pd.to_datetime(row.get("date"), errors="coerce") for row in rows]
+    valid_dates = [date for date in dates if not pd.isna(date)]
+    if not valid_dates:
+        return rows
+
+    end = pd.Timestamp(as_of_date) if as_of_date else max(valid_dates)
+    start = end - pd.DateOffset(years=history_years)
+    out = []
+    for row, parsed in zip(rows, dates):
+        if pd.isna(parsed):
+            continue
+        if start <= parsed <= end:
+            out.append(row)
+    return sorted(out, key=lambda item: (item["date"], item["region"], item["fuel"]))
 
 
 def build_training_data_coverage(repo_root: Path) -> dict[str, Any]:
@@ -575,10 +655,11 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
     station_input = repo_root / "page/manual_inputs/station_search_index.csv"
     region_input = repo_root / "page/manual_inputs/region_today.csv"
     manual_history_input = repo_root / "page/manual_inputs/price_history.csv"
-    ai_output_dir = repo_root / AI_WEB_OUTPUT_DIR
-    ai_today_input = ai_output_dir / "web_region_today.csv"
-    ai_history_input = ai_output_dir / "web_price_history_region.csv"
+    ai_today_input = ai_web_path(repo_root, "web_region_today.csv")
+    ai_history_input = ai_web_path(repo_root, "web_price_history_region.csv")
     ai_exists = ai_today_input.exists() or ai_history_input.exists()
+    ai_today_source = ai_web_source(repo_root, "web_region_today.csv")
+    ai_history_source = ai_web_source(repo_root, "web_price_history_region.csv")
 
     return {
         "schema_version": "external_data_status_v1",
@@ -611,7 +692,7 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
                 "rows": len(region),
                 "date_min": national_date,
                 "date_max": national_date,
-                "path": "ai-model/05_full_grid_prediction_for_web/outputs/web_region_today.csv" if ai_today_input.exists() else "page/manual_inputs/region_today.csv",
+                "path": ai_today_source if ai_today_input.exists() else "page/manual_inputs/region_today.csv",
                 "note": "AI 모델 완료 전까지 수동 입력합니다.",
             },
             {
@@ -641,7 +722,7 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
                 "rows": (csv_row_count(ai_today_input) or 0) + (csv_row_count(ai_history_input) or 0),
                 "date_min": None,
                 "date_max": None,
-                "path": "ai-model/05_full_grid_prediction_for_web/outputs/",
+                "path": ai_history_source if ai_history_input.exists() else ai_today_source,
                 "note": "학습 완료 후 지역/주유소 적정가격과 예측 이력을 생성합니다.",
             },
         ],
@@ -678,7 +759,7 @@ def build_region(repo_root: Path) -> list[dict[str, Any]]:
             "judge_policy": row.get("judge_policy") if pd.notna(row.get("judge_policy")) else judge_from_prices(actual, low, high, fair),
             "source_date": source_date,
             "station_count": to_float(row.get("station_count")),
-            "source": str(path.relative_to(repo_root)),
+            "source": str(path.relative_to(repo_root)).replace("\\", "/"),
         }
     return list(rows.values())
 
@@ -691,23 +772,27 @@ def build_station_index(repo_root: Path) -> list[dict[str, Any]]:
     out = []
     for _, row in df.iterrows():
         out.append({
-            "station_id": row.get("station_id"),
-            "name": row.get("name"),
-            "brand": row.get("brand"),
-            "region": row.get("region"),
-            "address": row.get("address"),
+            "station_id": to_text(row.get("station_id")),
+            "name": to_text(row.get("name")),
+            "brand": to_text(row.get("brand")),
+            "region": to_text(row.get("region")),
+            "address": to_text(row.get("address")),
             "lon": to_float(row.get("lon")),
             "lat": to_float(row.get("lat")),
             "gasoline_price": to_float(row.get("gasoline_price")),
             "diesel_price": to_float(row.get("diesel_price")),
-            "judge_policy": row.get("judge_policy") if pd.notna(row.get("judge_policy")) else None,
+            "judge_policy": to_text(row.get("judge_policy")),
         })
     return out
 
 
 def write_json(path: Path, obj: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    clean_obj = clean_json_value(obj)
+    path.write_text(
+        json.dumps(clean_obj, ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def main() -> None:
@@ -715,25 +800,31 @@ def main() -> None:
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[2])
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--as-of-date", default=None)
+    parser.add_argument("--history-years", type=int, default=10)
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
     output_dir = Path(args.output_dir).resolve() if args.output_dir else repo_root / "page/public/data/latest"
 
     national = build_national(repo_root, args.as_of_date)
+    resolved_as_of_date = args.as_of_date or national.get("as_of_date")
     region = build_region(repo_root)
     stations = build_station_index(repo_root)
-    history = build_price_history(repo_root, args.as_of_date)
+    history = build_price_history(repo_root, resolved_as_of_date)
     existing_history_path = output_dir / "price_history.json"
-    if existing_history_path.exists():
+    ai_history_path = ai_web_path(repo_root, "web_price_history_region.csv")
+    if existing_history_path.exists() and not ai_history_path.exists():
         try:
             existing_history = json.loads(existing_history_path.read_text(encoding="utf-8"))
             if isinstance(existing_history, list):
                 history = merge_history(existing_history, history)
         except Exception:
             pass
+    history = trim_history(history, resolved_as_of_date, args.history_years)
     training_coverage = build_training_data_coverage(repo_root)
     external_status = build_external_data_status(repo_root, output_dir, national, region, stations, history)
+    ai_region_source = ai_web_source(repo_root, "web_region_today.csv")
+    ai_region_path = ai_web_path(repo_root, "web_region_today.csv")
 
     manifest = {
         "schema_version": "page_data_v1",
@@ -753,7 +844,7 @@ def main() -> None:
         ],
         "source": {
             "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
-            "region": "ai-model/05_full_grid_prediction_for_web/outputs/web_region_today.csv" if (repo_root / AI_WEB_OUTPUT_DIR / "web_region_today.csv").exists() else "page/manual_inputs/region_today.csv" if region else None,
+            "region": ai_region_source if ai_region_path.exists() else "page/manual_inputs/region_today.csv" if region else None,
             "station": "page/manual_inputs/station_search_index.csv" if stations else None,
         },
     }

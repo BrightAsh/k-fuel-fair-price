@@ -1,6 +1,6 @@
 {
   "schema_version": "external_data_status_v1",
-  "generated_at": "2026-06-22T13:09:17+09:00",
+  "generated_at": "2026-06-22T14:45:02+09:00",
   "datasets": [
     {
       "id": "national_today",
@@ -16,9 +16,9 @@
       "id": "price_history",
       "label": "기간별 가격 추이",
       "status": "connected",
-      "rows": 235384,
-      "date_min": "2008-04-15",
-      "date_max": "2026-06-19",
+      "rows": 138814,
+      "date_min": "2016-06-09",
+      "date_max": "2026-06-09",
       "path": "page/public/data/latest/price_history.json",
       "note": "자동 갱신 시 기존 파일과 병합해 날짜별 이력을 누적합니다."
     },
@@ -26,10 +26,10 @@
       "id": "region_today",
       "label": "지역별 요약",
       "status": "connected",
-      "rows": 17,
+      "rows": 18,
       "date_min": "2026-06-09",
       "date_max": "2026-06-09",
-      "path": "page/manual_inputs/region_today.csv",
+      "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
       "note": "AI 모델 완료 전까지 수동 입력합니다."
     },
     {
@@ -55,11 +55,11 @@
     {
       "id": "ai_model_outputs",
       "label": "AI 적정가격 모델",
-      "status": "waiting",
-      "rows": 0,
+      "status": "connected",
+      "rows": 131544,
       "date_min": null,
       "date_max": null,
-      "path": "ai-model/05_full_grid_prediction_for_web/outputs/",
+      "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
       "note": "학습 완료 후 지역/주유소 적정가격과 예측 이력을 생성합니다."
     }
   ]

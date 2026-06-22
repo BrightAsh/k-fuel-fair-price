@@ -416,6 +416,16 @@ def date_conditions(start: str | None, end: str | None) -> list[str]:
     return conds
 
 
+def source_date_conditions(start: str | None, end: str | None) -> list[str]:
+    conds: list[str] = []
+    if start:
+        source_start = pd.Timestamp(start) - pd.Timedelta(days=SEQUENCE_REQUIRED_HISTORY_DAYS)
+        conds.append(f"CAST(date AS DATE) >= {sql_date(source_start)}")
+    if end:
+        conds.append(f"CAST(date AS DATE) <= {sql_date(end)}")
+    return conds
+
+
 def build_model_frame_query(
     target_dataset: Path,
     cfg: FuelConfig,
@@ -429,6 +439,8 @@ def build_model_frame_query(
     history_exprs = ",\n                ".join(history_sql_exprs(sequence_length))
     select_sql = ",\n            ".join(selected_column_exprs(bundle, all_columns))
     where_sql = " AND\n              ".join(date_conditions(start, end) + sequence_quality_conditions(bundle))
+    raw_conds = source_date_conditions(start, end)
+    raw_where_sql = "\n            WHERE " + " AND ".join(raw_conds) if raw_conds else ""
     limit_sql = f"\n        ORDER BY date, grid_id\n        LIMIT {int(limit)}" if limit else ""
 
     band_low_expr = (
@@ -446,6 +458,7 @@ def build_model_frame_query(
         WITH raw AS (
             SELECT CAST(date AS DATE) AS date_key, *
             FROM read_parquet({qstr(target_dataset)})
+            {raw_where_sql}
         ),
         target_rows AS (
             SELECT
@@ -937,7 +950,7 @@ def build_web_exports(out_dir: Path, fuel_outputs: dict[str, dict[str, Path]]) -
             "gap_policy",
         ]
     ].copy()
-    web_history["source"] = "ai-model/04_prediction_model_training/predict_full_grid_for_web.py"
+    web_history["source"] = "ai-model/05_full_grid_prediction_for_web/predict_full_grid_for_web.py"
 
     latest_idx = region_history.sort_values("date").groupby(["region", "fuel"], dropna=False).tail(1).index
     web_today = region_history.loc[

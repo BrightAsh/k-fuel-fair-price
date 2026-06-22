@@ -9,9 +9,11 @@ venv/
 .ipynb_checkpoints/
 ai-model/**/outputs/
 ai-model/03_prediction_model_design/
-# Keep lightweight AI web-serving exports, but not heavy parquet predictions.
-!ai-model/05_full_grid_prediction_for_web/outputs/
-!ai-model/05_full_grid_prediction_for_web/outputs/**/
-!ai-model/05_full_grid_prediction_for_web/outputs/**/*.csv
-!ai-model/05_full_grid_prediction_for_web/outputs/**/*.json
-ai-model/05_full_grid_prediction_for_web/outputs/**/*.parquet
+# Stage 05 outputs are local build artifacts. Stage 06 is the Git-friendly web package.
+!ai-model/06_web_operational_dataset_build/outputs/
+!ai-model/06_web_operational_dataset_build/outputs/**/
+!ai-model/06_web_operational_dataset_build/outputs/**/*.csv
+!ai-model/06_web_operational_dataset_build/outputs/**/*.json
+ai-model/06_web_operational_dataset_build/outputs/**/*.parquet
+!ai-model/06_web_operational_dataset_build/outputs/inference_state/
+!ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet
