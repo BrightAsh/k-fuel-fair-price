@@ -16,14 +16,6 @@ on:
         required: false
         default: true
         type: boolean
-  push:
-    branches: ["main"]
-    paths:
-      - ".github/workflows/daily-data-pipeline.yml"
-      - "automation/*.py"
-      - "page/scripts/**"
-      - "ai-model/05_full_grid_prediction_for_web/*.py"
-      - "ai-model/06_web_operational_dataset_build/*.py"
   schedule:
     # 03:00 KST daily
     - cron: "0 18 * * *"
@@ -77,9 +69,6 @@ jobs:
             --build-page
             --run-ai
           )
-          if [ "${{ github.event_name }}" = "push" ]; then
-            args+=(--skip-collection)
-          fi
           if [ -n "${{ inputs.start_date }}" ]; then
             args+=(--start-date "${{ inputs.start_date }}")
           fi
@@ -116,5 +105,5 @@ jobs:
             ai-model/05_full_grid_prediction_for_web \
             ai-model/06_web_operational_dataset_build
           git commit -m "Run daily data pipeline"
-          git pull --rebase origin main
+          git pull --rebase -X theirs origin main
           git push
