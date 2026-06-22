@@ -24,6 +24,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: daily-data-pipeline
@@ -31,6 +33,9 @@ concurrency:
 
 jobs:
   pipeline:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
@@ -107,3 +112,15 @@ jobs:
           git commit -m "Run daily data pipeline"
           git pull --rebase -X theirs origin main
           git push
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload page artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: page
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
