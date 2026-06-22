@@ -434,6 +434,13 @@ def infer_station_price_start(repo_root: Path, fallback_start: date, fallback_en
 def run_station_price_collection(repo_root: Path, enabled: bool, start_date: date, end_date: date) -> StepResult:
     if not enabled:
         return StepResult("collect_station_prices", "skipped", "disabled")
+    if start_date > end_date:
+        return StepResult(
+            "collect_station_prices",
+            "skipped",
+            "already up to date",
+            {"start_date": start_date.isoformat(), "end_date": end_date.isoformat()},
+        )
     effective_start = infer_station_price_start(repo_root, start_date, end_date)
     if effective_start > end_date:
         return StepResult(
@@ -793,7 +800,8 @@ def main() -> int:
     steps.append(run_preprocessing(repo_root, args.run_preprocessing))
     if args.run_ai or args.include_ai_placeholders:
         steps.extend(run_ai_pipeline(repo_root, True, start_date, end_date))
-    steps.append(run_page_build(repo_root, args.build_page, end_date))
+    page_as_of_date = end_date + timedelta(days=1) if args.run_ai or args.include_ai_placeholders else end_date
+    steps.append(run_page_build(repo_root, args.build_page, page_as_of_date))
     report_path = write_report(repo_root, steps, start_date, end_date)
 
     print(f"[PIPELINE] report={report_path}")
