@@ -1,6 +1,6 @@
 {
   "schema_version": "web_operational_dataset_v2",
-  "created_at": "2026-06-22T15:32:02+09:00",
+  "created_at": "2026-06-22T15:37:17+09:00",
   "as_of_date": "2026-06-11",
   "source": "ai-model/06_web_operational_dataset_build/daily_operational_prediction.py",
   "status": "no_new_target_dates",
@@ -34,59 +34,59 @@
     "web_price_history_region": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
       "exists": true,
-      "bytes": 19405353,
-      "mb": 18.506,
-      "modified_at": "2026-06-22T15:16:30+09:00"
+      "bytes": 19273880,
+      "mb": 18.381,
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "web_region_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
       "exists": true,
-      "bytes": 3088,
+      "bytes": 3051,
       "mb": 0.003,
-      "modified_at": "2026-06-22T15:16:30+09:00"
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "web_national_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv",
       "exists": true,
-      "bytes": 249,
+      "bytes": 246,
       "mb": 0.0,
-      "modified_at": "2026-06-22T15:16:30+09:00"
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "web_latest_grid_predictions": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
       "exists": true,
-      "bytes": 2598733,
-      "mb": 2.478,
-      "modified_at": "2026-06-22T15:16:31+09:00"
+      "bytes": 2581074,
+      "mb": 2.462,
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "grid_region_lookup": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/grid_region_lookup.csv",
       "exists": true,
-      "bytes": 283493,
-      "mb": 0.27,
-      "modified_at": "2026-06-22T14:29:34+09:00"
+      "bytes": 271154,
+      "mb": 0.259,
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "station_grid_lookup": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/station_grid_lookup.csv",
       "exists": true,
-      "bytes": 1933841,
-      "mb": 1.844,
-      "modified_at": "2026-06-22T15:12:59+09:00"
+      "bytes": 1912779,
+      "mb": 1.824,
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "inference_state": {
       "manifest": {
         "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input_manifest.json",
         "exists": true,
-        "bytes": 2341,
+        "bytes": 2266,
         "mb": 0.002,
-        "modified_at": "2026-06-22T15:32:02+09:00"
+        "modified_at": "2026-06-22T15:37:17+09:00"
       },
       "data": {
         "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
         "exists": true,
         "bytes": 8224224,
         "mb": 7.843,
-        "modified_at": "2026-06-22T15:30:14+09:00"
+        "modified_at": "2026-06-22T15:35:00+09:00"
       }
     }
   },
@@ -94,30 +94,30 @@
     "web_price_history_region": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
       "exists": true,
-      "bytes": 19405353,
-      "mb": 18.506,
-      "modified_at": "2026-06-22T15:16:30+09:00"
+      "bytes": 19273880,
+      "mb": 18.381,
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "web_region_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
       "exists": true,
-      "bytes": 3088,
+      "bytes": 3051,
       "mb": 0.003,
-      "modified_at": "2026-06-22T15:16:30+09:00"
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "web_national_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv",
       "exists": true,
-      "bytes": 249,
+      "bytes": 246,
       "mb": 0.0,
-      "modified_at": "2026-06-22T15:16:30+09:00"
+      "modified_at": "2026-06-22T15:35:00+09:00"
     },
     "web_latest_grid_predictions": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
       "exists": true,
-      "bytes": 2598733,
-      "mb": 2.478,
-      "modified_at": "2026-06-22T15:16:31+09:00"
+      "bytes": 2581074,
+      "mb": 2.462,
+      "modified_at": "2026-06-22T15:35:00+09:00"
     }
   }
 }
