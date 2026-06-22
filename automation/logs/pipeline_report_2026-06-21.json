@@ -1,6 +1,6 @@
 {
   "schema_version": "daily_pipeline_report_v1",
-  "generated_at": "2026-06-22T11:26:40+09:00",
+  "generated_at": "2026-06-22T14:49:46+09:00",
   "start_date": "2026-06-20",
   "end_date": "2026-06-21",
   "steps": [
@@ -9,7 +9,7 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/crude/crude_20080102_20260618.csv",
+        "path": "data-analysis/00_data_collection/outputs/crude/crude_20080102_20260619.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -137,7 +137,7 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6639 cols=44\n"
+        "output_tail": "[preprocess] saved /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv rows=6640 cols=44\n"
       }
     },
     {
@@ -167,12 +167,31 @@
       }
     },
     {
+      "name": "ai_operational_dataset",
+      "status": "skipped",
+      "detail": "stage 5 outputs are missing; using existing stage 06 operational data",
+      "data": {
+        "web_region_today": {
+          "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+          "exists": true,
+          "size": 3057,
+          "mtime": "2026-06-22T14:46:58+09:00"
+        },
+        "web_price_history_region": {
+          "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
+          "exists": true,
+          "size": 19279415,
+          "mtime": "2026-06-22T14:46:58+09:00"
+        }
+      }
+    },
+    {
       "name": "page_build",
       "status": "completed",
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=17 stations=10,468\n[INFO] history=235,382\n"
+        "output_tail": "[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/page/public/data/latest\n[INFO] as_of_date=2026-06-09 freshness=stale\n[INFO] regions=18 stations=10,468\n[INFO] history=138,374\n"
       }
     }
   ]

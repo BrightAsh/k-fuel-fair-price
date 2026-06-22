@@ -1,7 +1,7 @@
 {
   "schema_version": "national_today_v1",
   "as_of_date": "2026-06-09",
-  "generated_at": "2026-06-22T14:44:07+09:00",
+  "generated_at": "2026-06-22T14:48:57+09:00",
   "freshness": "stale",
   "fuels": {
     "gasoline": {
