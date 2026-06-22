@@ -1,65 +1,65 @@
 {
   "schema_version": "source_collection_v1",
-  "start_date": "2026-06-18",
-  "end_date": "2026-06-19",
-  "generated_at": "2026-06-22T04:08:11",
+  "start_date": "2026-06-11",
+  "end_date": "2026-06-21",
+  "generated_at": "2026-06-22T09:05:20",
   "results": [
     {
       "name": "fx_usdkrw",
       "status": "completed",
-      "rows": 2,
+      "rows": 7,
       "detail": "",
       "files": {
-        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fx_usdkrw/raw/ecos_fx_usdkrw_raw_20260618_20260619.csv",
-        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fx_usdkrw/final/fx_usdkrw_20260618_20260619.csv",
+        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fx_usdkrw/raw/ecos_fx_usdkrw_raw_20260611_20260621.csv",
+        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fx_usdkrw/final/fx_usdkrw_20260611_20260621.csv",
         "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fx_usdkrw/fx_usdkrw_20080102_20260619.csv"
       }
     },
     {
       "name": "crude",
       "status": "completed",
-      "rows": 2,
+      "rows": 7,
       "detail": "",
       "files": {
-        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/raw/opinet_crude_raw_20260618_20260619.csv",
-        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/final/crude_20260618_20260619.csv",
+        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/raw/opinet_crude_raw_20260611_20260621.csv",
+        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/final/crude_20260611_20260621.csv",
         "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/crude/crude_20080102_20260619.csv"
       }
     },
     {
       "name": "intl_products",
       "status": "completed",
-      "rows": 2,
+      "rows": 11,
       "detail": "",
       "files": {
-        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/raw/opinet_intl_products_raw_20260618_20260619.csv",
-        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/final/intl_products_20260618_20260619.csv",
-        "diesel_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/final/intl_product_diesel(0.001)_20260618_20260619.csv",
-        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260619.csv",
-        "latest_diesel": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260619.csv"
+        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/raw/opinet_intl_products_raw_20260611_20260621.csv",
+        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/final/intl_products_20260611_20260621.csv",
+        "diesel_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/final/intl_product_diesel(0.001)_20260611_20260621.csv",
+        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260621.csv",
+        "latest_diesel": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260621.csv"
       }
     },
     {
       "name": "retail_avg",
       "status": "completed",
-      "rows": 2,
+      "rows": 11,
       "detail": "",
       "files": {
-        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/retail_avg/raw/opinet_retail_avg_raw_20260618_20260619.csv",
-        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/retail_avg/final/retail_avg_20260618_20260619.csv",
-        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080415_20260619.csv"
+        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/retail_avg/raw/opinet_retail_avg_raw_20260611_20260621.csv",
+        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/retail_avg/final/retail_avg_20260611_20260621.csv",
+        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080415_20260621.csv"
       }
     },
     {
       "name": "brand_price",
       "status": "completed",
-      "rows": 4,
+      "rows": 22,
       "detail": "",
       "files": {
-        "gasoline_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/final/brand_gasoline_20260618_20260619.csv",
-        "diesel_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/final/brand_diesel_20260618_20260619.csv",
-        "latest_gasoline": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080415_20260619.csv",
-        "latest_diesel": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080415_20260619.csv"
+        "gasoline_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/final/brand_gasoline_20260611_20260621.csv",
+        "diesel_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/final/brand_diesel_20260611_20260621.csv",
+        "latest_gasoline": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080415_20260621.csv",
+        "latest_diesel": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080415_20260621.csv"
       }
     },
     {
@@ -68,21 +68,21 @@
       "rows": 66,
       "detail": "",
       "files": {
-        "gasoline_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/final/gasoline_tax_trend_20260618_20260619.xls",
-        "diesel_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/final/diesel_tax_trend_20260618_20260619.xls",
-        "latest_gasoline": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/gasoline_tax_trend_19970101_20260619.xls",
-        "latest_diesel": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/diesel_tax_trend_19970101_20260619.xls"
+        "gasoline_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/final/gasoline_tax_trend_20260611_20260621.xls",
+        "diesel_snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/final/diesel_tax_trend_20260611_20260621.xls",
+        "latest_gasoline": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/gasoline_tax_trend_19970101_20260621.xls",
+        "latest_diesel": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/fuel_tax_trend/diesel_tax_trend_19970101_20260621.xls"
       }
     },
     {
       "name": "refinery_weekly_supply",
       "status": "completed",
-      "rows": 0,
+      "rows": 1,
       "detail": "",
       "files": {
-        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/refinery_weekly_supply/raw/opinet_refinery_weekly_supply_raw_20260618_20260619.csv",
-        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/refinery_weekly_supply/final/refinery_weekly_supply_prices_by_product_20260618_20260619.csv",
-        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/refinery_weekly_supply/refinery_weekly_supply_prices_by_product_20080507_20260528.csv"
+        "raw": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/refinery_weekly_supply/raw/opinet_refinery_weekly_supply_raw_20260611_20260621.csv",
+        "snapshot": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/refinery_weekly_supply/final/refinery_weekly_supply_prices_by_product_20260611_20260621.csv",
+        "latest": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/refinery_weekly_supply/refinery_weekly_supply_prices_by_product_20080507_20260614.csv"
       }
     }
   ]

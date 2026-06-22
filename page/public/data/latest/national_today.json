@@ -1,35 +1,32 @@
 {
   "schema_version": "national_today_v1",
-  "as_of_date": "2026-06-11",
-  "generated_at": "2026-06-22T17:06:46+09:00",
+  "as_of_date": "2026-06-09",
+  "generated_at": "2026-06-22T18:51:28+09:00",
   "freshness": "stale",
   "fuels": {
     "gasoline": {
       "label": "휘발유",
-      "actual_price": 1999.9936837913185,
-      "actual_delta_1d": null,
-      "fair_price_policy": 1994.6162626443647,
-      "band_low_policy": 1984.779820091597,
-      "band_high_policy": 2016.903066905615,
-      "gap_policy": 5.377421146953793,
-      "judge_policy": "적정",
-      "policy_effect": null,
-      "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv"
+      "actual_price": 2009.98,
+      "actual_delta_1d": -0.07999999999992724,
+      "fair_price_policy": 2373.073215571967,
+      "band_low_policy": 2363.236746710217,
+      "band_high_policy": 2395.3601084705324,
+      "gap_policy": -363.093215571967,
+      "judge_policy": "저렴",
+      "policy_effect": 0.0
     },
     "diesel": {
       "label": "경유",
-      "actual_price": 2003.010094384707,
-      "actual_delta_1d": null,
-      "fair_price_policy": 1979.3522687176426,
-      "band_low_policy": 1966.1772687176426,
-      "band_high_policy": 1999.850946136997,
-      "gap_policy": 23.657825667064344,
-      "judge_policy": "비쌈",
-      "policy_effect": null,
-      "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv"
+      "actual_price": 2004.82,
+      "actual_delta_1d": 0.0,
+      "fair_price_policy": 2642.0332639849253,
+      "band_low_policy": 2628.858289283853,
+      "band_high_policy": 2662.5317067420665,
+      "gap_policy": -637.2132639849253,
+      "judge_policy": "저렴",
+      "policy_effect": 0.0
     }
   },
   "policies": [],
-  "errors": {},
-  "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv"
+  "errors": {}
 }
