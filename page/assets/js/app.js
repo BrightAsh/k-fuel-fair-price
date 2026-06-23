@@ -78,12 +78,18 @@ const REGION_COLORS = {
 
 const MAP_SIZE = { width: 1040, height: 900 };
 const MAP_BOUNDS = { x: 214, y: 58, width: 612, height: 780 };
-const DETAIL_MAP_SIZE = { width: 620, height: 720 };
+const DETAIL_MAP_SIZE = { width: 800, height: 720 };
 const CALLOUT_W = 228;
 const CALLOUT_H = 76;
-const DISTRICT_CALLOUT_W = 128;
-const DISTRICT_CALLOUT_H = 58;
+const DISTRICT_CALLOUT_W = 136;
+const DISTRICT_CALLOUT_H = 66;
 const KOREA_LAT_SCALE = 1.0;
+
+const DISTRICT_PASTEL_COLORS = [
+  "#cfe7ff", "#ffd7df", "#d8f4d2", "#ffe5b8", "#dcd7ff", "#c9f1ee",
+  "#f7d4ff", "#d7ebc0", "#ffd1c2", "#c8e0ff", "#f3e6b1", "#cef0d9",
+  "#e5d6c9", "#cfe0d4", "#f6cfca", "#d7dff7", "#e8d5f2", "#cce8ef",
+];
 const USE_FIXED_SAMPLE_PRICES = false;
 const SAMPLE_ACTUAL_PRICE = 1500;
 const SAMPLE_FAIR_PRICE = 1400;
@@ -893,8 +899,13 @@ function boundedCalloutPosition(point, width, height) {
 }
 
 function districtConnectorPath(anchor, callout) {
-  const startX = callout.side === "left" ? callout.x + DISTRICT_CALLOUT_W : callout.x;
-  const startY = callout.y + DISTRICT_CALLOUT_H / 2;
+  let startX = callout.x;
+  let startY = callout.y + DISTRICT_CALLOUT_H / 2;
+  if (callout.side === "left") startX = callout.x + DISTRICT_CALLOUT_W;
+  if (callout.side === "top" || callout.side === "bottom") {
+    startX = callout.x + DISTRICT_CALLOUT_W / 2;
+    startY = callout.side === "top" ? callout.y + DISTRICT_CALLOUT_H : callout.y;
+  }
   return `M${startX.toFixed(1)} ${startY.toFixed(1)} L${anchor[0].toFixed(1)} ${anchor[1].toFixed(1)}`;
 }
 
@@ -904,31 +915,59 @@ function districtCalloutLayout(features, project) {
     code: String(feature.properties?.code || ""),
     anchor: projectedCentroid(feature.geometry, project),
   }));
-  const left = items
+  const topCapacity = Math.max(0, Math.floor((DETAIL_MAP_SIZE.width - 16) / (DISTRICT_CALLOUT_W + 8)));
+  const edgeCount = items.length >= 9 ? Math.min(topCapacity, Math.ceil(items.length * 0.22)) : 0;
+  const byY = [...items].sort((a, b) => a.anchor[1] - b.anchor[1]);
+  const top = byY.slice(0, edgeCount).sort((a, b) => a.anchor[0] - b.anchor[0]);
+  const bottom = byY.slice(Math.max(edgeCount, byY.length - edgeCount)).sort((a, b) => a.anchor[0] - b.anchor[0]);
+  const used = new Set([...top, ...bottom].map((item) => item.code));
+  const remaining = items.filter((item) => !used.has(item.code));
+  const left = remaining
     .filter((item) => item.anchor[0] < DETAIL_MAP_SIZE.width / 2)
     .sort((a, b) => a.anchor[1] - b.anchor[1]);
-  const right = items
+  const right = remaining
     .filter((item) => item.anchor[0] >= DETAIL_MAP_SIZE.width / 2)
     .sort((a, b) => a.anchor[1] - b.anchor[1]);
-  if (!left.length && right.length > 1) left.push(...right.splice(0, Math.floor(right.length / 2)));
-  if (!right.length && left.length > 1) right.push(...left.splice(Math.ceil(left.length / 2)));
+  while (left.length > right.length + 1) right.unshift(left.pop());
+  while (right.length > left.length + 1) left.push(right.shift());
 
   const layout = new Map();
-  const place = (group, side) => {
-    const usable = DETAIL_MAP_SIZE.height - DISTRICT_CALLOUT_H - 16;
+  const spreadX = (count, index) => {
+    if (count <= 1) return clamp(DETAIL_MAP_SIZE.width / 2 - DISTRICT_CALLOUT_W / 2, 8, DETAIL_MAP_SIZE.width - DISTRICT_CALLOUT_W - 8);
+    const usable = DETAIL_MAP_SIZE.width - DISTRICT_CALLOUT_W - 16;
+    return 8 + (usable / (count - 1)) * index;
+  };
+  const placeHorizontal = (group, side) => {
+    group.forEach((item, index) => {
+      layout.set(item.code, {
+        side,
+        anchor: item.anchor,
+        x: spreadX(group.length, index),
+        y: side === "top" ? 8 : DETAIL_MAP_SIZE.height - DISTRICT_CALLOUT_H - 8,
+      });
+    });
+  };
+  const placeVertical = (group, side) => {
+    const topGuard = top.length ? DISTRICT_CALLOUT_H + 24 : 8;
+    const bottomGuard = bottom.length ? DISTRICT_CALLOUT_H + 24 : 8;
+    const minY = topGuard;
+    const maxY = DETAIL_MAP_SIZE.height - bottomGuard - DISTRICT_CALLOUT_H;
+    const usable = Math.max(0, maxY - minY);
     const step = group.length > 1 ? usable / (group.length - 1) : 0;
     group.forEach((item, index) => {
       layout.set(item.code, {
         side,
         anchor: item.anchor,
         x: side === "left" ? 8 : DETAIL_MAP_SIZE.width - DISTRICT_CALLOUT_W - 8,
-        y: group.length > 1 ? 8 + step * index : clamp(item.anchor[1] - DISTRICT_CALLOUT_H / 2, 8, DETAIL_MAP_SIZE.height - DISTRICT_CALLOUT_H - 8),
+        y: group.length > 1 ? minY + step * index : clamp(item.anchor[1] - DISTRICT_CALLOUT_H / 2, minY, maxY),
       });
     });
   };
 
-  place(left, "left");
-  place(right, "right");
+  placeHorizontal(top, "top");
+  placeHorizontal(bottom, "bottom");
+  placeVertical(left, "left");
+  placeVertical(right, "right");
   return layout;
 }
 
@@ -1176,12 +1215,18 @@ function selectedFeature() {
   return state.geojson?.features?.find((feature) => canonicalRegionName(feature.properties?.name) === state.selectedRegion);
 }
 
-function districtFill(metric) {
-  if (!metric || metric.actual_price === null || metric.actual_price === undefined) return "#eef2f7";
-  const klass = judgeClass(metric.judge_policy, metric.gap_policy);
-  if (klass === "high") return "#f2aaa5";
-  if (klass === "low") return "#9bd8f6";
-  return "#9ddfbf";
+function districtPastelFill(code, region = state.selectedRegion) {
+  const codes = districtFeaturesForRegion(region)
+    .map((feature) => String(feature.properties?.code || ""))
+    .filter(Boolean)
+    .sort();
+  const index = Math.max(0, codes.indexOf(String(code)));
+  return DISTRICT_PASTEL_COLORS[index % DISTRICT_PASTEL_COLORS.length];
+}
+
+function districtFill(metric, code) {
+  if (!code) return "#eef2f7";
+  return districtPastelFill(code);
 }
 
 function renderRegionDetailMap() {
@@ -1189,7 +1234,7 @@ function renderRegionDetailMap() {
   svg.innerHTML = "";
 
   if (state.districtGeojsonLoading) {
-    drawSvgLoading(svg, 620, 720, "시군구 경계 데이터를 불러오는 중입니다");
+    drawSvgLoading(svg, DETAIL_MAP_SIZE.width, DETAIL_MAP_SIZE.height, "시군구 경계 데이터를 불러오는 중입니다");
     return;
   }
 
@@ -1198,7 +1243,14 @@ function renderRegionDetailMap() {
     const selectedDistrictFeature = districtFeatureByCode();
     const featuresForView = selectedDistrictFeature ? [selectedDistrictFeature] : districtFeatures;
     const featureCollection = { type: "FeatureCollection", features: featuresForView };
-    const project = projectionForBox(featureCollection, { x: 24, y: 24, width: 572, height: 672 }, selectedDistrictFeature ? 18 : 28);
+    const overviewMapBox = {
+      x: DISTRICT_CALLOUT_W + 28,
+      y: DISTRICT_CALLOUT_H + 30,
+      width: DETAIL_MAP_SIZE.width - (DISTRICT_CALLOUT_W + 28) * 2,
+      height: DETAIL_MAP_SIZE.height - (DISTRICT_CALLOUT_H + 32) * 2,
+    };
+    const zoomMapBox = { x: 24, y: 24, width: DETAIL_MAP_SIZE.width - 48, height: DETAIL_MAP_SIZE.height - 48 };
+    const project = projectionForBox(featureCollection, selectedDistrictFeature ? zoomMapBox : overviewMapBox, selectedDistrictFeature ? 18 : 16);
     const pathLayer = makeSvgElement("g", { class: "district-layer" });
     const connectorLayer = makeSvgElement("g", { class: "district-connector-layer" });
     const calloutLayer = makeSvgElement("g", { class: "district-callout-layer" });
@@ -1215,7 +1267,7 @@ function renderRegionDetailMap() {
       const basePath = makeSvgElement("path", {
         d: geometryPath(selectedDistrictFeature.geometry, project),
         class: "district-path is-selected is-zoomed",
-        fill: state.detailMode === "grids" ? "#f8fbfd" : districtFill(metric),
+        fill: state.detailMode === "grids" ? "#f8fbfd" : districtFill(metric, code),
         "data-district-code": code,
         "aria-label": `${state.selectedRegion} ${name} 실제 ${won(metric.actual_price)}, 적정 ${won(metric.fair_price_policy)}`,
       });
@@ -1292,7 +1344,7 @@ function renderRegionDetailMap() {
       const path = makeSvgElement("path", {
         d: geometryPath(feature.geometry, project),
         class: `district-path ${state.hoveredDistrictCode === code ? "is-hovered" : ""}`,
-        fill: districtFill(metric),
+        fill: districtFill(metric, code),
         tabindex: "0",
         "data-district-code": code,
         "aria-label": `${state.selectedRegion} ${name} 실제 ${won(metric.actual_price)}, 적정 ${won(metric.fair_price_policy)}`,
@@ -1333,7 +1385,7 @@ function renderRegionDetailMap() {
   }
 
   const oneFeatureGeojson = { type: "FeatureCollection", features: [feature] };
-  const project = projectionForBox(oneFeatureGeojson, { x: 24, y: 24, width: 572, height: 672 }, 28);
+  const project = projectionForBox(oneFeatureGeojson, { x: 24, y: 24, width: DETAIL_MAP_SIZE.width - 48, height: DETAIL_MAP_SIZE.height - 48 }, 28);
   const path = makeSvgElement("path", {
     d: geometryPath(feature.geometry, project),
     class: "region-detail-path",
