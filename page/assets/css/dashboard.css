@@ -759,15 +759,24 @@ tbody tr.is-selected td {
 }
 
 .chart-band {
-  fill: rgba(34, 197, 94, 0.16);
+  fill: rgba(34, 197, 94, 0.24);
+}
+
+.chart-band-edge {
+  fill: none;
+  stroke: rgba(21, 128, 61, 0.62);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
 }
 
 .chart-line-actual {
   fill: none;
   stroke: var(--orange);
-  stroke-width: 3;
+  stroke-width: 4.2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .chart-line-actual-over {
@@ -785,14 +794,38 @@ tbody tr.is-selected td {
 .chart-line-fair {
   fill: none;
   stroke: #15803d;
-  stroke-width: 2;
+  stroke-width: 3.2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-point-actual,
+.chart-point-fair {
+  stroke: #fff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-point-actual {
+  fill: var(--orange);
+}
+
+.chart-point-actual-over {
+  fill: #dc2626;
+}
+
+.chart-point-actual-under {
+  fill: #2563eb;
+}
+
+.chart-point-fair {
+  fill: #15803d;
 }
 
 .chart-legend-band {
-  fill: rgba(34, 197, 94, 0.16);
-  stroke: rgba(21, 128, 61, 0.45);
+  fill: rgba(34, 197, 94, 0.24);
+  stroke: rgba(21, 128, 61, 0.62);
   stroke-width: 1;
 }
 

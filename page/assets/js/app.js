@@ -1,4 +1,6 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
+const NATIONAL_REGION = "\uC804\uAD6D";
+const DEFAULT_TREND_YEARS = 1;
 
 const state = {
   fuel: "gasoline",
@@ -353,9 +355,19 @@ function stationPrice(station) {
 
 function toIsoDate(value) {
   if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
+  const text = String(value).slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
+  return formatIsoDate(date);
+}
+
+function formatIsoDate(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function dateInRange(value, start, end) {
@@ -374,7 +386,7 @@ function snapshotHistoryRows() {
   Object.entries(data.fuels || FALLBACK_NATIONAL.fuels).forEach(([fuel, metric]) => {
     rows.push({
       date,
-      region: "전국",
+      region: NATIONAL_REGION,
       fuel,
       actual_price: metric.actual_price,
       fair_price_policy: metric.fair_price_policy,
@@ -412,7 +424,7 @@ function historyRows() {
   const normalized = incoming
     .map((row) => ({
       date: toIsoDate(row.date || row.as_of_date),
-      region: canonicalRegionName(row.region || "전국"),
+      region: canonicalRegionName(row.region || NATIONAL_REGION),
       fuel: row.fuel,
       actual_price: row.actual_price,
       fair_price_policy: row.fair_price_policy,
@@ -438,6 +450,24 @@ function dateExtent(rows) {
     min: dates[0] || "",
     max: dates[dates.length - 1] || "",
   };
+}
+
+function defaultTrendStart(extent) {
+  if (!extent.max) return extent.min;
+  const end = new Date(`${extent.max}T12:00:00`);
+  if (Number.isNaN(end.getTime())) return extent.min;
+  const start = new Date(end);
+  start.setFullYear(start.getFullYear() - DEFAULT_TREND_YEARS);
+  const iso = formatIsoDate(start);
+  return extent.min && iso < extent.min ? extent.min : iso;
+}
+
+function configureDateInput(id, extent, fallbackValue) {
+  const input = document.getElementById(id);
+  if (!input) return;
+  input.min = extent.min;
+  input.max = extent.max;
+  if (!input.value) input.value = fallbackValue;
 }
 
 function setSelectOptions(select, options) {
@@ -882,7 +912,7 @@ function renderNearby() {
 
 function filterOptions() {
   return [
-    { value: "전국", label: "전국" },
+    { value: NATIONAL_REGION, label: NATIONAL_REGION },
     ...REGION_ORDER.map((region) => ({ value: region, label: region })),
   ];
 }
@@ -895,28 +925,15 @@ function initializeAnalysisControls() {
     setSelectOptions(document.getElementById(id), filterOptions());
   });
 
-  ["trend-start", "download-start"].forEach((id) => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.min = extent.min;
-      input.max = extent.max;
-      if (!input.value) input.value = extent.min;
-    }
-  });
-
-  ["trend-end", "download-end"].forEach((id) => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.min = extent.min;
-      input.max = extent.max;
-      if (!input.value) input.value = extent.max;
-    }
-  });
+  configureDateInput("trend-start", extent, defaultTrendStart(extent));
+  configureDateInput("download-start", extent, extent.min);
+  configureDateInput("trend-end", extent, extent.max);
+  configureDateInput("download-end", extent, extent.max);
 }
 
 function selectedPriceRows(prefix) {
   const fuel = document.getElementById(`${prefix}-fuel`)?.value || state.fuel;
-  const region = document.getElementById(`${prefix}-region`)?.value || "전국";
+  const region = document.getElementById(`${prefix}-region`)?.value || NATIONAL_REGION;
   const start = document.getElementById(`${prefix}-start`)?.value || "";
   const end = document.getElementById(`${prefix}-end`)?.value || "";
 
@@ -1025,9 +1042,12 @@ function drawTrendChart(rows) {
   ).forEach((segment) => {
     if (segment.length < 2) return;
     const upper = segment.map(({ row, index }) => [xFor(index), yFor(row.band_high_policy)]);
-    const lower = segment.map(({ row, index }) => [xFor(index), yFor(row.band_low_policy)]).reverse();
-    const bandPath = `${chartPath(upper)} L${lower.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L")} Z`;
+    const lower = segment.map(({ row, index }) => [xFor(index), yFor(row.band_low_policy)]);
+    const lowerReversed = [...lower].reverse();
+    const bandPath = `${chartPath(upper)} L${lowerReversed.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L")} Z`;
     svg.append(makeSvgElement("path", { d: bandPath, class: "chart-band" }));
+    svg.append(makeSvgElement("path", { d: chartPath(upper), class: "chart-band-edge chart-band-edge-high" }));
+    svg.append(makeSvgElement("path", { d: chartPath(lower), class: "chart-band-edge chart-band-edge-low" }));
   });
 
   contiguousSeries(rows, (row) => numberValue(row.fair_price_policy) !== null).forEach((segment) => {
@@ -1053,6 +1073,23 @@ function drawTrendChart(rows) {
       class: `chart-line-actual chart-line-actual-${tone}`,
     }));
   }
+
+  const addLatestPoint = (key, className) => {
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const value = numberValue(rows[index][key]);
+      if (value === null) continue;
+      const tone = key === "actual_price" ? ` ${className}-${actualRangeTone(rows[index])}` : "";
+      svg.append(makeSvgElement("circle", {
+        cx: xFor(index),
+        cy: yFor(value),
+        r: 5,
+        class: `${className}${tone}`,
+      }));
+      return;
+    }
+  };
+  addLatestPoint("actual_price", "chart-point-actual");
+  addLatestPoint("fair_price_policy", "chart-point-fair");
 
   const firstDate = rows[0]?.date || "";
   const lastDate = rows[rows.length - 1]?.date || "";
@@ -1084,7 +1121,7 @@ function drawTrendChart(rows) {
 function renderTrend() {
   const rows = selectedPriceRows("trend");
   const fuel = document.getElementById("trend-fuel")?.value || state.fuel;
-  const region = document.getElementById("trend-region")?.value || "전국";
+  const region = document.getElementById("trend-region")?.value || NATIONAL_REGION;
   const start = document.getElementById("trend-start")?.value || "";
   const end = document.getElementById("trend-end")?.value || "";
   const availableExtent = dateExtent(historyRows().filter((row) => row.fuel === fuel && row.region === region));
@@ -1106,7 +1143,7 @@ function renderTrend() {
 function downloadRows() {
   const kind = document.getElementById("download-kind")?.value || "price";
   const fuel = document.getElementById("download-fuel")?.value || state.fuel;
-  const region = document.getElementById("download-region")?.value || "전국";
+  const region = document.getElementById("download-region")?.value || NATIONAL_REGION;
   const start = document.getElementById("download-start")?.value || "";
   const end = document.getElementById("download-end")?.value || "";
   const data = state.national || FALLBACK_NATIONAL;
@@ -1115,7 +1152,7 @@ function downloadRows() {
     const asOfDate = data.as_of_date || FALLBACK_NATIONAL.as_of_date;
     if (!dateInRange(asOfDate, start, end)) return [];
     return baseStations()
-      .filter((station) => region === "전국" || canonicalRegionName(station.region) === region)
+      .filter((station) => region === NATIONAL_REGION || canonicalRegionName(station.region) === region)
       .map((station) => ({
         기준일: asOfDate,
         지역: canonicalRegionName(station.region),
@@ -1352,7 +1389,7 @@ function exportCsv() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   const kind = document.getElementById("download-kind")?.value || "price";
-  const region = document.getElementById("download-region")?.value || "전국";
+  const region = document.getElementById("download-region")?.value || NATIONAL_REGION;
   link.href = url;
   link.download = `fair_fuel_${kind}_${region}_${new Date().toISOString().slice(0, 10)}.csv`;
   document.body.append(link);

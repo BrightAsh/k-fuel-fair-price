@@ -11,6 +11,8 @@ import pandas as pd
 
 
 KST = timezone(timedelta(hours=9))
+NATIONAL_REGION = "\uc804\uad6d"
+UNCLASSIFIED_REGION = "\ubbf8\ubd84\ub958"
 
 FUEL_CONFIG = {
     "gasoline": {
@@ -128,6 +130,14 @@ def weighted_average(values: pd.Series, weights: pd.Series) -> float | None:
     if not mask.any():
         return to_float(v.mean())
     return float((v[mask] * w[mask]).sum() / w[mask].sum())
+
+
+def aggregation_weights(part: pd.DataFrame) -> tuple[pd.Series, float | None]:
+    if "station_count" in part.columns:
+        raw = pd.to_numeric(part["station_count"], errors="coerce").fillna(0)
+        if raw.gt(0).any():
+            return raw, float(raw.sum())
+    return pd.Series(1.0, index=part.index), None
 
 
 def judge_from_prices(actual: float | None, low: float | None, high: float | None, fair: float | None = None) -> str | None:
@@ -320,7 +330,7 @@ def add_preprocessed_national_history(
 
             item = {
                 "date": pd.Timestamp(row[date_col]).strftime("%Y-%m-%d"),
-                "region": "전국",
+                "region": NATIONAL_REGION,
                 "fuel": fuel,
                 "actual_price": actual,
                 "fair_price_policy": None,
@@ -435,7 +445,7 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
             fair = to_float(row.get(fair_col)) if fair_col else None
             item = {
                 "date": pd.Timestamp(row[date_col]).strftime("%Y-%m-%d"),
-                "region": "전국",
+                "region": NATIONAL_REGION,
                 "fuel": fuel,
                 "actual_price": actual,
                 "fair_price_policy": fair,
@@ -459,7 +469,7 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
             fuel = str(row.get("fuel", "")).strip()
             if fuel not in FUEL_CONFIG:
                 continue
-            region = str(row.get("region", "전국")).strip() or "전국"
+            region = str(row.get("region", NATIONAL_REGION)).strip() or NATIONAL_REGION
             actual = to_float(row.get("actual_price"))
             fair = to_float(row.get("fair_price_policy"))
             gap = to_float(row.get("gap_policy")) if pd.notna(row.get("gap_policy")) else None
@@ -487,7 +497,7 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
         work["region"] = work.get("region", "").astype(str).str.strip()
         work = work.dropna(subset=["date"])
         work = work[work["fuel"].isin(FUEL_CONFIG) & work["region"].ne("")]
-        for col in ["actual_price", "fair_price_policy", "band_low_policy", "band_high_policy", "gap_policy"]:
+        for col in ["actual_price", "fair_price_policy", "band_low_policy", "band_high_policy", "gap_policy", "station_count"]:
             if col not in work.columns:
                 work[col] = pd.NA
             work[col] = pd.to_numeric(work[col], errors="coerce")
@@ -497,6 +507,7 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
         )
         work["date"] = work["date"].dt.strftime("%Y-%m-%d")
         work["source"] = ai_history_source
+        regional_work = work[work["region"].ne(NATIONAL_REGION)].copy()
         keep = [
             "date",
             "region",
@@ -508,7 +519,27 @@ def build_price_history(repo_root: Path, as_of_date: str | None) -> list[dict[st
             "gap_policy",
             "source",
         ]
-        for item in work[keep].where(pd.notna(work[keep]), None).to_dict("records"):
+        for item in regional_work[keep].where(pd.notna(regional_work[keep]), None).to_dict("records"):
+            by_key[(item["date"], item["region"], item["fuel"])] = item
+
+        national_work = regional_work[regional_work["region"].ne(UNCLASSIFIED_REGION)].copy()
+        for (date, fuel), part in national_work.groupby(["date", "fuel"], sort=True):
+            weights, _ = aggregation_weights(part)
+            actual = weighted_average(part["actual_price"], weights)
+            fair = weighted_average(part["fair_price_policy"], weights)
+            low = weighted_average(part["band_low_policy"], weights)
+            high = weighted_average(part["band_high_policy"], weights)
+            item = {
+                "date": date,
+                "region": NATIONAL_REGION,
+                "fuel": fuel,
+                "actual_price": actual,
+                "fair_price_policy": fair,
+                "band_low_policy": low,
+                "band_high_policy": high,
+                "gap_policy": actual - fair if actual is not None and fair is not None else None,
+                "source": f"{ai_history_source}#regional_average",
+            }
             by_key[(item["date"], item["region"], item["fuel"])] = item
 
     return sorted(by_key.values(), key=lambda item: (item["date"], item["region"], item["fuel"]))
@@ -518,7 +549,7 @@ def merge_history(existing: list[dict[str, Any]], incoming: list[dict[str, Any]]
     by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
     for row in existing + incoming:
         date = str(row.get("date") or row.get("as_of_date") or "").strip()
-        region = str(row.get("region") or "전국").strip()
+        region = str(row.get("region") or NATIONAL_REGION).strip()
         fuel = str(row.get("fuel") or "").strip()
         if not date or not region or fuel not in FUEL_CONFIG:
             continue

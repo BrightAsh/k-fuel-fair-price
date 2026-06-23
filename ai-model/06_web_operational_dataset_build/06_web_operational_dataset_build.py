@@ -61,6 +61,7 @@ STANDARD_HISTORY_COLUMNS = [
     "band_low_policy",
     "band_high_policy",
     "gap_policy",
+    "station_count",
     "source",
 ]
 
