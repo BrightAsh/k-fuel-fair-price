@@ -242,7 +242,7 @@
                   <option value="today-region">당일 지역별 AI 출력</option>
                   <option value="today-national">당일 전국 요약</option>
                   <option value="station-input">주유소 가격 입력</option>
-                  <option value="coverage">입력 데이터 현황 집계</option>
+                  <option value="coverage">모델 입력·AI 출력 현황</option>
                 </select>
               </label>
               <label>
@@ -275,13 +275,13 @@
             <div class="section-heading">
               <div>
                 <p>Daily service data</p>
-                <h2>당일 데이터 현황</h2>
+                <h2>모델 입력·출력 데이터 현황</h2>
               </div>
               <span id="training-coverage-summary">확인 중</span>
             </div>
             <div class="coverage-toolbar">
               <label>
-                <span>지도 지표</span>
+                <span>지표</span>
                 <select id="training-dataset"></select>
               </label>
               <label>
@@ -291,10 +291,23 @@
                   <option value="diesel">경유</option>
                 </select>
               </label>
+              <label>
+                <span>지역</span>
+                <select id="training-region"></select>
+              </label>
+              <label>
+                <span>시작일</span>
+                <input id="training-start" type="date" />
+              </label>
+              <label>
+                <span>종료일</span>
+                <input id="training-end" type="date" />
+              </label>
             </div>
             <div class="coverage-layout">
               <div class="coverage-map-shell">
                 <svg id="training-data-map" viewBox="0 0 620 740" role="img" aria-label="당일 입력 및 AI 출력 데이터 지역별 분포"></svg>
+                <svg id="training-data-chart" class="is-hidden" viewBox="0 0 920 520" role="img" aria-label="모델 입력 및 AI 출력 시계열"></svg>
               </div>
               <aside class="coverage-side">
                 <div id="training-coverage-stats" class="coverage-stats"></div>

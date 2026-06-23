@@ -54,31 +54,176 @@ DISTRICT_REGION_BY_PREFIX = {
     "39": "\uc81c\uc8fc",
 }
 
-TRAINING_COVERAGE_DATASETS = {
-    "grid_panel_rows": {
-        "label": "AI 학습 격자 패널 행 수",
-        "unit": "행",
-        "path": "ROOT_PATH/그리드/grid.parquet",
-        "note": "AI 02 최종 grid.parquet를 시도·날짜별로 집계한 값입니다.",
+DATA_STATUS_DATASETS = {
+    "actual_price": {
+        "label": "입력: 전일 실제가격",
+        "unit": "원/L",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": True,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+        "note": "오늘 적정가격 예측에 들어간 지역별 전일 공시 평균 가격입니다.",
     },
     "station_count": {
-        "label": "주유소 입력 수",
+        "label": "입력: 가격 반영 주유소 수",
         "unit": "개",
-        "path": "data-analysis/00_data_collection/outputs/derived_data/station_points.csv",
-        "note": "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값입니다.",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": True,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+        "note": "전일 실제가격과 지역 집계에 반영된 유종별 주유소 수입니다.",
     },
-    "facility_count": {
-        "label": "시설 영향력 입력 수",
-        "unit": "개",
-        "path": "data-analysis/00_data_collection/outputs/derived_data/facility_points.csv",
-        "note": "AI 01 시설 좌표 산출물을 시도별로 집계한 값입니다.",
+    "fair_price_policy": {
+        "label": "AI 출력: 오늘 적정가격",
+        "unit": "원/L",
+        "visual": "map",
+        "kind": "AI 출력",
+        "fuel_specific": True,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+        "note": "최근 28일 격자 입력과 정적 입지를 이용해 산출한 당일 적정가격입니다.",
     },
-    "land_price_grid_count": {
-        "label": "공시지가 격자 수",
+    "gap_policy": {
+        "label": "AI 출력: 실제-적정 차이",
+        "unit": "원/L",
+        "visual": "map",
+        "kind": "AI 출력",
+        "fuel_specific": True,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+        "note": "전일 실제가격에서 오늘 적정가격을 뺀 값입니다. 양수는 비싼 쪽, 음수는 저렴한 쪽입니다.",
+    },
+    "band_width": {
+        "label": "AI 출력: 적정가격대 폭",
+        "unit": "원/L",
+        "visual": "map",
+        "kind": "AI 출력",
+        "fuel_specific": True,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
+        "note": "AI 적정가격대의 상한과 하한 차이입니다.",
+    },
+    "model_grid_count": {
+        "label": "입력: 예측 가능 격자 수",
         "unit": "격자",
-        "path": "data-analysis/00_data_collection/outputs/derived_data/official_land_price_grid.csv",
-        "note": "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값입니다.",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": False,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
+        "note": "최신 28일 시계열 조건을 만족해 운영 예측에 들어갈 수 있는 500m 격자 수입니다.",
     },
+    "station_count_total": {
+        "label": "입력: 전체 주유소 수",
+        "unit": "개",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": False,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
+        "note": "격자별 주유소 수 정적 입력을 시도별로 합산했습니다.",
+    },
+    "facility_count_total": {
+        "label": "입력: 시설 수",
+        "unit": "개",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": False,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
+        "note": "저장소·공장·대리점 등 유가 형성에 영향을 줄 수 있는 시설 입력의 시도별 합계입니다.",
+    },
+    "station_neighbor_influence": {
+        "label": "입력: 주변 주유소 영향도",
+        "unit": "지수",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": False,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
+        "note": "격자 주변 주유소 분포를 거리 감쇠 방식으로 요약한 평균 영향도입니다.",
+    },
+    "official_land_price": {
+        "label": "입력: 공시지가",
+        "unit": "원/㎡",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": False,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
+        "note": "격자별 공시지가 입력의 시도별 평균입니다. 공시지가 자체 기준일은 별도로 표시합니다.",
+    },
+    "island_grid_ratio": {
+        "label": "입력: 섬 격자 비율",
+        "unit": "%",
+        "visual": "map",
+        "kind": "AI 입력",
+        "fuel_specific": False,
+        "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
+        "note": "시도 안의 운영 입력 격자 중 섬으로 표시된 격자의 비율입니다.",
+    },
+    "history_actual_price": {
+        "label": "그래프: 실제가격",
+        "unit": "원/L",
+        "visual": "chart",
+        "kind": "AI 입력",
+        "fuel_specific": True,
+        "path": "page/public/data/latest/price_history.json",
+        "note": "선택 지역과 유종의 실제가격 시계열입니다.",
+    },
+    "history_fair_price": {
+        "label": "그래프: 적정가격",
+        "unit": "원/L",
+        "visual": "chart",
+        "kind": "AI 출력",
+        "fuel_specific": True,
+        "path": "page/public/data/latest/price_history.json",
+        "note": "선택 지역과 유종의 AI 적정가격 시계열입니다.",
+    },
+    "history_gap_policy": {
+        "label": "그래프: 실제-적정 차이",
+        "unit": "원/L",
+        "visual": "chart",
+        "kind": "AI 출력",
+        "fuel_specific": True,
+        "path": "page/public/data/latest/price_history.json",
+        "note": "선택 지역과 유종의 실제가격과 적정가격 차이 시계열입니다.",
+    },
+    "usdkrw": {
+        "label": "그래프: 환율(USD/KRW)",
+        "unit": "원/달러",
+        "visual": "chart",
+        "kind": "전국 공통 입력",
+        "fuel_specific": False,
+        "path": "data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv",
+        "note": "전국 공통 입력으로 쓰인 원/달러 환율 시계열입니다.",
+    },
+    "wti": {
+        "label": "그래프: WTI 국제유가",
+        "unit": "달러/배럴",
+        "visual": "chart",
+        "kind": "전국 공통 입력",
+        "fuel_specific": False,
+        "path": "data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv",
+        "note": "전국 공통 입력으로 쓰인 WTI 국제유가 시계열입니다.",
+    },
+    "dubai": {
+        "label": "그래프: 두바이유",
+        "unit": "달러/배럴",
+        "visual": "chart",
+        "kind": "전국 공통 입력",
+        "fuel_specific": False,
+        "path": "data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv",
+        "note": "전국 공통 입력으로 쓰인 두바이유 시계열입니다.",
+    },
+    "brent": {
+        "label": "그래프: 브렌트유",
+        "unit": "달러/배럴",
+        "visual": "chart",
+        "kind": "전국 공통 입력",
+        "fuel_specific": False,
+        "path": "data-analysis/01_data_preprocessing/outputs/분석용일별통합데이터.csv",
+        "note": "전국 공통 입력으로 쓰인 브렌트유 시계열입니다.",
+    },
+}
+
+PREPROCESSED_SERIES_COLUMNS = {
+    "usdkrw": ["usdkrw"],
+    "wti": ["WTI"],
+    "dubai": ["두바이"],
+    "brent": ["브렌트"],
 }
 
 
@@ -665,75 +810,291 @@ def trim_history(rows: list[dict[str, Any]], as_of_date: str | None, history_yea
     return sorted(out, key=lambda item: (item["date"], item["region"], item["fuel"]))
 
 
-def build_training_data_coverage(repo_root: Path) -> dict[str, Any]:
-    generated_at = datetime.now(KST).isoformat(timespec="seconds")
-    path = repo_root / "page/manual_inputs/training_data_coverage.csv"
-    rows: list[dict[str, Any]] = []
-
+def latest_preprocessed_daily_path(repo_root: Path) -> Path | None:
+    path = repo_root / PREPROCESSED_DAILY_PATH
     if path.exists():
-        df = read_csv(path)
-        for _, row in df.iterrows():
-            dataset = str(row.get("dataset", "")).strip()
-            region = str(row.get("region", "")).strip()
-            value = to_float(row.get("value"))
-            if not dataset or not region or value is None:
-                continue
-            date_raw = row.get("date")
-            date = ""
-            if date_raw is not None and not pd.isna(date_raw) and str(date_raw).strip():
-                parsed_date = pd.to_datetime(date_raw, errors="coerce")
-                if not pd.isna(parsed_date):
-                    date = pd.Timestamp(parsed_date).strftime("%Y-%m-%d")
-            rows.append({
-                "dataset": dataset,
-                "date": date,
-                "region": region,
-                "value": value,
-                "unit": row.get("unit") if pd.notna(row.get("unit")) else TRAINING_COVERAGE_DATASETS.get(dataset, {}).get("unit"),
-                "label": row.get("label") if pd.notna(row.get("label")) else None,
-            })
+        return path
+    candidates = sorted((repo_root / "data-analysis/01_data_preprocessing/outputs").glob("*.csv"))
+    return candidates[-1] if candidates else None
 
-    rows_by_dataset: dict[str, list[dict[str, Any]]] = {}
-    for row in rows:
-        rows_by_dataset.setdefault(row["dataset"], []).append(row)
+
+def append_status_row(
+    rows: list[dict[str, Any]],
+    dataset: str,
+    region: str | None,
+    value: float | int | None,
+    *,
+    date: str | None = None,
+    fuel: str | None = None,
+    date_label: str | None = None,
+    source: str | None = None,
+) -> None:
+    cfg = DATA_STATUS_DATASETS.get(dataset, {})
+    numeric = to_float(value)
+    if not dataset or not region or numeric is None:
+        return
+    rows.append({
+        "dataset": dataset,
+        "date": date or "",
+        "date_label": date_label or (date or "날짜 없음"),
+        "region": region,
+        "fuel": fuel,
+        "value": numeric,
+        "unit": cfg.get("unit"),
+        "label": cfg.get("label", dataset),
+        "kind": cfg.get("kind"),
+        "visual": cfg.get("visual", "map"),
+        "source": source or cfg.get("path"),
+    })
+
+
+def append_status_series(
+    series: list[dict[str, Any]],
+    dataset: str,
+    date: str | None,
+    value: float | int | None,
+    *,
+    source: str | None = None,
+) -> None:
+    cfg = DATA_STATUS_DATASETS.get(dataset, {})
+    numeric = to_float(value)
+    if not dataset or not date or numeric is None:
+        return
+    series.append({
+        "dataset": dataset,
+        "date": date,
+        "value": numeric,
+        "unit": cfg.get("unit"),
+        "label": cfg.get("label", dataset),
+        "kind": cfg.get("kind"),
+        "visual": cfg.get("visual", "chart"),
+        "source": source or cfg.get("path"),
+    })
+
+
+def build_region_today_status_rows(repo_root: Path, as_of_date: str | None) -> list[dict[str, Any]]:
+    df = read_ai_web_csv(repo_root, "web_region_today.csv", as_of_date)
+    source = ai_web_source(repo_root, "web_region_today.csv")
+    rows: list[dict[str, Any]] = []
+    if df is None or df.empty:
+        return rows
+
+    date_col = "source_date" if "source_date" in df.columns else "date" if "date" in df.columns else None
+    if date_col:
+        latest_date = df[date_col].max()
+        df = df[df[date_col] == latest_date]
+        date = pd.Timestamp(latest_date).strftime("%Y-%m-%d")
+    else:
+        date = as_of_date or ""
+    date_label = f"{date} 기준" if date else "기준일 없음"
+
+    for _, row in df.iterrows():
+        region = to_text(row.get("region"))
+        fuel = to_text(row.get("fuel"))
+        low = to_float(row.get("band_low_policy"))
+        high = to_float(row.get("band_high_policy"))
+        append_status_row(rows, "actual_price", region, row.get("actual_price"), date=date, fuel=fuel, date_label=date_label, source=source)
+        append_status_row(rows, "station_count", region, row.get("station_count"), date=date, fuel=fuel, date_label=date_label, source=source)
+        append_status_row(rows, "fair_price_policy", region, row.get("fair_price_policy"), date=date, fuel=fuel, date_label=date_label, source=source)
+        append_status_row(rows, "gap_policy", region, row.get("gap_policy"), date=date, fuel=fuel, date_label=date_label, source=source)
+        append_status_row(
+            rows,
+            "band_width",
+            region,
+            high - low if high is not None and low is not None else None,
+            date=date,
+            fuel=fuel,
+            date_label=date_label,
+            source=source,
+        )
+    return rows
+
+
+def build_inference_state_status_rows(repo_root: Path, as_of_date: str | None) -> list[dict[str, Any]]:
+    state_path = repo_root / "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet"
+    rows: list[dict[str, Any]] = []
+    if not state_path.exists():
+        return rows
+
+    try:
+        state = pd.read_parquet(state_path)
+    except Exception:
+        return rows
+    if state.empty or "grid_id" not in state.columns or "date" not in state.columns:
+        return rows
+
+    state["date"] = pd.to_datetime(state["date"], errors="coerce")
+    state = state.dropna(subset=["date"])
+    if state.empty:
+        return rows
+    if as_of_date:
+        state = state[state["date"] <= pd.Timestamp(as_of_date)]
+    if state.empty:
+        return rows
+    latest_feature_date = state["date"].max()
+    latest_state = state[state["date"] == latest_feature_date].copy()
+
+    latest_grid = read_ai_web_csv(repo_root, "web_latest_grid_predictions.csv", as_of_date)
+    grid_source = ai_web_source(repo_root, "web_latest_grid_predictions.csv")
+    if latest_grid is not None and not latest_grid.empty and "grid_id" in latest_grid.columns and "region" in latest_grid.columns:
+        date_col = "source_date" if "source_date" in latest_grid.columns else "date" if "date" in latest_grid.columns else None
+        if date_col:
+            latest_date = latest_grid[date_col].max()
+            latest_grid = latest_grid[latest_grid[date_col] == latest_date]
+        region_lookup = latest_grid[["grid_id", "region"]].dropna().drop_duplicates("grid_id")
+    else:
+        lookup_path = ai_web_path(repo_root, "grid_region_lookup.csv")
+        if not lookup_path.exists():
+            return rows
+        region_lookup = read_csv(lookup_path)[["grid_id", "region"]].dropna().drop_duplicates("grid_id")
+        grid_source = ai_web_source(repo_root, "grid_region_lookup.csv")
+
+    work = latest_state.merge(region_lookup, on="grid_id", how="left")
+    work = work.dropna(subset=["region"])
+    if work.empty:
+        return rows
+
+    feature_date = pd.Timestamp(latest_feature_date).strftime("%Y-%m-%d")
+    dynamic_label = f"{feature_date} 입력상태 기준"
+    static_label = "날짜 없음 · 격자 정적 입력"
+    source = "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet"
+
+    for region, part in work.groupby("region", sort=True):
+        station_weights = pd.to_numeric(part.get("station_count_total", pd.Series(dtype=float)), errors="coerce").fillna(0)
+        if not station_weights.gt(0).any():
+            station_weights = pd.Series(1.0, index=part.index)
+
+        append_status_row(rows, "model_grid_count", region, int(part["grid_id"].nunique()), date=feature_date, date_label=dynamic_label, source=source)
+        for dataset, col in [
+            ("station_count_total", "station_count_total"),
+            ("facility_count_total", "facility_count_total"),
+        ]:
+            if col in part.columns:
+                append_status_row(rows, dataset, region, pd.to_numeric(part[col], errors="coerce").fillna(0).sum(), date_label=static_label, source=source)
+
+        if "station_neighbor_influence" in part.columns:
+            append_status_row(
+                rows,
+                "station_neighbor_influence",
+                region,
+                weighted_average(part["station_neighbor_influence"], station_weights),
+                date_label=static_label,
+                source=source,
+            )
+
+        if "official_land_price" in part.columns:
+            source_dates = []
+            if "official_price_source_date" in part.columns:
+                source_dates = sorted({
+                    pd.Timestamp(value).strftime("%Y-%m-%d")
+                    for value in pd.to_datetime(part["official_price_source_date"], errors="coerce").dropna()
+                })
+            land_date = source_dates[-1] if source_dates else None
+            append_status_row(
+                rows,
+                "official_land_price",
+                region,
+                weighted_average(part["official_land_price"], station_weights),
+                date=land_date,
+                date_label=f"공시지가 {land_date} 기준" if land_date else "공시지가 기준일 없음",
+                source=source,
+            )
+
+        if "is_island" in part.columns:
+            island = pd.to_numeric(part["is_island"], errors="coerce")
+            append_status_row(rows, "island_grid_ratio", region, island.mean() * 100, date_label=static_label, source=source)
+
+    return rows
+
+
+def build_preprocessed_status_series(repo_root: Path) -> list[dict[str, Any]]:
+    path = latest_preprocessed_daily_path(repo_root)
+    series: list[dict[str, Any]] = []
+    if path is None or not path.exists():
+        return series
+
+    try:
+        df = read_csv(path)
+    except Exception:
+        return series
+    date_col = find_col(df, ["date", "날짜", "일자"])
+    if date_col is None:
+        return series
+
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    df = df.dropna(subset=[date_col])
+    source = str(path.relative_to(repo_root)).replace("\\", "/")
+    for dataset, candidates in PREPROCESSED_SERIES_COLUMNS.items():
+        col = find_col(df, candidates)
+        if col is None:
+            continue
+        for _, row in df[[date_col, col]].dropna().iterrows():
+            append_status_series(
+                series,
+                dataset,
+                pd.Timestamp(row[date_col]).strftime("%Y-%m-%d"),
+                row[col],
+                source=source,
+            )
+    return series
+
+
+def history_dataset_extent(history: list[dict[str, Any]], key: str) -> tuple[int, str | None, str | None]:
+    dates = sorted({toIso for row in history if (toIso := to_text(row.get("date"))) and row.get(key) is not None})
+    return len(dates), (dates[0] if dates else None), (dates[-1] if dates else None)
+
+
+def build_training_data_coverage(repo_root: Path, as_of_date: str | None, history: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    generated_at = datetime.now(KST).isoformat(timespec="seconds")
+    history = history or []
+    rows = [
+        *build_region_today_status_rows(repo_root, as_of_date),
+        *build_inference_state_status_rows(repo_root, as_of_date),
+    ]
+    series = build_preprocessed_status_series(repo_root)
 
     datasets: list[dict[str, Any]] = []
-    for dataset, cfg in TRAINING_COVERAGE_DATASETS.items():
-        dataset_rows = rows_by_dataset.get(dataset, [])
-        dates = sorted({row["date"] for row in dataset_rows if row.get("date")})
+    for dataset, cfg in DATA_STATUS_DATASETS.items():
+        dataset_rows = [row for row in rows if row["dataset"] == dataset]
+        dataset_series = [row for row in series if row["dataset"] == dataset]
+        dates = sorted({
+            item["date"]
+            for item in [*dataset_rows, *dataset_series]
+            if item.get("date")
+        })
+        count = len(dataset_rows) + len(dataset_series)
+        if dataset == "history_actual_price":
+            count, date_min, date_max = history_dataset_extent(history, "actual_price")
+            dates = [date for date in [date_min, date_max] if date]
+        elif dataset == "history_fair_price":
+            count, date_min, date_max = history_dataset_extent(history, "fair_price_policy")
+            dates = [date for date in [date_min, date_max] if date]
+        elif dataset == "history_gap_policy":
+            count, date_min, date_max = history_dataset_extent(history, "gap_policy")
+            dates = [date for date in [date_min, date_max] if date]
         datasets.append({
             "id": dataset,
             "label": cfg["label"],
             "unit": cfg["unit"],
-            "status": "connected" if dataset_rows else "waiting",
-            "rows": len(dataset_rows),
+            "visual": cfg["visual"],
+            "kind": cfg["kind"],
+            "fuel_specific": bool(cfg.get("fuel_specific")),
+            "status": "connected" if count else "waiting",
+            "rows": count,
             "date_min": dates[0] if dates else None,
             "date_max": dates[-1] if dates else None,
             "path": cfg["path"],
             "note": cfg["note"],
         })
 
-    for dataset in sorted(set(rows_by_dataset) - set(TRAINING_COVERAGE_DATASETS)):
-        dataset_rows = rows_by_dataset[dataset]
-        dates = sorted({row["date"] for row in dataset_rows if row.get("date")})
-        datasets.append({
-            "id": dataset,
-            "label": dataset,
-            "unit": dataset_rows[0].get("unit"),
-            "status": "connected",
-            "rows": len(dataset_rows),
-            "date_min": dates[0] if dates else None,
-            "date_max": dates[-1] if dates else None,
-            "path": "page/manual_inputs/training_data_coverage.csv",
-            "note": "수동 입력된 AI 학습 데이터 커버리지입니다.",
-        })
-
     return {
-        "schema_version": "training_data_coverage_v1",
+        "schema_version": "model_data_status_v2",
         "generated_at": generated_at,
-        "source": "page/manual_inputs/training_data_coverage.csv" if path.exists() else None,
+        "as_of_date": as_of_date,
+        "source": "ai-model/06_web_operational_dataset_build/outputs + data-analysis/01_data_preprocessing/outputs",
         "datasets": datasets,
-        "rows": sorted(rows, key=lambda item: (item["dataset"], item.get("date") or "", item["region"])),
+        "rows": sorted(rows, key=lambda item: (item["dataset"], item.get("fuel") or "", item.get("date") or "", item["region"])),
+        "series": sorted(series, key=lambda item: (item["dataset"], item["date"])),
     }
 
 
@@ -1184,7 +1545,7 @@ def main() -> None:
         except Exception:
             pass
     history = trim_history(history, resolved_as_of_date, args.history_years)
-    training_coverage = build_training_data_coverage(repo_root)
+    training_coverage = build_training_data_coverage(repo_root, resolved_as_of_date, history)
     external_status = build_external_data_status(repo_root, output_dir, national, region, stations, history, district_detail)
     ai_region_source = ai_web_source(repo_root, "web_region_today.csv")
     ai_region_path = ai_web_path(repo_root, "web_region_today.csv")
@@ -1211,6 +1572,7 @@ def main() -> None:
             "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
             "region": ai_region_source if ai_region_path.exists() else "page/manual_inputs/region_today.csv" if region else None,
             "station": "page/manual_inputs/station_search_index.csv" if stations else None,
+            "model_data_status": "page/public/data/latest/training_data_coverage.json",
         },
     }
 

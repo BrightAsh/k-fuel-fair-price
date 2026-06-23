@@ -1,7 +1,7 @@
 {
   "schema_version": "page_data_v1",
   "as_of_date": "2026-06-23",
-  "generated_at": "2026-06-23T14:19:01+09:00",
+  "generated_at": "2026-06-23T16:06:49+09:00",
   "freshness": "fresh",
   "files": [
     "national_today.json",
@@ -19,6 +19,7 @@
   "source": {
     "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
     "region": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
-    "station": "page/manual_inputs/station_search_index.csv"
+    "station": "page/manual_inputs/station_search_index.csv",
+    "model_data_status": "page/public/data/latest/training_data_coverage.json"
   }
 }

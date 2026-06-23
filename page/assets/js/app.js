@@ -101,54 +101,33 @@ const DOWNLOAD_KIND_LABELS = {
   "today-region": "당일_지역별_AI출력",
   "today-national": "당일_전국요약",
   "station-input": "주유소_가격입력",
-  coverage: "입력데이터_현황집계",
+  coverage: "모델입력_AI출력_현황",
 };
 const DATA_STATUS_METRICS = [
-  {
-    id: "actual_price",
-    label: "입력: 전일 실제가격",
-    unit: "원/L",
-    kind: "입력 데이터",
-    note: "AI가 당일 적정가격을 산출할 때 기준으로 삼는 지역별 전일 실제 가격입니다.",
-    value: (metric) => numberValue(metric.actual_price),
-  },
-  {
-    id: "station_count",
-    label: "입력: 가격 산출 주유소 수",
-    unit: "개",
-    kind: "입력 데이터",
-    note: "지역별 평균 가격과 AI 출력 집계에 반영된 주유소 수입니다.",
-    value: (metric) => numberValue(metric.station_count),
-  },
-  {
-    id: "fair_price_policy",
-    label: "AI 출력: 오늘 적정가격",
-    unit: "원/L",
-    kind: "AI 출력",
-    note: "기준일 전 28일 입력 데이터를 바탕으로 산출한 당일 지역별 적정가격입니다.",
-    value: (metric) => numberValue(metric.fair_price_policy),
-  },
-  {
-    id: "gap_policy",
-    label: "AI 출력: 실제-적정 차이",
-    unit: "원/L",
-    kind: "AI 출력",
-    note: "전일 실제가격에서 당일 적정가격을 뺀 값입니다. 양수는 비싼 쪽, 음수는 저렴한 쪽입니다.",
-    value: (metric) => numberValue(metric.gap_policy),
-  },
-  {
-    id: "band_width",
-    label: "AI 출력: 적정가격대 폭",
-    unit: "원/L",
-    kind: "AI 출력",
-    note: "AI 적정가격대의 상한과 하한 차이입니다.",
-    value: (metric) => {
-      const low = numberValue(metric.band_low_policy);
-      const high = numberValue(metric.band_high_policy);
-      return low === null || high === null ? null : high - low;
-    },
-  },
+  { id: "actual_price", label: "입력: 전일 실제가격", unit: "원/L", visual: "map", kind: "AI 입력", fuel_specific: true },
+  { id: "station_count", label: "입력: 가격 반영 주유소 수", unit: "개", visual: "map", kind: "AI 입력", fuel_specific: true },
+  { id: "fair_price_policy", label: "AI 출력: 오늘 적정가격", unit: "원/L", visual: "map", kind: "AI 출력", fuel_specific: true },
+  { id: "gap_policy", label: "AI 출력: 실제-적정 차이", unit: "원/L", visual: "map", kind: "AI 출력", fuel_specific: true },
+  { id: "band_width", label: "AI 출력: 적정가격대 폭", unit: "원/L", visual: "map", kind: "AI 출력", fuel_specific: true },
+  { id: "model_grid_count", label: "입력: 예측 가능 격자 수", unit: "격자", visual: "map", kind: "AI 입력", fuel_specific: false },
+  { id: "station_count_total", label: "입력: 전체 주유소 수", unit: "개", visual: "map", kind: "AI 입력", fuel_specific: false },
+  { id: "facility_count_total", label: "입력: 시설 수", unit: "개", visual: "map", kind: "AI 입력", fuel_specific: false },
+  { id: "station_neighbor_influence", label: "입력: 주변 주유소 영향도", unit: "지수", visual: "map", kind: "AI 입력", fuel_specific: false },
+  { id: "official_land_price", label: "입력: 공시지가", unit: "원/㎡", visual: "map", kind: "AI 입력", fuel_specific: false },
+  { id: "island_grid_ratio", label: "입력: 섬 격자 비율", unit: "%", visual: "map", kind: "AI 입력", fuel_specific: false },
+  { id: "history_actual_price", label: "그래프: 실제가격", unit: "원/L", visual: "chart", kind: "AI 입력", fuel_specific: true },
+  { id: "history_fair_price", label: "그래프: 적정가격", unit: "원/L", visual: "chart", kind: "AI 출력", fuel_specific: true },
+  { id: "history_gap_policy", label: "그래프: 실제-적정 차이", unit: "원/L", visual: "chart", kind: "AI 출력", fuel_specific: true },
+  { id: "usdkrw", label: "그래프: 환율(USD/KRW)", unit: "원/달러", visual: "chart", kind: "전국 공통 입력", fuel_specific: false },
+  { id: "wti", label: "그래프: WTI 국제유가", unit: "달러/배럴", visual: "chart", kind: "전국 공통 입력", fuel_specific: false },
+  { id: "dubai", label: "그래프: 두바이유", unit: "달러/배럴", visual: "chart", kind: "전국 공통 입력", fuel_specific: false },
+  { id: "brent", label: "그래프: 브렌트유", unit: "달러/배럴", visual: "chart", kind: "전국 공통 입력", fuel_specific: false },
 ];
+const DATA_STATUS_HISTORY_VALUE_KEYS = {
+  history_actual_price: "actual_price",
+  history_fair_price: "fair_price_policy",
+  history_gap_policy: "gap_policy",
+};
 
 function sampleMetric(extra = {}) {
   return {
@@ -163,55 +142,11 @@ function sampleMetric(extra = {}) {
 }
 
 const TRAINING_COVERAGE_FALLBACK = {
-  schema_version: "training_data_coverage_v1",
+  schema_version: "model_data_status_v2",
   generated_at: null,
-  datasets: [
-    {
-      id: "grid_panel_rows",
-      label: "AI 학습 격자 패널 행 수",
-      unit: "행",
-      status: "waiting",
-      rows: 0,
-      date_min: null,
-      date_max: null,
-      path: "ROOT_PATH/그리드/grid.parquet",
-      note: "AI 02 최종 grid.parquet를 시도·날짜별로 집계한 값이 필요합니다.",
-    },
-    {
-      id: "station_count",
-      label: "주유소 입력 수",
-      unit: "개",
-      status: "waiting",
-      rows: 0,
-      date_min: null,
-      date_max: null,
-      path: "data-analysis/00_data_collection/outputs/derived_data/station_points.csv",
-      note: "AI 01 주유소 좌표/프로필 산출물을 시도별로 집계한 값이 필요합니다.",
-    },
-    {
-      id: "facility_count",
-      label: "시설 영향력 입력 수",
-      unit: "개",
-      status: "waiting",
-      rows: 0,
-      date_min: null,
-      date_max: null,
-      path: "data-analysis/00_data_collection/outputs/derived_data/facility_points.csv",
-      note: "AI 01 시설 좌표 산출물을 시도별로 집계한 값이 필요합니다.",
-    },
-    {
-      id: "land_price_grid_count",
-      label: "공시지가 격자 수",
-      unit: "격자",
-      status: "waiting",
-      rows: 0,
-      date_min: null,
-      date_max: null,
-      path: "data-analysis/00_data_collection/outputs/derived_data/official_land_price_grid.csv",
-      note: "공시지가 500m 격자 산출물을 시도·날짜별로 집계한 값이 필요합니다.",
-    },
-  ],
+  datasets: DATA_STATUS_METRICS.map((item) => ({ ...item, status: "waiting", rows: 0, date_min: null, date_max: null })),
   rows: [],
+  series: [],
 };
 
 const DISTRICT_DETAIL_FALLBACK = {
@@ -1660,9 +1595,8 @@ function initializeAnalysisControls(forceDates = false) {
   });
 
   configureDateInput("trend-start", extent, defaultTrendStart(extent), forceDates);
-  configureDateInput("download-start", extent, extent.min, forceDates);
   configureDateInput("trend-end", extent, extent.max, forceDates);
-  configureDateInput("download-end", extent, extent.max, forceDates);
+  configureDownloadDates(forceDates);
 }
 
 function selectedPriceRows(prefix) {
@@ -1902,6 +1836,28 @@ function selectedDownloadFilters() {
   };
 }
 
+function downloadDateExtent(kind = document.getElementById("download-kind")?.value || "history") {
+  if (kind === "coverage") {
+    const data = trainingCoverageData();
+    return dateExtent([
+      ...data.rows.map((row) => ({ date: toIsoDate(row.date) })),
+      ...data.series.map((row) => ({ date: toIsoDate(row.date) })),
+    ].filter((row) => row.date));
+  }
+  if (["today-region", "today-national", "station-input"].includes(kind)) {
+    const date = activeAsOfDate();
+    return { min: date, max: date };
+  }
+  return dateExtent(historyRows());
+}
+
+function configureDownloadDates(forceDates = false) {
+  const kind = document.getElementById("download-kind")?.value || "history";
+  const extent = downloadDateExtent(kind);
+  configureDateInput("download-start", extent, extent.min, forceDates);
+  configureDateInput("download-end", extent, extent.max, forceDates);
+}
+
 function regionMetricRows(fuel, region, date) {
   return regionRows()
     .filter((row) => region === NATIONAL_REGION || row.region === region)
@@ -1924,17 +1880,40 @@ function regionMetricRows(fuel, region, date) {
 }
 
 function coverageDownloadRows(start, end, region) {
-  return trainingCoverageData().rows
+  const data = trainingCoverageData();
+  const mapRows = data.rows
     .map((row) => ({
+      구분: "지도",
       기준일: toIsoDate(row.date),
+      날짜설명: row.date_label || (row.date ? `${toIsoDate(row.date)} 기준` : "날짜 없음"),
       지역: canonicalRegionName(row.region),
+      유종: row.fuel ? fuelLabel(row.fuel) : "공통",
       데이터ID: row.dataset,
       데이터명: row.label,
+      데이터성격: row.kind,
       값: row.value,
       단위: row.unit,
+      출처: row.source,
+    }))
+    .filter((row) => !row.기준일 || dateInRange(row.기준일, start, end))
+    .filter((row) => region === NATIONAL_REGION || row.지역 === region);
+  const seriesRows = data.series
+    .map((row) => ({
+      구분: "그래프",
+      기준일: toIsoDate(row.date),
+      날짜설명: row.date ? `${toIsoDate(row.date)} 기준` : "날짜 없음",
+      지역: NATIONAL_REGION,
+      유종: "공통",
+      데이터ID: row.dataset,
+      데이터명: row.label,
+      데이터성격: row.kind,
+      값: row.value,
+      단위: row.unit,
+      출처: row.source,
     }))
     .filter((row) => row.기준일 && dateInRange(row.기준일, start, end))
-    .filter((row) => region === NATIONAL_REGION || row.지역 === region);
+    .filter(() => region === NATIONAL_REGION);
+  return [...mapRows, ...seriesRows];
 }
 
 function downloadRows() {
@@ -1968,6 +1947,7 @@ function downloadRows() {
     if (!dateInRange(asOfDate, start, end)) return [];
     return baseStations()
       .filter((station) => region === NATIONAL_REGION || canonicalRegionName(station.region) === region)
+      .filter((station) => Number.isFinite(Number(fuel === "gasoline" ? station.gasoline_price : station.diesel_price)))
       .map((station) => ({
         기준일: asOfDate,
         지역: canonicalRegionName(station.region),
@@ -2015,28 +1995,84 @@ function trainingCoverageData() {
     ...data,
     datasets: Array.isArray(data.datasets) ? data.datasets : TRAINING_COVERAGE_FALLBACK.datasets,
     rows: Array.isArray(data.rows) ? data.rows : [],
+    series: Array.isArray(data.series) ? data.series : [],
   };
+}
+
+function dataStatusDatasets() {
+  const incoming = trainingCoverageData().datasets;
+  const byId = new Map(DATA_STATUS_METRICS.map((item) => [item.id, { ...item }]));
+  incoming.forEach((item) => {
+    if (!item?.id) return;
+    byId.set(item.id, { ...(byId.get(item.id) || {}), ...item });
+  });
+  return [...byId.values()];
 }
 
 function selectedTrainingDataset() {
   const select = document.getElementById("training-dataset");
-  return select?.value || DATA_STATUS_METRICS[0]?.id || "";
+  return select?.value || dataStatusDatasets()[0]?.id || "";
+}
+
+function selectedTrainingDatasetItem() {
+  return dataStatusDatasets().find((item) => item.id === selectedTrainingDataset()) || dataStatusDatasets()[0] || {};
 }
 
 function selectedDataStatusFuel() {
   return document.getElementById("training-fuel")?.value || state.fuel;
 }
 
-function initializeTrainingCoverageControls() {
+function selectedDataStatusRegion() {
+  return document.getElementById("training-region")?.value || NATIONAL_REGION;
+}
+
+function dataStatusGlobalExtent() {
+  const rows = [
+    ...historyRows().map((row) => ({ date: row.date })),
+    ...trainingCoverageData().series.map((row) => ({ date: toIsoDate(row.date) })),
+  ].filter((row) => row.date);
+  return dateExtent(rows);
+}
+
+function configureDataStatusDates(forceDates = false) {
+  const dataset = selectedTrainingDatasetItem();
+  const rows = dataStatusChartRows(dataset, true);
+  const extent = rows.length ? dateExtent(rows) : dataStatusGlobalExtent();
+  configureDateInput("training-start", extent, extent.min, forceDates);
+  configureDateInput("training-end", extent, extent.max, forceDates);
+}
+
+function updateDataStatusControlState() {
+  const dataset = selectedTrainingDatasetItem();
+  const isChart = dataset.visual === "chart";
+  const isHistoryChart = Boolean(DATA_STATUS_HISTORY_VALUE_KEYS[dataset.id]);
+  const fuel = document.getElementById("training-fuel");
+  const region = document.getElementById("training-region");
+  const start = document.getElementById("training-start");
+  const end = document.getElementById("training-end");
+  if (fuel) fuel.disabled = !dataset.fuel_specific;
+  if (region) region.disabled = !isHistoryChart;
+  if (start) start.disabled = !isChart;
+  if (end) end.disabled = !isChart;
+}
+
+function initializeTrainingCoverageControls(forceDates = false) {
   const select = document.getElementById("training-dataset");
   if (select) {
     const current = select.value;
-    select.innerHTML = DATA_STATUS_METRICS.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
-    select.value = DATA_STATUS_METRICS.some((item) => item.id === current) ? current : DATA_STATUS_METRICS[0].id;
+    const datasets = dataStatusDatasets();
+    select.innerHTML = datasets
+      .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.visual === "chart" ? "그래프 · " : "지도 · ")}${escapeHtml(item.label)}</option>`)
+      .join("");
+    select.value = datasets.some((item) => item.id === current) ? current : datasets[0]?.id || "";
   }
 
   const fuelSelect = document.getElementById("training-fuel");
   if (fuelSelect && !fuelSelect.value) fuelSelect.value = state.fuel;
+
+  setSelectOptions(document.getElementById("training-region"), filterOptions());
+  configureDataStatusDates(forceDates);
+  updateDataStatusControlState();
 }
 
 function coverageColor(value, minValue, maxValue) {
@@ -2108,49 +2144,219 @@ function renderTrainingCoverageMap(rows, dataset) {
   }
 }
 
-function renderTrainingCoverage() {
-  const dataset = DATA_STATUS_METRICS.find((item) => item.id === selectedTrainingDataset()) || DATA_STATUS_METRICS[0];
+function fallbackDataStatusMapRows(dataset) {
   const fuel = selectedDataStatusFuel();
   const asOfDate = activeAsOfDate();
-  const rows = regionRows()
+  const metricKey = dataset.id;
+  if (!["actual_price", "station_count", "fair_price_policy", "gap_policy", "band_width"].includes(metricKey)) {
+    return [];
+  }
+  return regionRows()
     .map((row) => {
       const metric = row[fuel] || {};
+      const low = numberValue(metric.band_low_policy);
+      const high = numberValue(metric.band_high_policy);
+      const value = metricKey === "band_width"
+        ? (low === null || high === null ? null : high - low)
+        : numberValue(metric[metricKey]);
       return {
         dataset: dataset.id,
         date: metric.source_date || asOfDate,
+        date_label: `${metric.source_date || asOfDate} 기준`,
         region: row.region,
-        value: dataset.value(metric),
+        fuel,
+        value,
         unit: dataset.unit,
         label: dataset.label,
+        kind: dataset.kind,
       };
     })
     .filter((row) => row.region && row.value !== null);
+}
+
+function dataStatusMapRows(dataset) {
+  const fuel = selectedDataStatusFuel();
+  const rows = trainingCoverageData().rows
+    .filter((row) => row.dataset === dataset.id)
+    .filter((row) => !dataset.fuel_specific || !row.fuel || row.fuel === fuel)
+    .map((row) => ({
+      ...row,
+      region: canonicalRegionName(row.region),
+      value: numberValue(row.value),
+    }))
+    .filter((row) => row.region && row.value !== null);
+  return rows.length ? rows : fallbackDataStatusMapRows(dataset);
+}
+
+function dataStatusChartRows(dataset, ignoreDate = false) {
+  const start = document.getElementById("training-start")?.value || "";
+  const end = document.getElementById("training-end")?.value || "";
+  const key = DATA_STATUS_HISTORY_VALUE_KEYS[dataset.id];
+  let rows = [];
+
+  if (key) {
+    const fuel = selectedDataStatusFuel();
+    const region = selectedDataStatusRegion();
+    rows = historyRows()
+      .filter((row) => row.fuel === fuel)
+      .filter((row) => row.region === region)
+      .map((row) => ({
+        date: row.date,
+        value: numberValue(row[key]),
+        unit: dataset.unit,
+        label: dataset.label,
+        source: row.source,
+      }));
+  } else {
+    rows = trainingCoverageData().series
+      .filter((row) => row.dataset === dataset.id)
+      .map((row) => ({
+        date: toIsoDate(row.date),
+        value: numberValue(row.value),
+        unit: row.unit || dataset.unit,
+        label: row.label || dataset.label,
+        source: row.source,
+      }));
+  }
+
+  return rows
+    .filter((row) => row.date && row.value !== null)
+    .filter((row) => ignoreDate || dateInRange(row.date, start, end))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function drawDataStatusChart(rows, dataset) {
+  const svg = document.getElementById("training-data-chart");
+  if (!svg) return;
+  svg.innerHTML = "";
+
+  const width = 920;
+  const height = 520;
+  const margin = { left: 82, right: 34, top: 54, bottom: 68 };
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
+
+  if (!rows.length) {
+    const text = makeSvgElement("text", { x: "460", y: "260", "text-anchor": "middle", class: "chart-empty" });
+    text.textContent = "선택한 조건의 시계열 데이터가 없습니다";
+    svg.append(text);
+    return;
+  }
+
+  const values = rows.map((row) => numberValue(row.value)).filter((value) => value !== null);
+  if (!values.length) {
+    const text = makeSvgElement("text", { x: "460", y: "260", "text-anchor": "middle", class: "chart-empty" });
+    text.textContent = "숫자 데이터가 없습니다";
+    svg.append(text);
+    return;
+  }
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const padding = Math.max(1, (maxValue - minValue) * 0.08);
+  const low = minValue - padding;
+  const high = maxValue + padding;
+  const xFor = (index) => margin.left + (rows.length === 1 ? chartWidth / 2 : (chartWidth * index) / (rows.length - 1));
+  const yFor = (value) => margin.top + ((high - Number(value)) / Math.max(1e-9, high - low)) * chartHeight;
+
+  for (let i = 0; i <= 4; i += 1) {
+    const y = margin.top + (chartHeight * i) / 4;
+    const value = high - ((high - low) * i) / 4;
+    svg.append(makeSvgElement("line", { x1: margin.left, y1: y, x2: width - margin.right, y2: y, class: "chart-grid" }));
+    const label = makeSvgElement("text", { x: margin.left - 12, y: y + 4, "text-anchor": "end", class: "chart-axis" });
+    label.textContent = `${Math.round(value).toLocaleString("ko-KR")}${dataset.unit ? ` ${dataset.unit}` : ""}`;
+    svg.append(label);
+  }
+
+  const points = rows.map((row, index) => [xFor(index), yFor(row.value)]);
+  svg.append(makeSvgElement("path", { d: chartPath(points), class: "data-status-line" }));
+  const latest = points[points.length - 1];
+  svg.append(makeSvgElement("circle", { cx: latest[0], cy: latest[1], r: 5, class: "data-status-point" }));
+
+  [
+    { x: margin.left, text: rows[0]?.date || "", anchor: "start" },
+    { x: width - margin.right, text: rows[rows.length - 1]?.date || "", anchor: "end" },
+  ].forEach((item) => {
+    const text = makeSvgElement("text", { x: item.x, y: height - 26, "text-anchor": item.anchor, class: "chart-axis" });
+    text.textContent = item.text;
+    svg.append(text);
+  });
+
+  const title = makeSvgElement("text", { x: margin.left, y: 28, class: "chart-label" });
+  title.textContent = dataset.label;
+  svg.append(title);
+}
+
+function renderTrainingCoverage() {
+  const dataset = selectedTrainingDatasetItem();
+  updateDataStatusControlState();
+  const isChart = dataset.visual === "chart";
+  document.querySelector(".coverage-map-shell")?.classList.toggle("is-chart-mode", isChart);
+  document.getElementById("training-data-map")?.classList.toggle("is-hidden", isChart);
+  document.getElementById("training-data-chart")?.classList.toggle("is-hidden", !isChart);
+  document.querySelector(".coverage-legend")?.classList.toggle("is-hidden", isChart);
+
+  if (isChart) {
+    const rows = dataStatusChartRows(dataset);
+    const values = rows.map((row) => row.value).filter((value) => Number.isFinite(value));
+    const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const min = values.length ? Math.min(...values) : null;
+    const max = values.length ? Math.max(...values) : null;
+    const summary = document.getElementById("training-coverage-summary");
+    const stats = document.getElementById("training-coverage-stats");
+    const note = document.getElementById("training-coverage-note");
+    const extent = dateExtent(rows);
+    const key = DATA_STATUS_HISTORY_VALUE_KEYS[dataset.id];
+    const targetLabel = key
+      ? `${selectedDataStatusRegion()} · ${fuelLabel(selectedDataStatusFuel())}`
+      : "전국 공통";
+
+    if (summary) summary.textContent = values.length
+      ? `${dataset.label} · ${targetLabel} · ${dateRangeLabel(extent.min, extent.max)}`
+      : `${dataset.label || "그래프 지표"} · 데이터 없음`;
+    if (stats) {
+      stats.innerHTML = `
+        <div><span>시점 수</span><strong>${values.length.toLocaleString("ko-KR")}</strong></div>
+        <div><span>평균</span><strong>${formatCount(average)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}</strong></div>
+        <div><span>최소 / 최대</span><strong>${min === null ? "-" : `${formatCount(min)} / ${formatCount(max)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}`}</strong></div>
+        <div><span>기간</span><strong>${escapeHtml(dateRangeLabel(extent.min, extent.max))}</strong></div>
+        <div><span>데이터 성격</span><strong>${escapeHtml(dataset.kind || "-")}</strong></div>
+      `;
+    }
+    if (note) note.textContent = values.length ? dataset.note || "선택한 지표의 전체 기간 시계열입니다." : "그래프로 표시할 데이터가 없습니다.";
+    drawDataStatusChart(rows, dataset);
+    return;
+  }
+
+  const fuel = selectedDataStatusFuel();
+  const rows = dataStatusMapRows(dataset);
   const values = rows.map((row) => row.value).filter((value) => Number.isFinite(value));
   const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
   const min = values.length ? Math.min(...values) : null;
   const max = values.length ? Math.max(...values) : null;
+  const dateLabels = [...new Set(rows.map((row) => row.date_label || (row.date ? `${row.date} 기준` : "날짜 없음")).filter(Boolean))];
   const summary = document.getElementById("training-coverage-summary");
   const stats = document.getElementById("training-coverage-stats");
   const note = document.getElementById("training-coverage-note");
 
   if (summary) summary.textContent = values.length
-    ? `${dataset.label} · ${fuelLabel(fuel)} · ${asOfDate} · ${values.length}개 시도`
-    : `${dataset.label || "당일 데이터"} · 데이터 없음`;
+    ? `${dataset.label} · ${dataset.fuel_specific ? `${fuelLabel(fuel)} · ` : ""}${dateLabels[0] || "날짜 없음"} · ${values.length}개 시도`
+    : `${dataset.label || "지도 지표"} · 데이터 없음`;
 
   if (stats) {
     stats.innerHTML = `
       <div><span>시도 수</span><strong>${values.length.toLocaleString("ko-KR")}</strong></div>
       <div><span>평균</span><strong>${formatCount(average)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}</strong></div>
       <div><span>최소 / 최대</span><strong>${min === null ? "-" : `${formatCount(min)} / ${formatCount(max)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}`}</strong></div>
-      <div><span>기준일</span><strong>${escapeHtml(asOfDate || "-")}</strong></div>
-      <div><span>데이터 성격</span><strong>${escapeHtml(dataset.kind)}</strong></div>
+      <div><span>기준</span><strong>${escapeHtml(dateLabels.slice(0, 2).join(" / ") || "날짜 없음")}</strong></div>
+      <div><span>데이터 성격</span><strong>${escapeHtml(dataset.kind || "-")}</strong></div>
     `;
   }
 
   if (note) {
     note.textContent = values.length
-      ? dataset.note
-      : "당일 지도에 표시할 지역별 데이터가 없습니다.";
+      ? dataset.note || "지도에 표시 가능한 최신 지역별 데이터입니다."
+      : "지도에 표시할 지역별 데이터가 없습니다.";
   }
 
   renderTrainingCoverageMap(rows, dataset);
@@ -2346,13 +2552,18 @@ async function loadDeferredData() {
     state.history = history;
     state.historyLoading = false;
     initializeAnalysisControls(true);
+    initializeTrainingCoverageControls(true);
     renderTrend();
+    renderTrainingCoverage();
     renderDownloadSummary();
   });
 
   loadJson("./public/data/latest/training_data_coverage.json", TRAINING_COVERAGE_FALLBACK).then((trainingCoverage) => {
     state.trainingCoverage = trainingCoverage;
     state.trainingCoverageLoading = false;
+    configureDownloadDates(true);
+    initializeTrainingCoverageControls(true);
+    renderTrainingCoverage();
     renderDownloadSummary();
   });
 }
@@ -2416,13 +2627,26 @@ async function boot() {
   ["trend-fuel", "trend-region", "trend-start", "trend-end"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", renderTrend);
   });
-  ["download-kind", "download-fuel", "download-region", "download-start", "download-end"].forEach((id) => {
+  document.getElementById("download-kind")?.addEventListener("change", () => {
+    configureDownloadDates(true);
+    renderDownloadSummary();
+  });
+  ["download-fuel", "download-region", "download-start", "download-end"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", renderDownloadSummary);
   });
   document.getElementById("training-dataset")?.addEventListener("change", () => {
+    configureDataStatusDates(true);
+    updateDataStatusControlState();
     renderTrainingCoverage();
   });
   document.getElementById("training-fuel")?.addEventListener("change", renderTrainingCoverage);
+  document.getElementById("training-region")?.addEventListener("change", () => {
+    configureDataStatusDates(true);
+    renderTrainingCoverage();
+  });
+  ["training-start", "training-end"].forEach((id) => {
+    document.getElementById(id)?.addEventListener("change", renderTrainingCoverage);
+  });
   document.getElementById("download-csv")?.addEventListener("click", exportCsv);
 
   window.addEventListener("popstate", () => {

@@ -859,7 +859,7 @@ tbody tr.is-selected td {
 
 .coverage-toolbar {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(160px, 240px);
+  grid-template-columns: minmax(240px, 1.4fr) minmax(120px, 160px) minmax(150px, 190px) minmax(150px, 190px) minmax(150px, 190px);
   gap: 12px;
   align-items: end;
   margin-bottom: 14px;
@@ -881,7 +881,8 @@ tbody tr.is-selected td {
   font-weight: 900;
 }
 
-.coverage-toolbar select {
+.coverage-toolbar select,
+.coverage-toolbar input {
   width: 100%;
   min-height: 42px;
   padding: 0 10px;
@@ -890,6 +891,12 @@ tbody tr.is-selected td {
   background: #fff;
   color: var(--ink);
   font-weight: 800;
+}
+
+.coverage-toolbar select:disabled,
+.coverage-toolbar input:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
 }
 
 .coverage-layout {
@@ -907,10 +914,24 @@ tbody tr.is-selected td {
   background: #f8fbfd;
 }
 
+.coverage-map-shell.is-chart-mode {
+  min-height: 560px;
+}
+
 #training-data-map {
   width: 100%;
   height: 100%;
   min-height: 660px;
+}
+
+#training-data-chart {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+}
+
+.is-hidden {
+  display: none !important;
 }
 
 .training-province {
@@ -984,6 +1005,20 @@ tbody tr.is-selected td {
   height: 12px;
   border-radius: 999px;
   background: linear-gradient(90deg, hsl(211 82% 88%), hsl(211 82% 42%));
+}
+
+.data-status-line {
+  fill: none;
+  stroke: #2563eb;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.data-status-point {
+  fill: #e0534b;
+  stroke: #fff;
+  stroke-width: 2;
 }
 
 .station-card {
@@ -1448,6 +1483,10 @@ tbody tr.is-selected td {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .coverage-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .coverage-layout {
     grid-template-columns: 1fr;
   }
@@ -1552,7 +1591,8 @@ tbody tr.is-selected td {
   }
 
   .coverage-map-shell,
-  #training-data-map {
+  #training-data-map,
+  #training-data-chart {
     min-height: 520px;
   }
 
