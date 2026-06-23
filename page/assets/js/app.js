@@ -11,6 +11,10 @@ const state = {
   history: [],
   trainingCoverage: null,
   geojson: null,
+  historyLoading: true,
+  stationsLoading: true,
+  trainingCoverageLoading: true,
+  geojsonLoading: true,
   selectedRegion: null,
   regionDetailEnabled: false,
 };
@@ -103,7 +107,7 @@ const DATA_STATUS_METRICS = [
     label: "AI 출력: 오늘 적정가격",
     unit: "원/L",
     kind: "AI 출력",
-    note: "t-1~t-28 입력 데이터를 바탕으로 산출한 당일 지역별 적정가격입니다.",
+    note: "기준일 전 28일 입력 데이터를 바탕으로 산출한 당일 지역별 적정가격입니다.",
     value: (metric) => numberValue(metric.fair_price_policy),
   },
   {
@@ -315,6 +319,18 @@ function koreanDate(value) {
   return `${date.getFullYear()}년 ${String(date.getMonth() + 1).padStart(2, "0")}월 ${String(date.getDate()).padStart(2, "0")}일`;
 }
 
+function offsetIsoDate(value, days) {
+  const date = new Date(`${value || ""}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() + days);
+  return formatIsoDate(date);
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = value;
+}
+
 function gapToneClass(gap) {
   const numeric = Number(gap);
   if (numeric > 0) return "gap-high";
@@ -389,7 +405,14 @@ function activePolicies() {
   return policies.map((policy) => ({
     ...policy,
     effect: policy[`${state.fuel}_effect`] ?? policy.effect ?? null,
+    effect_label: policy[`${state.fuel}_effect_label`] || policy.effect_label || null,
   }));
+}
+
+function policyEffectText(policy) {
+  if (policy.effect_label) return policy.effect_label;
+  if (policy.effect === null || policy.effect === undefined) return "효과 산정 대기";
+  return `인하 효과 ${won(policy.effect)}`;
 }
 
 function baseStations() {
@@ -513,12 +536,12 @@ function defaultTrendStart(extent) {
   return extent.min && iso < extent.min ? extent.min : iso;
 }
 
-function configureDateInput(id, extent, fallbackValue) {
+function configureDateInput(id, extent, fallbackValue, force = false) {
   const input = document.getElementById(id);
   if (!input) return;
   input.min = extent.min;
   input.max = extent.max;
-  if (!input.value) input.value = fallbackValue;
+  if (force || !input.value) input.value = fallbackValue;
 }
 
 function setSelectOptions(select, options) {
@@ -541,15 +564,18 @@ function dateRangeLabel(minDate, maxDate) {
 
 function renderStatus() {
   const data = state.national || FALLBACK_NATIONAL;
-  const asOfCopy = document.getElementById("as-of-copy");
-  const basisCopy = document.getElementById("data-basis-copy");
-  const generatedAt = document.getElementById("site-generated-at");
-
   const samplePrefix = data.freshness === "sample" ? "샘플 " : "";
   const dateLabel = koreanDate(data.as_of_date);
-  if (asOfCopy) asOfCopy.textContent = `${samplePrefix}적정가격 기준일: ${dateLabel}`;
-  if (basisCopy) basisCopy.textContent = "현재가는 전일 공시 평균 가격입니다. 적정가격은 t-1~t-28 데이터를 입력해 t일 기준으로 산출합니다.";
-  if (generatedAt) generatedAt.textContent = data.generated_at ? `데이터 생성: ${data.generated_at}` : "데이터 생성 시각 없음";
+  const inputStart = offsetIsoDate(data.as_of_date, -28);
+  const inputEnd = offsetIsoDate(data.as_of_date, -1);
+  const rangeText = inputStart && inputEnd ? `${inputStart} ~ ${inputEnd}` : "기준일 전 28일";
+
+  setText("as-of-copy", `${samplePrefix}적정가격 기준일: ${dateLabel}`);
+  setText(
+    "data-basis-copy",
+    `오늘 적정가격은 ${rangeText}의 지역별 실제가격, 전국 평균, 주유소 수 등 입력 데이터를 바탕으로 산출했습니다. 화면의 현재가는 ${inputEnd || "전일"} 공시 가격입니다.`,
+  );
+  setText("site-generated-at", data.generated_at ? `데이터 생성: ${data.generated_at}` : "데이터 생성 시각 없음");
 }
 
 function renderNational() {
@@ -558,16 +584,18 @@ function renderNational() {
   const klass = judgeClass(judge, fuel.gap_policy);
   const chip = document.getElementById("judge-chip");
 
-  document.getElementById("fuel-label").textContent = fuel.label || (state.fuel === "gasoline" ? "휘발유" : "경유");
-  document.getElementById("metric-actual").textContent = won(fuel.actual_price);
-  document.getElementById("metric-actual-delta").textContent = `전일 대비 ${signedWon(fuel.actual_delta_1d)}`;
-  document.getElementById("metric-fair").textContent = won(fuel.fair_price_policy);
-  document.getElementById("metric-band").textContent = `적정 범위 ${won(fuel.band_low_policy)} ~ ${won(fuel.band_high_policy)}`;
-  document.getElementById("metric-gap").textContent = signedWon(fuel.gap_policy);
-  document.getElementById("metric-judge").textContent = judge;
-  document.getElementById("metric-policy").textContent = `정책효과 ${won(fuel.policy_effect)}`;
-  chip.textContent = klass === "high" ? "적정가보다 높음" : klass === "low" ? "적정가보다 낮음" : "적정권";
-  chip.className = `judge-chip ${klass}`;
+  setText("fuel-label", fuel.label || (state.fuel === "gasoline" ? "휘발유" : "경유"));
+  setText("metric-actual", won(fuel.actual_price));
+  setText("metric-actual-delta", `전일 대비 ${signedWon(fuel.actual_delta_1d)}`);
+  setText("metric-fair", won(fuel.fair_price_policy));
+  setText("metric-band", `적정 범위 ${won(fuel.band_low_policy)} ~ ${won(fuel.band_high_policy)}`);
+  setText("metric-gap", signedWon(fuel.gap_policy));
+  setText("metric-judge", judge);
+  setText("metric-policy", fuel.policy_effect === null || fuel.policy_effect === undefined ? "정책효과 산정 대기" : `정책효과 ${won(fuel.policy_effect)}`);
+  if (chip) {
+    chip.textContent = klass === "high" ? "적정가보다 높음" : klass === "low" ? "적정가보다 낮음" : "적정권";
+    chip.className = `judge-chip ${klass}`;
+  }
 }
 
 function renderMapHeader() {
@@ -584,7 +612,7 @@ function renderPolicies() {
     <article class="policy-item">
       <strong>${escapeHtml(policy.title)}</strong>
       <span>${escapeHtml(policy.status || policy.period || "-")}</span>
-      <span>${policy.effect === null || policy.effect === undefined ? "효과 산정 대기" : `효과 ${won(policy.effect)}`}</span>
+      <span>${escapeHtml(policyEffectText(policy))}</span>
     </article>
   `).join("");
 
@@ -593,7 +621,7 @@ function renderPolicies() {
       <strong>${escapeHtml(policy.title)}</strong>
       <span>${escapeHtml(policy.period || "-")}</span>
       <span>${escapeHtml(policy.note || policy.status || "")}</span>
-      <em>${policy.effect === null || policy.effect === undefined ? "효과 산정 대기" : won(policy.effect)}</em>
+      <em>${escapeHtml(policyEffectText(policy).replace(/^(효과|인하 효과) /, ""))}</em>
     </article>
   `).join("");
 
@@ -702,6 +730,17 @@ function makeSvgElement(tag, attrs = {}) {
   return el;
 }
 
+function drawSvgLoading(svg, width, height, message) {
+  if (!svg) return;
+  svg.innerHTML = "";
+  const group = makeSvgElement("g", { class: "svg-loading", transform: `translate(${width / 2} ${height / 2})` });
+  const circle = makeSvgElement("circle", { cx: 0, cy: -18, r: 16, class: "svg-loading-spinner" });
+  const text = makeSvgElement("text", { x: 0, y: 26, "text-anchor": "middle", class: "svg-loading-text" });
+  text.textContent = message;
+  group.append(circle, text);
+  svg.append(group);
+}
+
 function connectorPath(anchor, callout) {
   const isLeft = callout.side === "left";
   const startX = isLeft ? callout.x + CALLOUT_W : callout.x;
@@ -716,6 +755,11 @@ function renderMap() {
   const rows = new Map(regionRows().map((row) => [row.region, row]));
 
   svg.innerHTML = "";
+
+  if (state.geojsonLoading) {
+    drawSvgLoading(svg, 1040, 900, "전국 지도 데이터를 불러오는 중입니다");
+    return;
+  }
 
   if (!state.geojson?.features?.length) {
     const text = makeSvgElement("text", { x: "520", y: "590", "text-anchor": "middle", class: "map-empty" });
@@ -909,7 +953,7 @@ function filterOptions() {
   ];
 }
 
-function initializeAnalysisControls() {
+function initializeAnalysisControls(forceDates = false) {
   const rows = historyRows();
   const extent = dateExtent(rows);
 
@@ -917,10 +961,10 @@ function initializeAnalysisControls() {
     setSelectOptions(document.getElementById(id), filterOptions());
   });
 
-  configureDateInput("trend-start", extent, defaultTrendStart(extent));
-  configureDateInput("download-start", extent, extent.min);
-  configureDateInput("trend-end", extent, extent.max);
-  configureDateInput("download-end", extent, extent.max);
+  configureDateInput("trend-start", extent, defaultTrendStart(extent), forceDates);
+  configureDateInput("download-start", extent, extent.min, forceDates);
+  configureDateInput("trend-end", extent, extent.max, forceDates);
+  configureDateInput("download-end", extent, extent.max, forceDates);
 }
 
 function selectedPriceRows(prefix) {
@@ -1117,6 +1161,13 @@ function drawTrendChart(rows) {
 }
 
 function renderTrend() {
+  if (state.historyLoading && !(Array.isArray(state.history) && state.history.length)) {
+    setText("trend-summary", "가격 추이 데이터 불러오는 중");
+    setText("trend-note", "파일 용량이 큰 전체 기간 가격 추이 데이터를 불러오고 있습니다.");
+    drawSvgLoading(document.getElementById("price-trend-chart"), 920, 480, "가격 추이 데이터를 불러오는 중입니다");
+    return;
+  }
+
   const rows = selectedPriceRows("trend");
   const fuel = document.getElementById("trend-fuel")?.value || state.fuel;
   const region = document.getElementById("trend-region")?.value || NATIONAL_REGION;
@@ -1302,6 +1353,11 @@ function renderTrainingCoverageMap(rows, dataset) {
   const svg = document.getElementById("training-data-map");
   if (!svg) return;
   svg.innerHTML = "";
+
+  if (state.geojsonLoading) {
+    drawSvgLoading(svg, 620, 740, "당일 데이터 지도를 불러오는 중입니다");
+    return;
+  }
 
   if (!state.geojson?.features?.length) {
     const text = makeSvgElement("text", { x: "310", y: "370", "text-anchor": "middle", class: "map-empty" });
@@ -1530,28 +1586,46 @@ function render() {
   renderTrainingCoverage();
 }
 
+async function loadDeferredData() {
+  loadJson("./public/data/latest/station_search_index.json", FALLBACK_STATIONS).then((stations) => {
+    state.stations = stations;
+    state.stationsLoading = false;
+    renderRegionDetail();
+    renderDownloadSummary();
+  });
+
+  loadJson("./public/data/latest/price_history.json", []).then((history) => {
+    state.history = history;
+    state.historyLoading = false;
+    initializeAnalysisControls(true);
+    renderTrend();
+    renderDownloadSummary();
+  });
+
+  loadJson("./public/data/latest/training_data_coverage.json", TRAINING_COVERAGE_FALLBACK).then((trainingCoverage) => {
+    state.trainingCoverage = trainingCoverage;
+    state.trainingCoverageLoading = false;
+    renderDownloadSummary();
+  });
+}
+
 async function boot() {
   clearRegionHash();
 
-  const [manifest, national, regions, stations, history, trainingCoverage, geojson] = await Promise.all([
+  const [manifest, national, regions, geojson] = await Promise.all([
     loadJson("./public/data/latest/site_manifest.json", {}),
     loadJson("./public/data/latest/national_today.json", FALLBACK_NATIONAL),
     loadJson("./public/data/latest/region_today.json", FALLBACK_REGIONS),
-    loadJson("./public/data/latest/station_search_index.json", FALLBACK_STATIONS),
-    loadJson("./public/data/latest/price_history.json", []),
-    loadJson("./public/data/latest/training_data_coverage.json", TRAINING_COVERAGE_FALLBACK),
     loadJson("./public/assets/korea-provinces.geojson", null),
   ]);
 
   state.manifest = manifest;
   state.national = national;
   state.regions = regions;
-  state.stations = stations;
-  state.history = history;
-  state.trainingCoverage = trainingCoverage;
   state.geojson = geojson;
+  state.geojsonLoading = false;
   applyFixedSamplePrices();
-  initializeAnalysisControls();
+  initializeAnalysisControls(true);
   initializeTrainingCoverageControls();
 
   document.querySelectorAll(".fuel-button").forEach((button) => {
@@ -1600,6 +1674,7 @@ async function boot() {
 
   render();
   if (state.regionDetailEnabled) activatePanel("region-detail");
+  loadDeferredData();
 }
 
 boot();

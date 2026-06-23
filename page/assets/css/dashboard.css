@@ -15,6 +15,12 @@
   --shadow: 0 20px 55px rgba(23, 33, 47, 0.12);
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -390,6 +396,23 @@ h2 {
   fill: var(--muted);
   font-size: 16px;
   font-weight: 800;
+}
+
+.svg-loading-spinner {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 34 80;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 1s linear infinite;
+}
+
+.svg-loading-text {
+  fill: var(--muted);
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .map-callout-shell strong,

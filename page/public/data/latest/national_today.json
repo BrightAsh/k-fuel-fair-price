@@ -1,7 +1,7 @@
 {
   "schema_version": "national_today_v1",
   "as_of_date": "2026-06-23",
-  "generated_at": "2026-06-23T09:24:56+09:00",
+  "generated_at": "2026-06-23T10:19:34+09:00",
   "freshness": "fresh",
   "fuels": {
     "gasoline": {
@@ -29,7 +29,34 @@
       "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv"
     }
   },
-  "policies": [],
+  "policies": [
+    {
+      "title": "유류세 한시 인하 연장",
+      "status": "진행 중",
+      "period": "2026-06-01~2026-07-31",
+      "note": "2026년 6월 이후에도 유류세 인하율을 휘발유 15%, 경유 25%로 유지합니다. 정부 발표 기준 인하 효과는 휘발유 122원/L, 경유 145원/L입니다.",
+      "gasoline_effect": 122.0,
+      "diesel_effect": 145.0,
+      "gasoline_effect_label": null,
+      "diesel_effect_label": null,
+      "effect_label": null,
+      "source_url": "https://www.korea.kr/news/policyNewsView.do?newsId=148964838",
+      "source": "page/manual_inputs/policies.csv"
+    },
+    {
+      "title": "석유제품 최고가격제",
+      "status": "진행 중",
+      "period": "2026-05-22부터 6차 기준 적용",
+      "note": "6차 석유제품 최고가격은 휘발유 1,934원/L, 경유 1,923원/L, 등유 1,530원/L입니다. 최고가격은 정유사 공급가격 기준이며 주유소 판매가격은 직접 적용 대상이 아닙니다.",
+      "gasoline_effect": null,
+      "diesel_effect": null,
+      "gasoline_effect_label": "휘발유 1,934원/L",
+      "diesel_effect_label": "경유 1,923원/L",
+      "effect_label": "정유사 공급가격 상한",
+      "source_url": "https://www.korea.kr/news/policyNewsView.do?newsId=148964961",
+      "source": "page/manual_inputs/policies.csv"
+    }
+  ],
   "errors": {},
   "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv"
 }

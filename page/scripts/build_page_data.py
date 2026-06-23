@@ -186,6 +186,43 @@ def read_ai_web_csv(repo_root: Path, filename: str, as_of_date: str | None = Non
     return df
 
 
+def build_policy_items(repo_root: Path, as_of_date: str | None) -> list[dict[str, Any]]:
+    path = repo_root / "page/manual_inputs/policies.csv"
+    if not path.exists():
+        return []
+
+    df = read_csv(path)
+    as_of_ts = pd.Timestamp(as_of_date) if as_of_date else None
+    policies: list[dict[str, Any]] = []
+
+    for _, row in df.iterrows():
+        start = to_text(row.get("start_date"))
+        end = to_text(row.get("end_date"))
+        if as_of_ts is not None:
+            if start and pd.Timestamp(start) > as_of_ts:
+                continue
+            if end and pd.Timestamp(end) < as_of_ts:
+                continue
+
+        item = {
+            "title": to_text(row.get("title")),
+            "status": to_text(row.get("status")),
+            "period": to_text(row.get("period")),
+            "note": to_text(row.get("note")),
+            "gasoline_effect": to_float(row.get("gasoline_effect")),
+            "diesel_effect": to_float(row.get("diesel_effect")),
+            "gasoline_effect_label": to_text(row.get("gasoline_effect_label")),
+            "diesel_effect_label": to_text(row.get("diesel_effect_label")),
+            "effect_label": to_text(row.get("effect_label")),
+            "source_url": to_text(row.get("source_url")),
+            "source": "page/manual_inputs/policies.csv",
+        }
+        if item["title"]:
+            policies.append(item)
+
+    return policies
+
+
 def build_ai_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any] | None:
     df = read_ai_web_csv(repo_root, "web_region_today.csv", as_of_date)
     if df is None or df.empty:
@@ -237,7 +274,7 @@ def build_ai_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]
         "generated_at": datetime.now(KST).isoformat(timespec="seconds"),
         "freshness": freshness,
         "fuels": fuels,
-        "policies": [],
+        "policies": build_policy_items(repo_root, resolved_date),
         "errors": {},
         "source": source,
     }
@@ -408,7 +445,7 @@ def build_national(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
         "generated_at": generated_at,
         "freshness": freshness,
         "fuels": fuels,
-        "policies": [],
+        "policies": build_policy_items(repo_root, resolved_date),
         "errors": errors,
     }
 
