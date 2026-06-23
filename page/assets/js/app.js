@@ -13,8 +13,6 @@ const state = {
   geojson: null,
   selectedRegion: null,
   regionDetailEnabled: false,
-  userLocation: null,
-  locationError: "",
 };
 
 const REGION_ORDER = [
@@ -76,6 +74,59 @@ const SAMPLE_FAIR_PRICE = 1400;
 const SAMPLE_BAND_LOW = 1380;
 const SAMPLE_BAND_HIGH = 1420;
 const SAMPLE_GAP_PRICE = SAMPLE_ACTUAL_PRICE - SAMPLE_FAIR_PRICE;
+const DOWNLOAD_KIND_LABELS = {
+  history: "가격추이_AI출력",
+  "today-region": "당일_지역별_AI출력",
+  "today-national": "당일_전국요약",
+  "station-input": "주유소_가격입력",
+  coverage: "입력데이터_현황집계",
+};
+const DATA_STATUS_METRICS = [
+  {
+    id: "actual_price",
+    label: "입력: 전일 실제가격",
+    unit: "원/L",
+    kind: "입력 데이터",
+    note: "AI가 당일 적정가격을 산출할 때 기준으로 삼는 지역별 전일 실제 가격입니다.",
+    value: (metric) => numberValue(metric.actual_price),
+  },
+  {
+    id: "station_count",
+    label: "입력: 가격 산출 주유소 수",
+    unit: "개",
+    kind: "입력 데이터",
+    note: "지역별 평균 가격과 AI 출력 집계에 반영된 주유소 수입니다.",
+    value: (metric) => numberValue(metric.station_count),
+  },
+  {
+    id: "fair_price_policy",
+    label: "AI 출력: 오늘 적정가격",
+    unit: "원/L",
+    kind: "AI 출력",
+    note: "t-1~t-28 입력 데이터를 바탕으로 산출한 당일 지역별 적정가격입니다.",
+    value: (metric) => numberValue(metric.fair_price_policy),
+  },
+  {
+    id: "gap_policy",
+    label: "AI 출력: 실제-적정 차이",
+    unit: "원/L",
+    kind: "AI 출력",
+    note: "전일 실제가격에서 당일 적정가격을 뺀 값입니다. 양수는 비싼 쪽, 음수는 저렴한 쪽입니다.",
+    value: (metric) => numberValue(metric.gap_policy),
+  },
+  {
+    id: "band_width",
+    label: "AI 출력: 적정가격대 폭",
+    unit: "원/L",
+    kind: "AI 출력",
+    note: "AI 적정가격대의 상한과 하한 차이입니다.",
+    value: (metric) => {
+      const low = numberValue(metric.band_low_policy);
+      const high = numberValue(metric.band_high_policy);
+      return low === null || high === null ? null : high - low;
+    },
+  },
+];
 
 function sampleMetric(extra = {}) {
   return {
@@ -824,36 +875,17 @@ function stationMatches(station, query) {
     .includes(query);
 }
 
-function stationCard(station, options = {}) {
+function stationCard(station) {
   const price = stationPrice(station);
   const klass = judgeClass(station.judge_policy);
-  const distanceMarkup = options.distanceKm === undefined
-    ? ""
-    : `<span class="distance">${options.distanceKm.toLocaleString("ko-KR", { maximumFractionDigits: 2 })} km</span>`;
   return `
     <article class="station-card">
       <strong>${escapeHtml(station.name || station.station_id)}</strong>
       <span>${escapeHtml(station.brand || "-")} · ${escapeHtml(station.region || "-")}</span>
       <span>${escapeHtml(station.address || "")}</span>
       <span>${state.fuel === "gasoline" ? "휘발유" : "경유"} ${won(price)} · <b class="${klass}">${escapeHtml(station.judge_policy || "-")}</b></span>
-      ${distanceMarkup}
     </article>
   `;
-}
-
-function renderStations() {
-  const input = document.getElementById("station-search");
-  const query = input.value.trim().toLowerCase();
-  const rows = query
-    ? baseStations()
-      .filter((station) => stationMatches(station, query))
-      .slice(0, 12)
-    : [];
-
-  document.getElementById("search-count").textContent = query ? `${rows.length}개 결과` : "검색어를 입력하세요";
-  document.getElementById("station-results").innerHTML = rows.length
-    ? rows.map((station) => stationCard(station)).join("")
-    : `<div class="empty-state">${query ? "검색 결과가 없습니다" : "검색어를 입력하세요"}</div>`;
 }
 
 function renderRegionStations() {
@@ -868,46 +900,6 @@ function renderRegionStations() {
   document.getElementById("region-station-results").innerHTML = rows.length
     ? rows.map((station) => stationCard(station)).join("")
     : `<div class="empty-state">해당 지역 주유소 데이터가 없습니다</div>`;
-}
-
-function distanceKm(a, b) {
-  const r = 6371;
-  const toRad = (value) => Number(value) * Math.PI / 180;
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const dLat = toRad(b.lat - a.lat);
-  const dLon = toRad(b.lon - a.lon);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 2 * r * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-}
-
-function renderNearby() {
-  const radius = Number(document.getElementById("nearby-radius")?.value || 5);
-  const countEl = document.getElementById("nearby-count");
-  const resultsEl = document.getElementById("nearby-results");
-  const statusEl = document.getElementById("location-status");
-
-  if (!state.userLocation) {
-    countEl.textContent = "위치 확인 전";
-    statusEl.textContent = state.locationError || "위치 동의 후 표시";
-    resultsEl.innerHTML = `<div class="empty-state">내 위치 사용을 누르면 주변 주유소를 정렬합니다</div>`;
-    return;
-  }
-
-  const rows = baseStations()
-    .filter((station) => Number.isFinite(Number(station.lat)) && Number.isFinite(Number(station.lon)))
-    .map((station) => ({
-      station,
-      distance: distanceKm(state.userLocation, { lat: Number(station.lat), lon: Number(station.lon) }),
-    }))
-    .filter((row) => row.distance <= radius)
-    .sort((a, b) => a.distance - b.distance);
-
-  countEl.textContent = `${rows.length}개 결과`;
-  statusEl.textContent = `위치 ${state.userLocation.lat.toFixed(4)}, ${state.userLocation.lon.toFixed(4)}`;
-  resultsEl.innerHTML = rows.length
-    ? rows.map((row) => stationCard(row.station, { distanceKm: row.distance })).join("")
-    : `<div class="empty-state">${radius} km 안의 주유소 데이터가 없습니다</div>`;
 }
 
 function filterOptions() {
@@ -1146,16 +1138,84 @@ function renderTrend() {
   drawTrendChart(rows);
 }
 
+function activeAsOfDate() {
+  const data = state.national || FALLBACK_NATIONAL;
+  return data.as_of_date || FALLBACK_NATIONAL.as_of_date || "";
+}
+
+function selectedDownloadFilters() {
+  return {
+    kind: document.getElementById("download-kind")?.value || "history",
+    fuel: document.getElementById("download-fuel")?.value || state.fuel,
+    region: document.getElementById("download-region")?.value || NATIONAL_REGION,
+    start: document.getElementById("download-start")?.value || "",
+    end: document.getElementById("download-end")?.value || "",
+  };
+}
+
+function regionMetricRows(fuel, region, date) {
+  return regionRows()
+    .filter((row) => region === NATIONAL_REGION || row.region === region)
+    .map((row) => {
+      const metric = row[fuel] || {};
+      return {
+        기준일: metric.source_date || date,
+        지역: row.region,
+        유종: fuelLabel(fuel),
+        입력_전일실제가_원L: metric.actual_price,
+        AI출력_오늘적정가격_원L: metric.fair_price_policy,
+        AI출력_적정범위하한_원L: metric.band_low_policy,
+        AI출력_적정범위상한_원L: metric.band_high_policy,
+        AI출력_실제_minus_적정_원L: metric.gap_policy,
+        AI출력_판정: metric.judge_policy,
+        입력_주유소수: metric.station_count,
+        출처: metric.source,
+      };
+    });
+}
+
+function coverageDownloadRows(start, end, region) {
+  return trainingCoverageData().rows
+    .map((row) => ({
+      기준일: toIsoDate(row.date),
+      지역: canonicalRegionName(row.region),
+      데이터ID: row.dataset,
+      데이터명: row.label,
+      값: row.value,
+      단위: row.unit,
+    }))
+    .filter((row) => row.기준일 && dateInRange(row.기준일, start, end))
+    .filter((row) => region === NATIONAL_REGION || row.지역 === region);
+}
+
 function downloadRows() {
-  const kind = document.getElementById("download-kind")?.value || "price";
-  const fuel = document.getElementById("download-fuel")?.value || state.fuel;
-  const region = document.getElementById("download-region")?.value || NATIONAL_REGION;
-  const start = document.getElementById("download-start")?.value || "";
-  const end = document.getElementById("download-end")?.value || "";
+  const { kind, fuel, region, start, end } = selectedDownloadFilters();
+  const asOfDate = activeAsOfDate();
   const data = state.national || FALLBACK_NATIONAL;
 
-  if (kind === "station") {
-    const asOfDate = data.as_of_date || FALLBACK_NATIONAL.as_of_date;
+  if (kind === "today-region") {
+    if (!dateInRange(asOfDate, start, end)) return [];
+    return regionMetricRows(fuel, region, asOfDate);
+  }
+
+  if (kind === "today-national") {
+    if (!dateInRange(asOfDate, start, end)) return [];
+    const metric = data.fuels?.[fuel] || FALLBACK_NATIONAL.fuels[fuel];
+    return [{
+      기준일: asOfDate,
+      지역: NATIONAL_REGION,
+      유종: fuelLabel(fuel),
+      입력_전국실제평균_원L: metric.actual_price,
+      AI출력_오늘적정가격_원L: metric.fair_price_policy,
+      AI출력_적정범위하한_원L: metric.band_low_policy,
+      AI출력_적정범위상한_원L: metric.band_high_policy,
+      AI출력_실제_minus_적정_원L: metric.gap_policy,
+      AI출력_판정: metric.judge_policy,
+      출처: metric.source || data.source,
+    }];
+  }
+
+  if (kind === "station-input") {
     if (!dateInRange(asOfDate, start, end)) return [];
     return baseStations()
       .filter((station) => region === NATIONAL_REGION || canonicalRegionName(station.region) === region)
@@ -1167,22 +1227,26 @@ function downloadRows() {
         브랜드: station.brand,
         주소: station.address,
         유종: fuelLabel(fuel),
-        현재가_전일공시_원L: fuel === "gasoline" ? station.gasoline_price : station.diesel_price,
+        입력_전일공시가격_원L: fuel === "gasoline" ? station.gasoline_price : station.diesel_price,
         판정: station.judge_policy,
         위도: station.lat,
         경도: station.lon,
       }));
   }
 
+  if (kind === "coverage") {
+    return coverageDownloadRows(start, end, region);
+  }
+
   return selectedPriceRows("download").map((row) => ({
     기준일: row.date,
     지역: row.region,
     유종: fuelLabel(row.fuel),
-    현재가_전일공시_원L: row.actual_price,
-    적정가격_오늘산출_원L: row.fair_price_policy,
-    적정범위_하한_원L: row.band_low_policy,
-    적정범위_상한_원L: row.band_high_policy,
-    실제_minus_적정_원L: row.gap_policy,
+    입력_전일실제가_원L: row.actual_price,
+    AI출력_오늘적정가격_원L: row.fair_price_policy,
+    AI출력_적정범위하한_원L: row.band_low_policy,
+    AI출력_적정범위상한_원L: row.band_high_policy,
+    AI출력_실제_minus_적정_원L: row.gap_policy,
     출처: row.source,
   }));
 }
@@ -1190,7 +1254,9 @@ function downloadRows() {
 function renderDownloadSummary() {
   const count = document.getElementById("download-count");
   if (!count) return;
-  count.textContent = `${downloadRows().length.toLocaleString("ko-KR")}개 행`;
+  const kind = document.getElementById("download-kind")?.value || "history";
+  const label = DOWNLOAD_KIND_LABELS[kind] || "데이터";
+  count.textContent = `${label.replaceAll("_", " ")} · ${downloadRows().length.toLocaleString("ko-KR")}개 행`;
 }
 
 function trainingCoverageData() {
@@ -1203,72 +1269,25 @@ function trainingCoverageData() {
   };
 }
 
-function trainingCoverageDatasets() {
-  const data = trainingCoverageData();
-  const fallbackById = new Map(TRAINING_COVERAGE_FALLBACK.datasets.map((item) => [item.id, item]));
-  const seen = new Set();
-  const merged = data.datasets.map((item) => {
-    seen.add(item.id);
-    return { ...fallbackById.get(item.id), ...item };
-  });
-  TRAINING_COVERAGE_FALLBACK.datasets.forEach((item) => {
-    if (!seen.has(item.id)) merged.push(item);
-  });
-  return merged;
-}
-
 function selectedTrainingDataset() {
   const select = document.getElementById("training-dataset");
-  return select?.value || trainingCoverageDatasets()[0]?.id || "";
+  return select?.value || DATA_STATUS_METRICS[0]?.id || "";
 }
 
-function defaultTrainingDatasetId(datasets, current) {
-  if (datasets.some((item) => item.id === current) && trainingRowsFor(current).length > 0) {
-    return current;
-  }
-  const firstDatasetWithRows = datasets.find((item) => trainingRowsFor(item.id).length > 0);
-  if (firstDatasetWithRows) return firstDatasetWithRows.id;
-  return datasets.some((item) => item.id === current) ? current : datasets[0]?.id || "";
-}
-
-function trainingRowsFor(datasetId) {
-  return trainingCoverageData().rows
-    .filter((row) => row.dataset === datasetId)
-    .map((row) => ({
-      ...row,
-      region: canonicalRegionName(row.region),
-      value: numberValue(row.value),
-      date: toIsoDate(row.date) || "",
-    }))
-    .filter((row) => row.region && row.value !== null);
-}
-
-function trainingDatesFor(datasetId) {
-  return [...new Set(trainingRowsFor(datasetId).map((row) => row.date).filter(Boolean))].sort();
-}
-
-function syncTrainingDateOptions(datasetId) {
-  const select = document.getElementById("training-date");
-  if (!select) return;
-  if (select.dataset.datasetId === datasetId) return;
-
-  const dates = trainingDatesFor(datasetId);
-  select.dataset.datasetId = datasetId;
-  select.disabled = dates.length === 0;
-  select.innerHTML = dates.length
-    ? dates.map((date) => `<option value="${escapeHtml(date)}">${escapeHtml(date)}</option>`).join("")
-    : `<option value="">전체</option>`;
-  if (dates.length) select.value = dates[dates.length - 1];
+function selectedDataStatusFuel() {
+  return document.getElementById("training-fuel")?.value || state.fuel;
 }
 
 function initializeTrainingCoverageControls() {
   const select = document.getElementById("training-dataset");
-  if (!select) return;
-  const datasets = trainingCoverageDatasets();
-  const current = select.value;
-  select.innerHTML = datasets.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
-  select.value = defaultTrainingDatasetId(datasets, current);
-  syncTrainingDateOptions(select.value);
+  if (select) {
+    const current = select.value;
+    select.innerHTML = DATA_STATUS_METRICS.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
+    select.value = DATA_STATUS_METRICS.some((item) => item.id === current) ? current : DATA_STATUS_METRICS[0].id;
+  }
+
+  const fuelSelect = document.getElementById("training-fuel");
+  if (fuelSelect && !fuelSelect.value) fuelSelect.value = state.fuel;
 }
 
 function coverageColor(value, minValue, maxValue) {
@@ -1330,44 +1349,54 @@ function renderTrainingCoverageMap(rows, dataset) {
 
   if (!values.length) {
     const text = makeSvgElement("text", { x: "310", y: "370", "text-anchor": "middle", class: "map-empty" });
-    text.textContent = "GitHub에 지역별 AI 학습 데이터 집계가 없습니다";
+    text.textContent = "당일 지역별 데이터가 없습니다";
     svg.append(text);
   }
 }
 
 function renderTrainingCoverage() {
-  const datasetId = selectedTrainingDataset();
-  syncTrainingDateOptions(datasetId);
-
-  const dataset = trainingCoverageDatasets().find((item) => item.id === datasetId) || trainingCoverageDatasets()[0] || {};
-  const dateSelect = document.getElementById("training-date");
-  const selectedDate = dateSelect?.value || "";
-  const rows = trainingRowsFor(datasetId).filter((row) => !selectedDate || row.date === selectedDate);
+  const dataset = DATA_STATUS_METRICS.find((item) => item.id === selectedTrainingDataset()) || DATA_STATUS_METRICS[0];
+  const fuel = selectedDataStatusFuel();
+  const asOfDate = activeAsOfDate();
+  const rows = regionRows()
+    .map((row) => {
+      const metric = row[fuel] || {};
+      return {
+        dataset: dataset.id,
+        date: metric.source_date || asOfDate,
+        region: row.region,
+        value: dataset.value(metric),
+        unit: dataset.unit,
+        label: dataset.label,
+      };
+    })
+    .filter((row) => row.region && row.value !== null);
   const values = rows.map((row) => row.value).filter((value) => Number.isFinite(value));
-  const total = values.reduce((sum, value) => sum + value, 0);
+  const average = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  const min = values.length ? Math.min(...values) : null;
+  const max = values.length ? Math.max(...values) : null;
   const summary = document.getElementById("training-coverage-summary");
   const stats = document.getElementById("training-coverage-stats");
   const note = document.getElementById("training-coverage-note");
-  const datasetPeriod = dateRangeLabel(dataset.date_min, dataset.date_max);
-  const dateLabel = selectedDate || (datasetPeriod === "-" ? "전체" : datasetPeriod);
 
   if (summary) summary.textContent = values.length
-    ? `${dataset.label} · ${dateLabel} · ${values.length}개 시도`
-    : `${dataset.label || "AI 학습 데이터"} · 데이터 없음`;
+    ? `${dataset.label} · ${fuelLabel(fuel)} · ${asOfDate} · ${values.length}개 시도`
+    : `${dataset.label || "당일 데이터"} · 데이터 없음`;
 
   if (stats) {
     stats.innerHTML = `
       <div><span>시도 수</span><strong>${values.length.toLocaleString("ko-KR")}</strong></div>
-      <div><span>합계</span><strong>${formatCount(total)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}</strong></div>
-      <div><span>기간</span><strong>${escapeHtml(dateRangeLabel(dataset.date_min, dataset.date_max))}</strong></div>
-      <div><span>입력</span><strong>${escapeHtml(dataset.path || "page/manual_inputs/training_data_coverage.csv")}</strong></div>
+      <div><span>평균</span><strong>${formatCount(average)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}</strong></div>
+      <div><span>최소 / 최대</span><strong>${min === null ? "-" : `${formatCount(min)} / ${formatCount(max)}${dataset.unit ? ` ${escapeHtml(dataset.unit)}` : ""}`}</strong></div>
+      <div><span>기준일</span><strong>${escapeHtml(asOfDate || "-")}</strong></div>
+      <div><span>데이터 성격</span><strong>${escapeHtml(dataset.kind)}</strong></div>
     `;
   }
 
   if (note) {
     note.textContent = values.length
-      ? dataset.note || "선택한 학습 데이터의 지역별 분포입니다."
-      : `${dataset.note || "지역별 집계 데이터가 필요합니다"} 현재 GitHub에는 이 지도를 칠할 시도별 학습 데이터 집계가 없습니다.`;
+      ? dataset.note
+      : "당일 지도에 표시할 지역별 데이터가 없습니다.";
   }
 
   renderTrainingCoverageMap(rows, dataset);
@@ -1376,6 +1405,13 @@ function renderTrainingCoverage() {
 function csvCell(value) {
   const text = value === null || value === undefined ? "" : String(value);
   return `"${text.replaceAll('"', '""')}"`;
+}
+
+function safeFilePart(value) {
+  return String(value || "")
+    .trim()
+    .replaceAll(" ", "_")
+    .replace(/[\\/:*?"<>|]+/g, "-") || "전체";
 }
 
 function exportCsv() {
@@ -1394,10 +1430,11 @@ function exportCsv() {
   const blob = new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  const kind = document.getElementById("download-kind")?.value || "price";
-  const region = document.getElementById("download-region")?.value || NATIONAL_REGION;
+  const { kind, fuel, region, start, end } = selectedDownloadFilters();
+  const kindLabel = DOWNLOAD_KIND_LABELS[kind] || "데이터";
+  const period = start || end ? `${start || "시작"}_${end || "종료"}` : activeAsOfDate() || new Date().toISOString().slice(0, 10);
   link.href = url;
-  link.download = `fair_fuel_${kind}_${region}_${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `적정유가_${safeFilePart(kindLabel)}_${safeFilePart(fuelLabel(fuel))}_${safeFilePart(region)}_${safeFilePart(period)}.csv`;
   document.body.append(link);
   link.click();
   link.remove();
@@ -1436,34 +1473,7 @@ function applyFixedSamplePrices() {
     }));
   }
 
-  // Station search and price trend keep source data so users can inspect real history.
-}
-
-function requestUserLocation() {
-  const statusEl = document.getElementById("location-status");
-  if (!navigator.geolocation) {
-    state.locationError = "브라우저 위치 기능을 사용할 수 없습니다";
-    renderNearby();
-    return;
-  }
-
-  statusEl.textContent = "위치 확인 중";
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      state.userLocation = {
-        lat: position.coords.latitude,
-        lon: position.coords.longitude,
-      };
-      state.locationError = "";
-      renderNearby();
-      activatePanel("nearby");
-    },
-    (error) => {
-      state.locationError = error.code === 1 ? "위치 권한이 거부되었습니다" : "위치를 확인하지 못했습니다";
-      renderNearby();
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-  );
+  // Price trend and downloadable source data keep real history for inspection.
 }
 
 function activatePanel(name) {
@@ -1515,8 +1525,6 @@ function render() {
   renderRegions();
   renderMap();
   renderRegionDetail();
-  renderStations();
-  renderNearby();
   renderTrend();
   renderDownloadSummary();
   renderTrainingCoverage();
@@ -1563,7 +1571,6 @@ async function boot() {
       }
       updateRegionDetailTab();
       activatePanel(button.dataset.panel);
-      if (button.dataset.panel === "search") document.getElementById("station-search")?.focus();
     });
   });
 
@@ -1573,14 +1580,7 @@ async function boot() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  document.getElementById("station-search").addEventListener("input", () => {
-    renderStations();
-    if (document.getElementById("station-search").value.trim()) activatePanel("search");
-  });
-
-  document.getElementById("region-station-search").addEventListener("input", renderRegionStations);
-  document.getElementById("use-location").addEventListener("click", requestUserLocation);
-  document.getElementById("nearby-radius").addEventListener("change", renderNearby);
+  document.getElementById("region-station-search")?.addEventListener("input", renderRegionStations);
   ["trend-fuel", "trend-region", "trend-start", "trend-end"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", renderTrend);
   });
@@ -1588,11 +1588,9 @@ async function boot() {
     document.getElementById(id)?.addEventListener("change", renderDownloadSummary);
   });
   document.getElementById("training-dataset")?.addEventListener("change", () => {
-    const dateSelect = document.getElementById("training-date");
-    if (dateSelect) dateSelect.dataset.datasetId = "";
     renderTrainingCoverage();
   });
-  document.getElementById("training-date")?.addEventListener("change", renderTrainingCoverage);
+  document.getElementById("training-fuel")?.addEventListener("change", renderTrainingCoverage);
   document.getElementById("download-csv")?.addEventListener("click", exportCsv);
 
   window.addEventListener("popstate", () => {

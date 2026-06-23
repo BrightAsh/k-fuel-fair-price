@@ -1075,8 +1075,7 @@ tbody tr.is-selected td {
   min-height: 100%;
 }
 
-.local-search,
-.nearby-toolbar {
+.local-search {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1087,8 +1086,7 @@ tbody tr.is-selected td {
   border-radius: 8px;
 }
 
-.local-search span,
-.nearby-toolbar span {
+.local-search span {
   flex: 0 0 auto;
   color: var(--muted);
   font-size: 13px;
@@ -1108,30 +1106,6 @@ tbody tr.is-selected td {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.nearby-toolbar {
-  flex-wrap: wrap;
-}
-
-.nearby-toolbar label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.nearby-toolbar select {
-  min-height: 38px;
-  padding: 0 34px 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: #fff;
-  color: var(--ink);
-}
-
-.nearby-toolbar strong {
-  color: var(--muted);
-  font-size: 13px;
-}
-
 .primary-action {
   min-height: 40px;
   padding: 0 16px;
@@ -1139,12 +1113,6 @@ tbody tr.is-selected td {
   border-radius: 6px;
   background: var(--blue);
   color: #fff;
-  font-weight: 900;
-}
-
-.station-card .distance {
-  margin-top: 8px;
-  color: var(--blue);
   font-weight: 900;
 }
 
