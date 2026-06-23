@@ -1128,6 +1128,60 @@ tbody tr.is-selected td {
   stroke-width: 2.2;
 }
 
+.district-path.is-zoomed {
+  cursor: default;
+}
+
+.district-boundary-path {
+  stroke: #102337;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.district-callout {
+  cursor: pointer;
+}
+
+.district-callout-shell {
+  width: 100%;
+  height: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(16, 35, 55, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(16, 35, 55, 0.16);
+  color: #102337;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.district-callout-shell:hover,
+.district-callout-shell.is-selected {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(16, 35, 55, 0.24);
+}
+
+.district-callout-shell strong,
+.district-callout-shell span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.district-callout-shell strong {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.district-callout-shell span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.32;
+}
+
 .district-map-label {
   fill: #102337;
   font-size: 16px;
@@ -1141,6 +1195,11 @@ tbody tr.is-selected td {
 
 .district-map-label.is-selected {
   font-size: 20px;
+}
+
+.district-map-label.is-zoomed {
+  font-size: 26px;
+  opacity: 0.32;
 }
 
 .district-grid-point {
@@ -1161,6 +1220,48 @@ tbody tr.is-selected td {
 
 .district-grid-point.gap-good {
   fill: var(--green);
+}
+
+.district-station-point {
+  fill: #102337;
+  stroke: #fff;
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.9;
+}
+
+.district-station-point.high {
+  fill: var(--red);
+}
+
+.district-station-point.low {
+  fill: var(--blue);
+}
+
+.district-station-point.good {
+  fill: var(--green);
+}
+
+.district-grid-cell {
+  stroke: rgba(16, 35, 55, 0.2);
+  stroke-width: 0.8;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.94;
+}
+
+.district-map-legend {
+  pointer-events: none;
+}
+
+.district-map-legend-title,
+.district-map-legend-label {
+  fill: #102337;
+  font-size: 11px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.94);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .region-station-card {

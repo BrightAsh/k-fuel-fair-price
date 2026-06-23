@@ -78,6 +78,8 @@ const MAP_BOUNDS = { x: 214, y: 58, width: 612, height: 780 };
 const DETAIL_MAP_SIZE = { width: 620, height: 720 };
 const CALLOUT_W = 228;
 const CALLOUT_H = 76;
+const DISTRICT_CALLOUT_W = 132;
+const DISTRICT_CALLOUT_H = 76;
 const KOREA_LAT_SCALE = 1.0;
 const USE_FIXED_SAMPLE_PRICES = false;
 const SAMPLE_ACTUAL_PRICE = 1500;
@@ -820,6 +822,142 @@ function projectedCentroid(geometry, project) {
   return [x, y];
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function median(values) {
+  const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+function coordinateStep(rows, key, fallback) {
+  const values = [...new Set(rows
+    .map((row) => Number(row[key]))
+    .filter((value) => Number.isFinite(value))
+    .map((value) => Number(value.toFixed(6))))]
+    .sort((a, b) => a - b);
+  const diffs = [];
+  for (let i = 1; i < values.length; i += 1) {
+    const diff = values[i] - values[i - 1];
+    if (diff > 0.00001) diffs.push(diff);
+  }
+  return median(diffs) || fallback;
+}
+
+function gridCellPath(row, project, halfLon, halfLat) {
+  const lon = Number(row.center_lon);
+  const lat = Number(row.center_lat);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return "";
+  return ringPath([
+    [lon - halfLon, lat - halfLat],
+    [lon + halfLon, lat - halfLat],
+    [lon + halfLon, lat + halfLat],
+    [lon - halfLon, lat + halfLat],
+  ], project);
+}
+
+function gridColorValue(row) {
+  return Number(row.actual_price);
+}
+
+function gridColorDomain(rows) {
+  const values = rows
+    .map(gridColorValue)
+    .filter((value) => Number.isFinite(value));
+  return {
+    min: values.length ? Math.min(...values) : null,
+    max: values.length ? Math.max(...values) : null,
+  };
+}
+
+function whiteRedScale(value, min, max) {
+  if (!Number.isFinite(value) || !Number.isFinite(min) || !Number.isFinite(max)) return "#f8fbfd";
+  const ratio = max === min ? 0.5 : clamp((value - min) / (max - min), 0, 1);
+  const r = Math.round(255 - ratio * 26);
+  const g = Math.round(255 - ratio * 197);
+  const b = Math.round(255 - ratio * 176);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function boundedCalloutPosition(point, width, height) {
+  const [cx, cy] = point;
+  return {
+    x: clamp(cx - width / 2, 8, DETAIL_MAP_SIZE.width - width - 8),
+    y: clamp(cy - height / 2, 8, DETAIL_MAP_SIZE.height - height - 8),
+  };
+}
+
+function districtMetricCallout(feature, metric, project, selected) {
+  const code = String(feature.properties?.code || "");
+  const name = feature.properties?.name || code;
+  const [cx, cy] = projectedCentroid(feature.geometry, project);
+  const position = boundedCalloutPosition([cx, cy], DISTRICT_CALLOUT_W, DISTRICT_CALLOUT_H);
+  const foreign = makeSvgElement("foreignObject", {
+    x: position.x.toFixed(1),
+    y: position.y.toFixed(1),
+    width: DISTRICT_CALLOUT_W,
+    height: DISTRICT_CALLOUT_H,
+    class: "district-callout",
+    tabindex: "0",
+    "data-district-code": code,
+  });
+  const shell = document.createElement("div");
+  shell.className = `district-callout-shell ${selected ? "is-selected" : ""}`;
+  shell.innerHTML = `
+    <strong>${escapeHtml(name)}</strong>
+    <span>현재 ${priceWon(metric.actual_price)}</span>
+    <span>적정 ${priceWon(metric.fair_price_policy)}</span>
+  `;
+  foreign.append(shell);
+  foreign.addEventListener("click", () => openDistrictDetail(code));
+  foreign.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openDistrictDetail(code);
+    }
+  });
+  return foreign;
+}
+
+function addDistrictClip(svg, feature, project) {
+  const code = String(feature.properties?.code || "selected");
+  const clipId = `district-clip-${code}`;
+  const defs = makeSvgElement("defs");
+  const clip = makeSvgElement("clipPath", { id: clipId });
+  clip.append(makeSvgElement("path", { d: geometryPath(feature.geometry, project) }));
+  defs.append(clip);
+  svg.append(defs);
+  return clipId;
+}
+
+function drawGridLegend(svg, domain) {
+  if (!Number.isFinite(domain.min) || !Number.isFinite(domain.max)) return;
+  const group = makeSvgElement("g", { class: "district-map-legend", transform: "translate(24 656)" });
+  const title = makeSvgElement("text", { x: 0, y: -8, class: "district-map-legend-title" });
+  title.textContent = "격자 현재가";
+  group.append(title);
+
+  for (let index = 0; index < 6; index += 1) {
+    const value = domain.min + ((domain.max - domain.min) * index) / 5;
+    group.append(makeSvgElement("rect", {
+      x: String(index * 26),
+      y: "0",
+      width: "26",
+      height: "10",
+      fill: whiteRedScale(value, domain.min, domain.max),
+    }));
+  }
+
+  const minText = makeSvgElement("text", { x: 0, y: 28, class: "district-map-legend-label" });
+  minText.textContent = `최저 ${priceWon(domain.min)}`;
+  const maxText = makeSvgElement("text", { x: 156, y: 28, "text-anchor": "end", class: "district-map-legend-label" });
+  maxText.textContent = `최고 ${priceWon(domain.max)}`;
+  group.append(minText, maxText);
+  svg.append(group);
+}
+
 function makeSvgElement(tag, attrs = {}) {
   const el = document.createElementNS(SVG_NS, tag);
   Object.entries(attrs).forEach(([key, value]) => {
@@ -965,21 +1103,96 @@ function renderRegionDetailMap() {
 
   const districtFeatures = districtFeaturesForRegion();
   if (districtFeatures.length) {
-    const featureCollection = { type: "FeatureCollection", features: districtFeatures };
-    const project = projectionForBox(featureCollection, { x: 24, y: 24, width: 572, height: 672 }, 28);
+    const selectedDistrictFeature = districtFeatureByCode();
+    const featuresForView = selectedDistrictFeature ? [selectedDistrictFeature] : districtFeatures;
+    const featureCollection = { type: "FeatureCollection", features: featuresForView };
+    const project = projectionForBox(featureCollection, { x: 24, y: 24, width: 572, height: 672 }, selectedDistrictFeature ? 18 : 28);
     const pathLayer = makeSvgElement("g", { class: "district-layer" });
+    const calloutLayer = makeSvgElement("g", { class: "district-callout-layer" });
     const gridLayer = makeSvgElement("g", { class: "district-grid-layer" });
-    const labelLayer = makeSvgElement("g", { class: "district-label-layer" });
+    const stationLayer = makeSvgElement("g", { class: "district-station-layer" });
+
+    if (selectedDistrictFeature) {
+      const code = String(selectedDistrictFeature.properties?.code || "");
+      const name = selectedDistrictFeature.properties?.name || code;
+      const row = districtRowForCode(code) || {};
+      const metric = metricFor(row);
+      const clipId = addDistrictClip(svg, selectedDistrictFeature, project);
+      let gridDomainForLegend = null;
+      const basePath = makeSvgElement("path", {
+        d: geometryPath(selectedDistrictFeature.geometry, project),
+        class: "district-path is-selected is-zoomed",
+        fill: state.detailMode === "grids" ? "#f8fbfd" : districtFill(metric),
+        "data-district-code": code,
+        "aria-label": `${state.selectedRegion} ${name} 실제 ${won(metric.actual_price)}, 적정 ${won(metric.fair_price_policy)}`,
+      });
+      pathLayer.append(basePath);
+
+      if (state.detailMode === "grids") {
+        const rows = gridRowsForSelected().filter((rowItem) => rowItem.fuel === state.fuel);
+        const halfLon = coordinateStep(rows, "center_lon", 0.0055) / 2;
+        const halfLat = coordinateStep(rows, "center_lat", 0.0045) / 2;
+        const domain = gridColorDomain(rows);
+        gridDomainForLegend = domain;
+        gridLayer.setAttribute("clip-path", `url(#${clipId})`);
+        rows.forEach((rowItem) => {
+          const value = gridColorValue(rowItem);
+          const path = makeSvgElement("path", {
+            d: gridCellPath(rowItem, project, halfLon, halfLat),
+            class: "district-grid-cell",
+            fill: whiteRedScale(value, domain.min, domain.max),
+          });
+          const title = makeSvgElement("title");
+          title.textContent = `${rowItem.grid_id}: 현재 ${won(rowItem.actual_price)} / 적정 ${won(rowItem.fair_price_policy)} / 차이 ${signedWon(rowItem.gap_policy)}`;
+          path.append(title);
+          gridLayer.append(path);
+        });
+      } else {
+        stationLayer.setAttribute("clip-path", `url(#${clipId})`);
+        baseStations()
+          .filter(stationInSelectedScope)
+          .filter((station) => Number.isFinite(Number(station.lon)) && Number.isFinite(Number(station.lat)))
+          .forEach((station) => {
+            const [cx, cy] = project([Number(station.lon), Number(station.lat)]);
+            const circle = makeSvgElement("circle", {
+              cx: cx.toFixed(1),
+              cy: cy.toFixed(1),
+              r: "5.2",
+              class: `district-station-point ${judgeClass(station.judge_policy)}`,
+            });
+            const title = makeSvgElement("title");
+            title.textContent = `${station.name || station.station_id}: ${fuelLabel()} ${won(stationPrice(station))}`;
+            circle.append(title);
+            stationLayer.append(circle);
+          });
+      }
+
+      const boundaryPath = makeSvgElement("path", {
+        d: geometryPath(selectedDistrictFeature.geometry, project),
+        class: "district-boundary-path",
+        fill: "none",
+      });
+      const [cx, cy] = projectedCentroid(selectedDistrictFeature.geometry, project);
+      const label = makeSvgElement("text", {
+        x: cx.toFixed(1),
+        y: cy.toFixed(1),
+        "text-anchor": "middle",
+        class: "district-map-label is-selected is-zoomed",
+      });
+      label.textContent = name;
+      svg.append(pathLayer, gridLayer, stationLayer, boundaryPath, label);
+      if (gridDomainForLegend) drawGridLegend(svg, gridDomainForLegend);
+      return;
+    }
 
     districtFeatures.forEach((feature) => {
       const code = String(feature.properties?.code || "");
       const name = feature.properties?.name || code;
       const row = districtRowForCode(code) || {};
       const metric = metricFor(row);
-      const selected = code && code === String(state.selectedDistrictCode || "");
       const path = makeSvgElement("path", {
         d: geometryPath(feature.geometry, project),
-        class: `district-path ${selected ? "is-selected" : ""}`,
+        class: "district-path",
         fill: districtFill(metric),
         tabindex: "0",
         "data-district-code": code,
@@ -996,33 +1209,10 @@ function renderRegionDetailMap() {
         }
       });
       pathLayer.append(path);
-
-      const [cx, cy] = projectedCentroid(feature.geometry, project);
-      const label = makeSvgElement("text", {
-        x: cx.toFixed(1),
-        y: cy.toFixed(1),
-        "text-anchor": "middle",
-        class: `district-map-label ${selected ? "is-selected" : ""}`,
-      });
-      label.textContent = name;
-      labelLayer.append(label);
+      calloutLayer.append(districtMetricCallout(feature, metric, project, false));
     });
 
-    if (state.detailMode === "grids" && state.selectedDistrictCode) {
-      gridRowsForSelected()
-        .filter((row) => row.fuel === state.fuel)
-        .forEach((row) => {
-          const [cx, cy] = project([Number(row.center_lon), Number(row.center_lat)]);
-          gridLayer.append(makeSvgElement("circle", {
-            cx: cx.toFixed(1),
-            cy: cy.toFixed(1),
-            r: "4",
-            class: `district-grid-point ${gapToneClass(row.gap_policy)}`,
-          }));
-        });
-    }
-
-    svg.append(pathLayer, gridLayer, labelLayer);
+    svg.append(pathLayer, calloutLayer);
     return;
   }
 
