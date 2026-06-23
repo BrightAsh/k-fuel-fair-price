@@ -11,11 +11,17 @@ const state = {
   history: [],
   trainingCoverage: null,
   geojson: null,
+  districtGeojson: null,
+  districtDetail: null,
   historyLoading: true,
   stationsLoading: true,
   trainingCoverageLoading: true,
   geojsonLoading: true,
+  districtGeojsonLoading: true,
+  districtDataLoading: true,
   selectedRegion: null,
+  selectedDistrictCode: null,
+  detailMode: "stations",
   regionDetailEnabled: false,
 };
 
@@ -196,6 +202,15 @@ const TRAINING_COVERAGE_FALLBACK = {
   rows: [],
 };
 
+const DISTRICT_DETAIL_FALLBACK = {
+  schema_version: "district_detail_v1",
+  generated_at: null,
+  as_of_date: null,
+  source: null,
+  districts: [],
+  grids: [],
+};
+
 const CALLOUT_POSITIONS = {
   서울: { side: "left", x: 20, y: 38 },
   인천: { side: "left", x: 20, y: 122 },
@@ -341,10 +356,15 @@ function gapToneClass(gap) {
 function judgeClass(value, gap) {
   if (value === "적정") return "good";
   if (value === "비쌈" || value === "상향이탈") return "high";
-  if (value === "저렴" || value === "하향이탈") return "low";
+  if (value === "저렴" || value === "쌈" || value === "하향이탈") return "low";
   if (Number(gap) > 30) return "high";
   if (Number(gap) < -30) return "low";
   return "good";
+}
+
+function judgeLabel(value) {
+  if (value === "쌈") return "저렴";
+  return value || "-";
 }
 
 function canonicalRegionName(name) {
@@ -392,6 +412,50 @@ function rowForRegion(region) {
 
 function metricFor(row) {
   return row?.[state.fuel] || {};
+}
+
+function districtData() {
+  const data = state.districtDetail || DISTRICT_DETAIL_FALLBACK;
+  return {
+    ...DISTRICT_DETAIL_FALLBACK,
+    ...data,
+    districts: Array.isArray(data.districts) ? data.districts : [],
+    grids: Array.isArray(data.grids) ? data.grids : [],
+  };
+}
+
+function districtRowsForRegion(region = state.selectedRegion) {
+  return districtData().districts
+    .filter((row) => row.region === region)
+    .sort((a, b) => String(a.district_name || "").localeCompare(String(b.district_name || ""), "ko-KR"));
+}
+
+function districtRowForCode(code = state.selectedDistrictCode) {
+  if (!code) return null;
+  return districtData().districts.find((row) => String(row.district_code) === String(code)) || null;
+}
+
+function selectedDistrictName() {
+  return districtRowForCode()?.district_name || "";
+}
+
+function districtFeaturesForRegion(region = state.selectedRegion) {
+  return (state.districtGeojson?.features || [])
+    .filter((feature) => canonicalRegionName(feature.properties?.region) === region);
+}
+
+function districtFeatureByCode(code = state.selectedDistrictCode) {
+  if (!code) return null;
+  return (state.districtGeojson?.features || [])
+    .find((feature) => String(feature.properties?.code) === String(code)) || null;
+}
+
+function activeDetailRow() {
+  return districtRowForCode() || rowForRegion(state.selectedRegion);
+}
+
+function activeDetailMetric() {
+  return metricFor(activeDetailRow());
 }
 
 function activeFuel() {
@@ -714,6 +778,34 @@ function geometryPath(geometry, project) {
   return "";
 }
 
+function pointInRing(lon, lat, ring) {
+  let inside = false;
+  let j = ring.length - 1;
+  for (let i = 0; i < ring.length; i += 1) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    const intersects = (yi > lat) !== (yj > lat)
+      && lon < ((xj - xi) * (lat - yi)) / ((yj - yi) || 1e-12) + xi;
+    if (intersects) inside = !inside;
+    j = i;
+  }
+  return inside;
+}
+
+function pointInPolygon(lon, lat, polygon) {
+  if (!polygon?.length || !pointInRing(lon, lat, polygon[0])) return false;
+  return !polygon.slice(1).some((ring) => pointInRing(lon, lat, ring));
+}
+
+function pointInGeometry(lon, lat, geometry) {
+  if (!Number.isFinite(Number(lon)) || !Number.isFinite(Number(lat)) || !geometry) return false;
+  if (geometry.type === "Polygon") return pointInPolygon(Number(lon), Number(lat), geometry.coordinates);
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.some((polygon) => pointInPolygon(Number(lon), Number(lat), polygon));
+  }
+  return false;
+}
+
 function projectedCentroid(geometry, project) {
   const points = geometryCoordinates(geometry).map(project);
   if (!points.length) return [MAP_SIZE.width / 2, MAP_SIZE.height / 2];
@@ -848,9 +940,85 @@ function selectedFeature() {
   return state.geojson?.features?.find((feature) => canonicalRegionName(feature.properties?.name) === state.selectedRegion);
 }
 
+function districtFill(metric) {
+  if (!metric || metric.actual_price === null || metric.actual_price === undefined) return "#eef2f7";
+  const klass = judgeClass(metric.judge_policy, metric.gap_policy);
+  if (klass === "high") return "#f2aaa5";
+  if (klass === "low") return "#9bd8f6";
+  return "#9ddfbf";
+}
+
 function renderRegionDetailMap() {
   const svg = document.getElementById("region-detail-map");
   svg.innerHTML = "";
+
+  if (state.districtGeojsonLoading) {
+    drawSvgLoading(svg, 620, 720, "시군구 경계 데이터를 불러오는 중입니다");
+    return;
+  }
+
+  const districtFeatures = districtFeaturesForRegion();
+  if (districtFeatures.length) {
+    const featureCollection = { type: "FeatureCollection", features: districtFeatures };
+    const project = projectionForBox(featureCollection, { x: 24, y: 24, width: 572, height: 672 }, 28);
+    const pathLayer = makeSvgElement("g", { class: "district-layer" });
+    const gridLayer = makeSvgElement("g", { class: "district-grid-layer" });
+    const labelLayer = makeSvgElement("g", { class: "district-label-layer" });
+
+    districtFeatures.forEach((feature) => {
+      const code = String(feature.properties?.code || "");
+      const name = feature.properties?.name || code;
+      const row = districtRowForCode(code) || {};
+      const metric = metricFor(row);
+      const selected = code && code === String(state.selectedDistrictCode || "");
+      const path = makeSvgElement("path", {
+        d: geometryPath(feature.geometry, project),
+        class: `district-path ${selected ? "is-selected" : ""}`,
+        fill: districtFill(metric),
+        tabindex: "0",
+        "data-district-code": code,
+        "aria-label": `${state.selectedRegion} ${name} 실제 ${won(metric.actual_price)}, 적정 ${won(metric.fair_price_policy)}`,
+      });
+      const title = makeSvgElement("title");
+      title.textContent = `${name}: 실제 ${won(metric.actual_price)} / 적정 ${won(metric.fair_price_policy)}`;
+      path.append(title);
+      path.addEventListener("click", () => openDistrictDetail(code));
+      path.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openDistrictDetail(code);
+        }
+      });
+      pathLayer.append(path);
+
+      const [cx, cy] = projectedCentroid(feature.geometry, project);
+      const label = makeSvgElement("text", {
+        x: cx.toFixed(1),
+        y: cy.toFixed(1),
+        "text-anchor": "middle",
+        class: `district-map-label ${selected ? "is-selected" : ""}`,
+      });
+      label.textContent = name;
+      labelLayer.append(label);
+    });
+
+    if (state.detailMode === "grids" && state.selectedDistrictCode) {
+      gridRowsForSelected()
+        .filter((row) => row.fuel === state.fuel)
+        .forEach((row) => {
+          const [cx, cy] = project([Number(row.center_lon), Number(row.center_lat)]);
+          gridLayer.append(makeSvgElement("circle", {
+            cx: cx.toFixed(1),
+            cy: cy.toFixed(1),
+            r: "4",
+            class: `district-grid-point ${gapToneClass(row.gap_policy)}`,
+          }));
+        });
+    }
+
+    svg.append(pathLayer, gridLayer, labelLayer);
+    return;
+  }
 
   const feature = selectedFeature();
   if (!feature) {
@@ -893,22 +1061,28 @@ function renderRegionDetail() {
     return;
   }
 
-  const row = rowForRegion(state.selectedRegion);
+  const row = activeDetailRow();
   const metric = metricFor(row);
   const klass = judgeClass(metric.judge_policy, metric.gap_policy);
   const data = state.national || FALLBACK_NATIONAL;
+  const districtName = selectedDistrictName();
+  const scopeLabel = districtName ? `${state.selectedRegion} ${districtName}` : state.selectedRegion;
+  const modeLabel = state.detailMode === "grids" ? "격자" : "주유소";
 
-  document.getElementById("region-detail-title").textContent = `${state.selectedRegion} ${state.fuel === "gasoline" ? "휘발유" : "경유"}`;
+  document.getElementById("region-detail-title").textContent = `${scopeLabel} ${state.fuel === "gasoline" ? "휘발유" : "경유"}`;
   document.getElementById("region-detail-date").textContent = data.as_of_date || "-";
   document.getElementById("region-detail-actual").textContent = won(metric.actual_price);
   document.getElementById("region-detail-fair").textContent = won(metric.fair_price_policy);
   document.getElementById("region-detail-gap").textContent = signedWon(metric.gap_policy);
-  document.getElementById("region-detail-judge").innerHTML = `<span class="badge ${klass}">${escapeHtml(metric.judge_policy || "-")}</span>`;
-  document.getElementById("region-station-title").textContent = `${state.selectedRegion} 주유소`;
+  document.getElementById("region-detail-judge").innerHTML = `<span class="badge ${klass}">${escapeHtml(judgeLabel(metric.judge_policy))}</span>`;
+  document.getElementById("region-station-title").textContent = `${scopeLabel} ${modeLabel}`;
+  document.getElementById("region-detail-search-label").textContent = state.detailMode === "grids" ? "격자 검색" : "주유소 검색";
+  document.getElementById("region-station-search").placeholder = state.detailMode === "grids" ? "격자 ID" : "주유소명, 브랜드, 주소";
 
   updateRegionDetailTab();
+  updateDetailModeButtons();
   renderRegionDetailMap();
-  renderRegionStations();
+  renderRegionDetailItems();
 }
 
 function stationMatches(station, query) {
@@ -932,17 +1106,65 @@ function stationCard(station) {
   `;
 }
 
-function renderRegionStations() {
+function stationInSelectedScope(station) {
+  if (canonicalRegionName(station.region) !== state.selectedRegion) return false;
+  const feature = districtFeatureByCode();
+  if (!feature) return true;
+  return pointInGeometry(station.lon, station.lat, feature.geometry);
+}
+
+function gridRowsForSelected() {
+  return districtData().grids
+    .filter((row) => row.region === state.selectedRegion)
+    .filter((row) => !state.selectedDistrictCode || String(row.district_code) === String(state.selectedDistrictCode));
+}
+
+function gridCard(row) {
+  return `
+    <article class="station-card grid-card">
+      <strong>${escapeHtml(row.grid_id || "-")}</strong>
+      <span>${escapeHtml(row.district_name || row.region || "-")} · 주유소 ${formatCount(row.station_count)}개</span>
+      <span>현재가 ${won(row.actual_price)} · 적정가 ${won(row.fair_price_policy)}</span>
+      <span>차이 <b class="${gapToneClass(row.gap_policy)}">${signedWon(row.gap_policy)}</b> · ${escapeHtml(judgeLabel(row.judge_policy))}</span>
+    </article>
+  `;
+}
+
+function updateDetailModeButtons() {
+  document.querySelectorAll(".detail-mode-button").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.detailMode === state.detailMode);
+  });
+}
+
+function renderRegionDetailItems() {
   const input = document.getElementById("region-station-search");
   const query = input.value.trim().toLowerCase();
-  const rows = baseStations()
-    .filter((station) => canonicalRegionName(station.region) === state.selectedRegion)
-    .filter((station) => stationMatches(station, query))
-    .slice(0, 24);
 
-  document.getElementById("region-station-count").textContent = `${rows.length}개`;
+  if (state.detailMode === "grids") {
+    if (state.districtDataLoading && !districtData().grids.length) {
+      document.getElementById("region-station-count").textContent = "불러오는 중";
+      document.getElementById("region-station-results").innerHTML = `<div class="empty-state">격자 데이터를 불러오는 중입니다</div>`;
+      return;
+    }
+
+    const rows = gridRowsForSelected()
+      .filter((row) => row.fuel === state.fuel)
+      .filter((row) => !query || String(row.grid_id || "").toLowerCase().includes(query))
+      .sort((a, b) => Math.abs(Number(b.gap_policy || 0)) - Math.abs(Number(a.gap_policy || 0)));
+    document.getElementById("region-station-count").textContent = `${rows.length.toLocaleString("ko-KR")}개`;
+    document.getElementById("region-station-results").innerHTML = rows.length
+      ? rows.slice(0, 80).map((row) => gridCard(row)).join("")
+      : `<div class="empty-state">해당 조건의 격자 데이터가 없습니다</div>`;
+    return;
+  }
+
+  const rows = baseStations()
+    .filter(stationInSelectedScope)
+    .filter((station) => stationMatches(station, query));
+
+  document.getElementById("region-station-count").textContent = `${rows.length.toLocaleString("ko-KR")}개`;
   document.getElementById("region-station-results").innerHTML = rows.length
-    ? rows.map((station) => stationCard(station)).join("")
+    ? rows.slice(0, 80).map((station) => stationCard(station)).join("")
     : `<div class="empty-state">해당 지역 주유소 데이터가 없습니다</div>`;
 }
 
@@ -1549,6 +1771,8 @@ function clearRegionHash() {
 
 function clearRegionSelection(updateUrl = true) {
   state.selectedRegion = null;
+  state.selectedDistrictCode = null;
+  state.detailMode = "stations";
   state.regionDetailEnabled = false;
 
   const regionSearch = document.getElementById("region-station-search");
@@ -1564,13 +1788,25 @@ function clearRegionSelection(updateUrl = true) {
 function openRegionDetail(region) {
   if (!region) return;
   state.selectedRegion = canonicalRegionName(region);
+  state.selectedDistrictCode = null;
+  state.detailMode = "stations";
   state.regionDetailEnabled = true;
+  const regionSearch = document.getElementById("region-station-search");
+  if (regionSearch) regionSearch.value = "";
   updateRegionDetailTab();
   renderRegions();
   renderMap();
   renderRegionDetail();
   activatePanel("region-detail");
   clearRegionHash();
+}
+
+function openDistrictDetail(code) {
+  if (!code) return;
+  state.selectedDistrictCode = String(code);
+  const regionSearch = document.getElementById("region-station-search");
+  if (regionSearch) regionSearch.value = "";
+  renderRegionDetail();
 }
 
 function render() {
@@ -1587,6 +1823,18 @@ function render() {
 }
 
 async function loadDeferredData() {
+  loadJson("./public/assets/korea-districts.geojson", null).then((geojson) => {
+    state.districtGeojson = geojson;
+    state.districtGeojsonLoading = false;
+    renderRegionDetail();
+  });
+
+  loadJson("./public/data/latest/district_detail.json", DISTRICT_DETAIL_FALLBACK).then((districtDetail) => {
+    state.districtDetail = districtDetail;
+    state.districtDataLoading = false;
+    renderRegionDetail();
+  });
+
   loadJson("./public/data/latest/station_search_index.json", FALLBACK_STATIONS).then((stations) => {
     state.stations = stations;
     state.stationsLoading = false;
@@ -1631,7 +1879,7 @@ async function boot() {
   document.querySelectorAll(".fuel-button").forEach((button) => {
     button.addEventListener("click", () => {
       state.fuel = button.dataset.fuel;
-      document.querySelectorAll(".fuel-button").forEach((item) => item.classList.toggle("is-active", item === button));
+      document.querySelectorAll(".fuel-button").forEach((item) => item.classList.toggle("is-active", item.dataset.fuel === state.fuel));
       render();
     });
   });
@@ -1654,7 +1902,15 @@ async function boot() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  document.getElementById("region-station-search")?.addEventListener("input", renderRegionStations);
+  document.getElementById("region-station-search")?.addEventListener("input", renderRegionDetailItems);
+  document.querySelectorAll(".detail-mode-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.detailMode = button.dataset.detailMode || "stations";
+      const regionSearch = document.getElementById("region-station-search");
+      if (regionSearch) regionSearch.value = "";
+      renderRegionDetail();
+    });
+  });
   ["trend-fuel", "trend-region", "trend-start", "trend-end"].forEach((id) => {
     document.getElementById(id)?.addEventListener("change", renderTrend);
   });

@@ -131,7 +131,13 @@
                   <p>Selected region</p>
                   <h2 id="region-detail-title">지역 상세</h2>
                 </div>
-                <span id="region-detail-date">-</span>
+                <div class="region-detail-heading-tools">
+                  <div class="segmented-control region-detail-fuel-switch" aria-label="상세 유종 선택">
+                    <button class="fuel-button is-active" type="button" data-fuel="gasoline">휘발유</button>
+                    <button class="fuel-button" type="button" data-fuel="diesel">경유</button>
+                  </div>
+                  <span id="region-detail-date">-</span>
+                </div>
               </div>
 
               <div class="region-detail-summary">
@@ -167,9 +173,13 @@
                 <span id="region-station-count">-</span>
               </div>
               <label class="local-search">
-                <span>주유소 검색</span>
+                <span id="region-detail-search-label">주유소 검색</span>
                 <input id="region-station-search" type="search" placeholder="주유소명, 브랜드, 주소" autocomplete="off" />
               </label>
+              <div class="detail-mode-switch" aria-label="지역 상세 보기 방식">
+                <button class="detail-mode-button is-active" type="button" data-detail-mode="stations">주유소</button>
+                <button class="detail-mode-button" type="button" data-detail-mode="grids">격자</button>
+              </div>
               <div id="region-station-results" class="station-results region-station-results"></div>
             </aside>
           </div>

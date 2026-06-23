@@ -1,18 +1,20 @@
 {
   "schema_version": "page_data_v1",
   "as_of_date": "2026-06-23",
-  "generated_at": "2026-06-23T10:19:34+09:00",
+  "generated_at": "2026-06-23T14:00:54+09:00",
   "freshness": "fresh",
   "files": [
     "national_today.json",
     "region_today.json",
+    "district_detail.json",
     "station_search_index.json",
     "price_history.json",
     "training_data_coverage.json",
     "external_data_status.json"
   ],
   "assets": [
-    "korea-provinces.geojson"
+    "korea-provinces.geojson",
+    "korea-districts.geojson"
   ],
   "source": {
     "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",

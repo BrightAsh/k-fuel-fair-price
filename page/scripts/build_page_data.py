@@ -32,6 +32,26 @@ AI_WEB_OUTPUT_DIRS = [
     Path("ai-model/06_web_operational_dataset_build/outputs/web"),
     Path("ai-model/05_full_grid_prediction_for_web/outputs"),
 ]
+DISTRICT_ASSET_PATH = Path("page/public/assets/korea-districts.geojson")
+DISTRICT_REGION_BY_PREFIX = {
+    "11": "\uc11c\uc6b8",
+    "21": "\ubd80\uc0b0",
+    "22": "\ub300\uad6c",
+    "23": "\uc778\ucc9c",
+    "24": "\uad11\uc8fc",
+    "25": "\ub300\uc804",
+    "26": "\uc6b8\uc0b0",
+    "29": "\uc138\uc885",
+    "31": "\uacbd\uae30",
+    "32": "\uac15\uc6d0",
+    "33": "\ucda9\ubd81",
+    "34": "\ucda9\ub0a8",
+    "35": "\uc804\ubd81",
+    "36": "\uc804\ub0a8",
+    "37": "\uacbd\ubd81",
+    "38": "\uacbd\ub0a8",
+    "39": "\uc81c\uc8fc",
+}
 
 TRAINING_COVERAGE_DATASETS = {
     "grid_panel_rows": {
@@ -716,7 +736,209 @@ def build_training_data_coverage(repo_root: Path) -> dict[str, Any]:
     }
 
 
-def build_external_data_status(repo_root: Path, output_dir: Path, national: dict[str, Any], region: list[dict[str, Any]], stations: list[dict[str, Any]], history: list[dict[str, Any]]) -> dict[str, Any]:
+def point_in_ring(lon: float, lat: float, ring: list[list[float]]) -> bool:
+    inside = False
+    if len(ring) < 3:
+        return False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        xi, yi = ring[i][0], ring[i][1]
+        xj, yj = ring[j][0], ring[j][1]
+        intersects = (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / ((yj - yi) or 1e-12) + xi
+        if intersects:
+            inside = not inside
+        j = i
+    return inside
+
+
+def point_in_polygon(lon: float, lat: float, polygon: list[list[list[float]]]) -> bool:
+    if not polygon or not point_in_ring(lon, lat, polygon[0]):
+        return False
+    return not any(point_in_ring(lon, lat, hole) for hole in polygon[1:])
+
+
+def point_in_geometry(lon: float, lat: float, geometry: dict[str, Any]) -> bool:
+    if geometry.get("type") == "Polygon":
+        return point_in_polygon(lon, lat, geometry.get("coordinates", []))
+    if geometry.get("type") == "MultiPolygon":
+        return any(point_in_polygon(lon, lat, polygon) for polygon in geometry.get("coordinates", []))
+    return False
+
+
+def geometry_bbox(geometry: dict[str, Any]) -> tuple[float, float, float, float]:
+    coords: list[list[float]] = []
+
+    def walk(value: Any) -> None:
+        if isinstance(value, list) and len(value) >= 2 and isinstance(value[0], (int, float)) and isinstance(value[1], (int, float)):
+            coords.append(value)
+            return
+        if isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(geometry.get("coordinates", []))
+    if not coords:
+        return (0.0, 0.0, 0.0, 0.0)
+    lons = [float(point[0]) for point in coords]
+    lats = [float(point[1]) for point in coords]
+    return (min(lons), min(lats), max(lons), max(lats))
+
+
+def load_district_features(repo_root: Path) -> list[dict[str, Any]]:
+    path = repo_root / DISTRICT_ASSET_PATH
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    features: list[dict[str, Any]] = []
+    for feature in data.get("features", []):
+        props = feature.setdefault("properties", {})
+        code = str(props.get("code") or "")
+        region = props.get("region") or DISTRICT_REGION_BY_PREFIX.get(code[:2])
+        name = to_text(props.get("name"))
+        if not code or not region or not name:
+            continue
+        feature["_bbox"] = geometry_bbox(feature.get("geometry", {}))
+        props["region"] = region
+        props["name"] = name
+        features.append(feature)
+    return features
+
+
+def assign_district(lon: float | None, lat: float | None, region: str | None, features_by_region: dict[str, list[dict[str, Any]]]) -> dict[str, Any] | None:
+    if lon is None or lat is None or not region:
+        return None
+    for feature in features_by_region.get(region, []):
+        min_lon, min_lat, max_lon, max_lat = feature.get("_bbox", (0.0, 0.0, 0.0, 0.0))
+        if lon < min_lon or lon > max_lon or lat < min_lat or lat > max_lat:
+            continue
+        if point_in_geometry(lon, lat, feature.get("geometry", {})):
+            return feature.get("properties", {})
+    return None
+
+
+def build_district_detail(repo_root: Path, as_of_date: str | None) -> dict[str, Any]:
+    generated_at = datetime.now(KST).isoformat(timespec="seconds")
+    features = load_district_features(repo_root)
+    features_by_region: dict[str, list[dict[str, Any]]] = {}
+    for feature in features:
+        features_by_region.setdefault(str(feature["properties"]["region"]), []).append(feature)
+
+    latest_grid = read_ai_web_csv(repo_root, "web_latest_grid_predictions.csv", as_of_date)
+    source = ai_web_source(repo_root, "web_latest_grid_predictions.csv")
+    if latest_grid is None or latest_grid.empty or not features:
+        return {
+            "schema_version": "district_detail_v1",
+            "generated_at": generated_at,
+            "as_of_date": as_of_date,
+            "source": source,
+            "districts": [],
+            "grids": [],
+        }
+
+    work = latest_grid.copy()
+    date_col = "source_date" if "source_date" in work.columns else "date" if "date" in work.columns else None
+    if date_col:
+        latest_date = work[date_col].max()
+        work = work[work[date_col] == latest_date]
+        resolved_date = pd.Timestamp(latest_date).strftime("%Y-%m-%d")
+    else:
+        resolved_date = as_of_date
+
+    district_codes: list[str | None] = []
+    district_names: list[str | None] = []
+    for _, row in work.iterrows():
+        district = assign_district(
+            to_float(row.get("center_lon")),
+            to_float(row.get("center_lat")),
+            to_text(row.get("region")),
+            features_by_region,
+        )
+        district_codes.append(to_text(district.get("code")) if district else None)
+        district_names.append(to_text(district.get("name")) if district else None)
+
+    work["district_code"] = district_codes
+    work["district_name"] = district_names
+    mapped = work.dropna(subset=["district_code", "district_name"]).copy()
+
+    grids: list[dict[str, Any]] = []
+    for _, row in mapped.iterrows():
+        actual = to_float(row.get("actual_price"))
+        fair = to_float(row.get("fair_price_policy"))
+        low = to_float(row.get("band_low_policy"))
+        high = to_float(row.get("band_high_policy"))
+        grids.append({
+            "source_date": resolved_date,
+            "feature_date": pd.Timestamp(row.get("feature_date")).strftime("%Y-%m-%d") if pd.notna(row.get("feature_date")) else None,
+            "fuel": to_text(row.get("fuel")),
+            "grid_id": to_text(row.get("grid_id")),
+            "region": to_text(row.get("region")),
+            "district_code": to_text(row.get("district_code")),
+            "district_name": to_text(row.get("district_name")),
+            "center_lon": to_float(row.get("center_lon")),
+            "center_lat": to_float(row.get("center_lat")),
+            "station_count": to_float(row.get("station_count")),
+            "actual_price": actual,
+            "fair_price_policy": fair,
+            "band_low_policy": low,
+            "band_high_policy": high,
+            "gap_policy": to_float(row.get("gap_policy")) if pd.notna(row.get("gap_policy")) else (actual - fair if actual is not None and fair is not None else None),
+            "judge_policy": to_text(row.get("judge_policy")) or judge_from_prices(actual, low, high, fair),
+            "source": source,
+        })
+
+    district_rows: dict[tuple[str, str], dict[str, Any]] = {}
+    for feature in features:
+        props = feature["properties"]
+        key = (str(props["region"]), str(props["code"]))
+        district_rows[key] = {
+            "region": props["region"],
+            "district_code": props["code"],
+            "district_name": props["name"],
+        }
+
+    if not mapped.empty:
+        for (region, code, name, fuel), part in mapped.groupby(["region", "district_code", "district_name", "fuel"], sort=True):
+            weights = pd.to_numeric(part.get("station_count", pd.Series(dtype=float)), errors="coerce").fillna(0)
+            if not weights.gt(0).any():
+                weights = pd.Series(1.0, index=part.index)
+            actual = weighted_average(part.get("actual_price", pd.Series(dtype=float)), weights)
+            fair = weighted_average(part.get("fair_price_policy", pd.Series(dtype=float)), weights)
+            low = weighted_average(part.get("band_low_policy", pd.Series(dtype=float)), weights)
+            high = weighted_average(part.get("band_high_policy", pd.Series(dtype=float)), weights)
+            key = (str(region), str(code))
+            district_rows.setdefault(key, {"region": region, "district_code": code, "district_name": name})
+            district_rows[key][fuel] = {
+                "actual_price": actual,
+                "fair_price_policy": fair,
+                "band_low_policy": low,
+                "band_high_policy": high,
+                "gap_policy": actual - fair if actual is not None and fair is not None else None,
+                "judge_policy": judge_from_prices(actual, low, high, fair),
+                "source_date": resolved_date,
+                "station_count": to_float(weights.sum()),
+                "grid_count": int(len(part)),
+                "source": source,
+            }
+
+    return {
+        "schema_version": "district_detail_v1",
+        "generated_at": generated_at,
+        "as_of_date": resolved_date,
+        "source": source,
+        "districts": sorted(district_rows.values(), key=lambda item: (str(item.get("region")), str(item.get("district_name")))),
+        "grids": sorted(grids, key=lambda item: (str(item.get("region")), str(item.get("district_name")), str(item.get("fuel")), str(item.get("grid_id")))),
+    }
+
+
+def build_external_data_status(
+    repo_root: Path,
+    output_dir: Path,
+    national: dict[str, Any],
+    region: list[dict[str, Any]],
+    stations: list[dict[str, Any]],
+    history: list[dict[str, Any]],
+    district_detail: dict[str, Any],
+) -> dict[str, Any]:
     generated_at = datetime.now(KST).isoformat(timespec="seconds")
     history_min, history_max = history_extent(history)
     national_date = national.get("as_of_date")
@@ -772,6 +994,16 @@ def build_external_data_status(repo_root: Path, output_dir: Path, national: dict
                 "date_max": national_date,
                 "path": "page/manual_inputs/station_search_index.csv",
                 "note": "주유소명, 주소, 좌표, 현재가를 담는 공개 검색 인덱스입니다.",
+            },
+            {
+                "id": "district_detail",
+                "label": "시군구 상세 지도",
+                "status": "connected" if district_detail.get("districts") else "waiting",
+                "rows": len(district_detail.get("districts", [])),
+                "date_min": district_detail.get("as_of_date"),
+                "date_max": district_detail.get("as_of_date"),
+                "path": "page/public/data/latest/district_detail.json",
+                "note": "시도 클릭 후 시군구 경계, 가격 요약, 격자 상세를 표시하는 데이터입니다.",
             },
             {
                 "id": "manual_price_history",
@@ -878,6 +1110,7 @@ def main() -> None:
     resolved_as_of_date = args.as_of_date or national.get("as_of_date")
     region = build_region(repo_root)
     stations = build_station_index(repo_root)
+    district_detail = build_district_detail(repo_root, resolved_as_of_date)
     history = build_price_history(repo_root, resolved_as_of_date)
     existing_history_path = output_dir / "price_history.json"
     ai_history_path = ai_web_path(repo_root, "web_price_history_region.csv")
@@ -890,7 +1123,7 @@ def main() -> None:
             pass
     history = trim_history(history, resolved_as_of_date, args.history_years)
     training_coverage = build_training_data_coverage(repo_root)
-    external_status = build_external_data_status(repo_root, output_dir, national, region, stations, history)
+    external_status = build_external_data_status(repo_root, output_dir, national, region, stations, history, district_detail)
     ai_region_source = ai_web_source(repo_root, "web_region_today.csv")
     ai_region_path = ai_web_path(repo_root, "web_region_today.csv")
 
@@ -902,6 +1135,7 @@ def main() -> None:
         "files": [
             "national_today.json",
             "region_today.json",
+            "district_detail.json",
             "station_search_index.json",
             "price_history.json",
             "training_data_coverage.json",
@@ -909,6 +1143,7 @@ def main() -> None:
         ],
         "assets": [
             "korea-provinces.geojson",
+            "korea-districts.geojson",
         ],
         "source": {
             "national": "data-analysis/05_policy_application/outputs + data-analysis/01_data_preprocessing/outputs",
@@ -919,6 +1154,7 @@ def main() -> None:
 
     write_json(output_dir / "national_today.json", national)
     write_json(output_dir / "region_today.json", region)
+    write_json(output_dir / "district_detail.json", district_detail)
     write_json(output_dir / "station_search_index.json", stations)
     write_json(output_dir / "price_history.json", history)
     write_json(output_dir / "training_data_coverage.json", training_coverage)
@@ -928,6 +1164,7 @@ def main() -> None:
     print(f"[SAVE] {output_dir}")
     print(f"[INFO] as_of_date={manifest['as_of_date']} freshness={manifest['freshness']}")
     print(f"[INFO] regions={len(region):,} stations={len(stations):,}")
+    print(f"[INFO] districts={len(district_detail.get('districts', [])):,} district_grids={len(district_detail.get('grids', [])):,}")
     print(f"[INFO] history={len(history):,}")
 
 
