@@ -1,6 +1,8 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 const NATIONAL_REGION = "\uC804\uAD6D";
 const DEFAULT_TREND_YEARS = 1;
+const TREND_CHART_SIZE = { width: 1120, height: 660 };
+const TREND_HOVER_DEFAULT = "그래프 위에 커서를 올리면 해당 날짜의 실제가격, 적정가격, 적정가격대와 판정이 표시됩니다.";
 
 const state = {
   fuel: "gasoline",
@@ -1658,21 +1660,70 @@ function actualSegmentTone(leftRow, rightRow) {
   return left;
 }
 
+function trendJudgementText(row) {
+  const tone = actualRangeTone(row);
+  if (tone === "over") return "비쌈";
+  if (tone === "under") return "저렴";
+  if (numberValue(row.actual_price) !== null && numberValue(row.band_low_policy) !== null && numberValue(row.band_high_policy) !== null) return "적정";
+
+  const actual = numberValue(row.actual_price);
+  const fair = numberValue(row.fair_price_policy);
+  if (actual === null || fair === null) return "-";
+  if (actual > fair) return "비쌈";
+  if (actual < fair) return "저렴";
+  return "적정";
+}
+
+function renderTrendHoverDetail(row = null) {
+  const detail = document.getElementById("trend-hover-detail");
+  if (!detail) return;
+  if (!row) {
+    detail.textContent = TREND_HOVER_DEFAULT;
+    return;
+  }
+
+  const low = numberValue(row.band_low_policy);
+  const high = numberValue(row.band_high_policy);
+  const range = low === null || high === null ? "-" : `${won(low)} ~ ${won(high)}`;
+  detail.innerHTML = [
+    ["날짜", row.date || "-"],
+    ["판정", trendJudgementText(row)],
+    ["실제가격", won(row.actual_price)],
+    ["적정가격", won(row.fair_price_policy)],
+    ["적정가격대", range],
+  ].map(([label, value]) => `<span>${escapeHtml(label)}<strong>${escapeHtml(value)}</strong></span>`).join("");
+}
+
+function monthTickRows(rows) {
+  const ticks = [];
+  let previousMonth = "";
+  rows.forEach((row, index) => {
+    const month = String(row.date || "").slice(0, 7);
+    if (!month || month === previousMonth) return;
+    ticks.push({ index, month });
+    previousMonth = month;
+  });
+  return ticks;
+}
+
 function drawTrendChart(rows) {
   const svg = document.getElementById("price-trend-chart");
   if (!svg) return;
   svg.innerHTML = "";
+  svg.setAttribute("viewBox", `0 0 ${TREND_CHART_SIZE.width} ${TREND_CHART_SIZE.height}`);
 
   if (!rows.length) {
-    const text = makeSvgElement("text", { x: "460", y: "240", "text-anchor": "middle", class: "chart-empty" });
+    renderTrendHoverDetail(null);
+    const text = makeSvgElement("text", { x: TREND_CHART_SIZE.width / 2, y: TREND_CHART_SIZE.height / 2, "text-anchor": "middle", class: "chart-empty" });
     text.textContent = "선택한 조건의 가격 데이터가 없습니다";
     svg.append(text);
     return;
   }
 
-  const width = 920;
-  const height = 480;
-  const margin = { left: 74, right: 30, top: 70, bottom: 64 };
+  renderTrendHoverDetail(null);
+  const width = TREND_CHART_SIZE.width;
+  const height = TREND_CHART_SIZE.height;
+  const margin = { left: 82, right: 34, top: 74, bottom: 98 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
   const values = rows.flatMap((row) => [
@@ -1682,7 +1733,7 @@ function drawTrendChart(rows) {
     numberValue(row.band_high_policy),
   ]).filter((value) => value !== null);
   if (!values.length) {
-    const text = makeSvgElement("text", { x: "460", y: "240", "text-anchor": "middle", class: "chart-empty" });
+    const text = makeSvgElement("text", { x: width / 2, y: height / 2, "text-anchor": "middle", class: "chart-empty" });
     text.textContent = "가격 숫자 데이터가 없습니다";
     svg.append(text);
     return;
@@ -1694,6 +1745,17 @@ function drawTrendChart(rows) {
   const high = maxValue + padding;
   const xFor = (index) => margin.left + (rows.length === 1 ? chartWidth / 2 : (chartWidth * index) / (rows.length - 1));
   const yFor = (value) => margin.top + ((high - Number(value)) / Math.max(1, high - low)) * chartHeight;
+
+  const monthTicks = monthTickRows(rows);
+  const monthLabelStep = Math.max(1, Math.ceil(monthTicks.length / 18));
+  monthTicks.forEach((tick, tickIndex) => {
+    const x = xFor(tick.index);
+    svg.append(makeSvgElement("line", { x1: x, y1: margin.top, x2: x, y2: margin.top + chartHeight, class: "chart-month-grid" }));
+    if (tickIndex % monthLabelStep !== 0 && tickIndex !== monthTicks.length - 1) return;
+    const label = makeSvgElement("text", { x, y: height - 48, "text-anchor": "middle", class: "chart-axis" });
+    label.textContent = tick.month;
+    svg.append(label);
+  });
 
   for (let i = 0; i <= 4; i += 1) {
     const y = margin.top + (chartHeight * i) / 4;
@@ -1765,7 +1827,7 @@ function drawTrendChart(rows) {
     { x: margin.left, text: firstDate, anchor: "start" },
     { x: width - margin.right, text: lastDate, anchor: "end" },
   ].forEach((item) => {
-    const text = makeSvgElement("text", { x: item.x, y: height - 22, "text-anchor": item.anchor, class: "chart-axis" });
+    const text = makeSvgElement("text", { x: item.x, y: height - 20, "text-anchor": item.anchor, class: "chart-axis" });
     text.textContent = item.text;
     svg.append(text);
   });
@@ -1790,13 +1852,71 @@ function drawTrendChart(rows) {
     text.textContent = item.text;
     svg.append(text);
   });
+
+  const hoverLayer = makeSvgElement("g", { class: "chart-hover-layer", opacity: "0" });
+  const hoverLine = makeSvgElement("line", { y1: margin.top, y2: margin.top + chartHeight, class: "chart-hover-line" });
+  const actualPoint = makeSvgElement("circle", { r: 5, class: "chart-hover-point chart-hover-point-actual" });
+  const fairPoint = makeSvgElement("circle", { r: 5, class: "chart-hover-point chart-hover-point-fair" });
+  hoverLayer.append(hoverLine, actualPoint, fairPoint);
+  svg.append(hoverLayer);
+
+  const hitArea = makeSvgElement("rect", {
+    x: margin.left,
+    y: margin.top,
+    width: chartWidth,
+    height: chartHeight,
+    class: "chart-hit-area",
+  });
+  const updateHover = (event) => {
+    const rect = svg.getBoundingClientRect();
+    const pointerX = ((event.clientX - rect.left) / Math.max(1, rect.width)) * width;
+    const index = Math.max(0, Math.min(rows.length - 1, Math.round(((pointerX - margin.left) / chartWidth) * (rows.length - 1))));
+    const row = rows[index];
+    const x = xFor(index);
+    hoverLine.setAttribute("x1", x);
+    hoverLine.setAttribute("x2", x);
+    const actual = numberValue(row.actual_price);
+    const fair = numberValue(row.fair_price_policy);
+    actualPoint.setAttribute("cx", x);
+    fairPoint.setAttribute("cx", x);
+    actualPoint.setAttribute("cy", actual === null ? -100 : yFor(actual));
+    fairPoint.setAttribute("cy", fair === null ? -100 : yFor(fair));
+    hoverLayer.setAttribute("opacity", "1");
+    renderTrendHoverDetail(row);
+  };
+  hitArea.addEventListener("mousemove", updateHover);
+  hitArea.addEventListener("mouseleave", () => {
+    hoverLayer.setAttribute("opacity", "0");
+    renderTrendHoverDetail(null);
+  });
+  hitArea.addEventListener("focus", () => {
+    const index = rows.length - 1;
+    const row = rows[index];
+    const x = xFor(index);
+    hoverLine.setAttribute("x1", x);
+    hoverLine.setAttribute("x2", x);
+    actualPoint.setAttribute("cx", x);
+    fairPoint.setAttribute("cx", x);
+    actualPoint.setAttribute("cy", numberValue(row.actual_price) === null ? -100 : yFor(row.actual_price));
+    fairPoint.setAttribute("cy", numberValue(row.fair_price_policy) === null ? -100 : yFor(row.fair_price_policy));
+    hoverLayer.setAttribute("opacity", "1");
+    renderTrendHoverDetail(row);
+  });
+  hitArea.addEventListener("blur", () => {
+    hoverLayer.setAttribute("opacity", "0");
+    renderTrendHoverDetail(null);
+  });
+  hitArea.setAttribute("tabindex", "0");
+  hitArea.setAttribute("aria-label", "가격 추이 상세값 확인 영역");
+  svg.append(hitArea);
 }
 
 function renderTrend() {
   if (state.historyLoading && !(Array.isArray(state.history) && state.history.length)) {
     setText("trend-summary", "가격 추이 데이터 불러오는 중");
     setText("trend-note", "파일 용량이 큰 전체 기간 가격 추이 데이터를 불러오고 있습니다.");
-    drawSvgLoading(document.getElementById("price-trend-chart"), 920, 480, "가격 추이 데이터를 불러오는 중입니다");
+    renderTrendHoverDetail(null);
+    drawSvgLoading(document.getElementById("price-trend-chart"), TREND_CHART_SIZE.width, TREND_CHART_SIZE.height, "가격 추이 데이터를 불러오는 중입니다");
     return;
   }
 
