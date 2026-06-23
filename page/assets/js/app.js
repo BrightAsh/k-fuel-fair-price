@@ -22,6 +22,9 @@ const state = {
   districtGeojsonLoading: true,
   selectedRegion: null,
   selectedDistrictCode: null,
+  hoveredDistrictCode: null,
+  hoveredStationKey: null,
+  focusedStationKey: null,
   detailMode: "stations",
   regionDetailEnabled: false,
 };
@@ -78,8 +81,8 @@ const MAP_BOUNDS = { x: 214, y: 58, width: 612, height: 780 };
 const DETAIL_MAP_SIZE = { width: 620, height: 720 };
 const CALLOUT_W = 228;
 const CALLOUT_H = 76;
-const DISTRICT_CALLOUT_W = 132;
-const DISTRICT_CALLOUT_H = 76;
+const DISTRICT_CALLOUT_W = 128;
+const DISTRICT_CALLOUT_H = 58;
 const KOREA_LAT_SCALE = 1.0;
 const USE_FIXED_SAMPLE_PRICES = false;
 const SAMPLE_ACTUAL_PRICE = 1500;
@@ -889,11 +892,98 @@ function boundedCalloutPosition(point, width, height) {
   };
 }
 
-function districtMetricCallout(feature, metric, project, selected) {
+function districtConnectorPath(anchor, callout) {
+  const startX = callout.side === "left" ? callout.x + DISTRICT_CALLOUT_W : callout.x;
+  const startY = callout.y + DISTRICT_CALLOUT_H / 2;
+  return `M${startX.toFixed(1)} ${startY.toFixed(1)} L${anchor[0].toFixed(1)} ${anchor[1].toFixed(1)}`;
+}
+
+function districtCalloutLayout(features, project) {
+  const items = features.map((feature) => ({
+    feature,
+    code: String(feature.properties?.code || ""),
+    anchor: projectedCentroid(feature.geometry, project),
+  }));
+  const left = items
+    .filter((item) => item.anchor[0] < DETAIL_MAP_SIZE.width / 2)
+    .sort((a, b) => a.anchor[1] - b.anchor[1]);
+  const right = items
+    .filter((item) => item.anchor[0] >= DETAIL_MAP_SIZE.width / 2)
+    .sort((a, b) => a.anchor[1] - b.anchor[1]);
+  if (!left.length && right.length > 1) left.push(...right.splice(0, Math.floor(right.length / 2)));
+  if (!right.length && left.length > 1) right.push(...left.splice(Math.ceil(left.length / 2)));
+
+  const layout = new Map();
+  const place = (group, side) => {
+    const usable = DETAIL_MAP_SIZE.height - DISTRICT_CALLOUT_H - 16;
+    const step = group.length > 1 ? usable / (group.length - 1) : 0;
+    group.forEach((item, index) => {
+      layout.set(item.code, {
+        side,
+        anchor: item.anchor,
+        x: side === "left" ? 8 : DETAIL_MAP_SIZE.width - DISTRICT_CALLOUT_W - 8,
+        y: group.length > 1 ? 8 + step * index : clamp(item.anchor[1] - DISTRICT_CALLOUT_H / 2, 8, DETAIL_MAP_SIZE.height - DISTRICT_CALLOUT_H - 8),
+      });
+    });
+  };
+
+  place(left, "left");
+  place(right, "right");
+  return layout;
+}
+
+function syncRegionDetailHover() {
+  const hoveredDistrict = state.hoveredDistrictCode;
+  const hoveredStation = state.hoveredStationKey || state.focusedStationKey;
+
+  document.querySelectorAll(".district-path[data-district-code], .district-callout[data-district-code], .district-connector[data-district-code]").forEach((element) => {
+    element.classList.toggle("is-hovered", Boolean(hoveredDistrict && element.getAttribute("data-district-code") === hoveredDistrict));
+  });
+  document.querySelectorAll("[data-station-key]").forEach((element) => {
+    const matched = Boolean(hoveredStation && element.getAttribute("data-station-key") === hoveredStation);
+    element.classList.toggle("is-hovered", matched);
+    element.classList.toggle("is-focused", Boolean(state.focusedStationKey && element.getAttribute("data-station-key") === state.focusedStationKey));
+  });
+}
+
+function setHoveredDistrict(code) {
+  state.hoveredDistrictCode = code ? String(code) : null;
+  syncRegionDetailHover();
+}
+
+function setHoveredStation(key, districtCode = null) {
+  state.hoveredStationKey = key ? String(key) : null;
+  state.hoveredDistrictCode = districtCode ? String(districtCode) : null;
+  syncRegionDetailHover();
+}
+
+function scrollStationIntoView(key) {
+  if (!key) return;
+  const card = [...document.querySelectorAll(".station-card[data-station-key]")]
+    .find((element) => element.getAttribute("data-station-key") === String(key));
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function focusStation(key) {
+  state.focusedStationKey = key ? String(key) : null;
+  state.hoveredStationKey = key ? String(key) : null;
+  syncRegionDetailHover();
+  const hasCard = [...document.querySelectorAll(".station-card[data-station-key]")]
+    .some((element) => element.getAttribute("data-station-key") === String(key));
+  if (!hasCard) {
+    const regionSearch = document.getElementById("region-station-search");
+    if (regionSearch) regionSearch.value = "";
+    renderRegionDetailItems();
+    requestAnimationFrame(() => scrollStationIntoView(key));
+    return;
+  }
+  scrollStationIntoView(key);
+}
+
+function districtMetricCallout(feature, metric, project, selected, layout) {
   const code = String(feature.properties?.code || "");
   const name = feature.properties?.name || code;
-  const [cx, cy] = projectedCentroid(feature.geometry, project);
-  const position = boundedCalloutPosition([cx, cy], DISTRICT_CALLOUT_W, DISTRICT_CALLOUT_H);
+  const position = layout || boundedCalloutPosition(projectedCentroid(feature.geometry, project), DISTRICT_CALLOUT_W, DISTRICT_CALLOUT_H);
   const foreign = makeSvgElement("foreignObject", {
     x: position.x.toFixed(1),
     y: position.y.toFixed(1),
@@ -904,13 +994,15 @@ function districtMetricCallout(feature, metric, project, selected) {
     "data-district-code": code,
   });
   const shell = document.createElement("div");
-  shell.className = `district-callout-shell ${selected ? "is-selected" : ""}`;
+  shell.className = `district-callout-shell ${selected ? "is-selected" : ""} ${state.hoveredDistrictCode === code ? "is-hovered" : ""}`;
   shell.innerHTML = `
     <strong>${escapeHtml(name)}</strong>
     <span>현재 ${priceWon(metric.actual_price)}</span>
     <span>적정 ${priceWon(metric.fair_price_policy)}</span>
   `;
   foreign.append(shell);
+  foreign.addEventListener("mouseenter", () => setHoveredDistrict(code));
+  foreign.addEventListener("mouseleave", () => setHoveredDistrict(null));
   foreign.addEventListener("click", () => openDistrictDetail(code));
   foreign.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -1108,6 +1200,7 @@ function renderRegionDetailMap() {
     const featureCollection = { type: "FeatureCollection", features: featuresForView };
     const project = projectionForBox(featureCollection, { x: 24, y: 24, width: 572, height: 672 }, selectedDistrictFeature ? 18 : 28);
     const pathLayer = makeSvgElement("g", { class: "district-layer" });
+    const connectorLayer = makeSvgElement("g", { class: "district-connector-layer" });
     const calloutLayer = makeSvgElement("g", { class: "district-callout-layer" });
     const gridLayer = makeSvgElement("g", { class: "district-grid-layer" });
     const stationLayer = makeSvgElement("g", { class: "district-station-layer" });
@@ -1149,8 +1242,7 @@ function renderRegionDetailMap() {
         });
       } else {
         stationLayer.setAttribute("clip-path", `url(#${clipId})`);
-        baseStations()
-          .filter(stationInSelectedScope)
+        stationRowsForSelected("")
           .filter((station) => Number.isFinite(Number(station.lon)) && Number.isFinite(Number(station.lat)))
           .forEach((station) => {
             const [cx, cy] = project([Number(station.lon), Number(station.lat)]);
@@ -1158,11 +1250,16 @@ function renderRegionDetailMap() {
               cx: cx.toFixed(1),
               cy: cy.toFixed(1),
               r: "5.2",
-              class: `district-station-point ${judgeClass(station.judge_policy)}`,
+              class: `district-station-point ${state.focusedStationKey === station._station_key ? "is-focused" : ""}`,
+              "data-station-key": station._station_key,
+              "data-district-code": station._district_code,
             });
             const title = makeSvgElement("title");
             title.textContent = `${station.name || station.station_id}: ${fuelLabel()} ${won(stationPrice(station))}`;
             circle.append(title);
+            circle.addEventListener("mouseenter", () => setHoveredStation(station._station_key, station._district_code));
+            circle.addEventListener("mouseleave", () => setHoveredStation(null, null));
+            circle.addEventListener("click", () => focusStation(station._station_key));
             stationLayer.append(circle);
           });
       }
@@ -1185,14 +1282,16 @@ function renderRegionDetailMap() {
       return;
     }
 
+    const calloutLayout = districtCalloutLayout(districtFeatures, project);
     districtFeatures.forEach((feature) => {
       const code = String(feature.properties?.code || "");
       const name = feature.properties?.name || code;
       const row = districtRowForCode(code) || {};
       const metric = metricFor(row);
+      const layout = calloutLayout.get(code);
       const path = makeSvgElement("path", {
         d: geometryPath(feature.geometry, project),
-        class: "district-path",
+        class: `district-path ${state.hoveredDistrictCode === code ? "is-hovered" : ""}`,
         fill: districtFill(metric),
         tabindex: "0",
         "data-district-code": code,
@@ -1201,6 +1300,8 @@ function renderRegionDetailMap() {
       const title = makeSvgElement("title");
       title.textContent = `${name}: 실제 ${won(metric.actual_price)} / 적정 ${won(metric.fair_price_policy)}`;
       path.append(title);
+      path.addEventListener("mouseenter", () => setHoveredDistrict(code));
+      path.addEventListener("mouseleave", () => setHoveredDistrict(null));
       path.addEventListener("click", () => openDistrictDetail(code));
       path.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -1209,10 +1310,17 @@ function renderRegionDetailMap() {
         }
       });
       pathLayer.append(path);
-      calloutLayer.append(districtMetricCallout(feature, metric, project, false));
+      if (layout) {
+        connectorLayer.append(makeSvgElement("path", {
+          d: districtConnectorPath(layout.anchor, layout),
+          class: `district-connector ${state.hoveredDistrictCode === code ? "is-hovered" : ""}`,
+          "data-district-code": code,
+        }));
+      }
+      calloutLayer.append(districtMetricCallout(feature, metric, project, false, layout));
     });
 
-    svg.append(pathLayer, calloutLayer);
+    svg.append(pathLayer, connectorLayer, calloutLayer);
     return;
   }
 
@@ -1244,11 +1352,11 @@ function renderRegionDetailMap() {
   svg.append(path, text);
 }
 
-function updateRegionDetailTab() {
-  const tab = document.getElementById("region-detail-tab");
-  if (!tab) return;
-  tab.textContent = state.selectedRegion || "선택지역";
-  tab.classList.toggle("has-region", Boolean(state.regionDetailEnabled && state.selectedRegion));
+function updateRegionMapBackButton() {
+  const button = document.getElementById("region-map-back");
+  if (!button) return;
+  button.hidden = !state.selectedRegion;
+  button.textContent = state.selectedDistrictCode ? `${state.selectedRegion} 전체` : "전국 지도로";
 }
 
 function isDistrictDataLoading(region = state.selectedRegion) {
@@ -1272,7 +1380,6 @@ async function ensureDistrictData(region = state.selectedRegion) {
 
 function renderRegionDetail() {
   if (!state.selectedRegion) {
-    updateRegionDetailTab();
     return;
   }
 
@@ -1296,7 +1403,7 @@ function renderRegionDetail() {
   document.getElementById("region-detail-search-label").textContent = state.detailMode === "grids" ? "격자 검색" : "주유소 검색";
   document.getElementById("region-station-search").placeholder = state.detailMode === "grids" ? "격자 ID" : "주유소명, 브랜드, 주소";
 
-  updateRegionDetailTab();
+  updateRegionMapBackButton();
   updateDetailModeButtons();
   renderRegionDetailMap();
   renderRegionDetailItems();
@@ -1310,13 +1417,51 @@ function stationMatches(station, query) {
     .includes(query);
 }
 
+function stationKey(station) {
+  return String(station.station_id || `${station.name || ""}|${station.address || ""}|${station.lon || ""}|${station.lat || ""}`);
+}
+
+function stationDistrict(station) {
+  const region = canonicalRegionName(station.region);
+  const feature = districtFeaturesForRegion(region)
+    .find((item) => pointInGeometry(station.lon, station.lat, item.geometry));
+  if (!feature) return { code: "", name: "" };
+  return {
+    code: String(feature.properties?.code || ""),
+    name: String(feature.properties?.name || ""),
+  };
+}
+
+function stationSortValue(station) {
+  const price = Number(stationPrice(station));
+  return Number.isFinite(price) ? price : Number.POSITIVE_INFINITY;
+}
+
+function stationRowsForSelected(query = "") {
+  return baseStations()
+    .filter(stationInSelectedScope)
+    .filter((station) => stationMatches(station, query))
+    .map((station) => {
+      const district = stationDistrict(station);
+      return {
+        ...station,
+        _station_key: stationKey(station),
+        _district_code: district.code,
+        _district_name: district.name,
+      };
+    })
+    .sort((a, b) => stationSortValue(a) - stationSortValue(b) || String(a.name || "").localeCompare(String(b.name || ""), "ko-KR"));
+}
+
 function stationCard(station) {
   const price = stationPrice(station);
   const klass = judgeClass(station.judge_policy);
+  const districtName = station._district_name ? `${canonicalRegionName(station.region)} ${station._district_name}` : canonicalRegionName(station.region);
+  const focused = state.focusedStationKey === station._station_key;
   return `
-    <article class="station-card">
+    <article class="station-card ${focused ? "is-focused" : ""}" data-station-key="${escapeHtml(station._station_key)}" data-district-code="${escapeHtml(station._district_code || "")}">
       <strong>${escapeHtml(station.name || station.station_id)}</strong>
-      <span>${escapeHtml(station.brand || "-")} · ${escapeHtml(station.region || "-")}</span>
+      <span>${escapeHtml(station.brand || "-")} · ${escapeHtml(districtName || "-")}</span>
       <span>${escapeHtml(station.address || "")}</span>
       <span>${state.fuel === "gasoline" ? "휘발유" : "경유"} ${won(price)} · <b class="${klass}">${escapeHtml(station.judge_policy || "-")}</b></span>
     </article>
@@ -1353,6 +1498,23 @@ function updateDetailModeButtons() {
   });
 }
 
+function bindStationCards() {
+  document.querySelectorAll(".station-card[data-station-key]").forEach((card) => {
+    const stationKeyValue = card.getAttribute("data-station-key");
+    const districtCode = card.getAttribute("data-district-code");
+    card.addEventListener("mouseenter", () => setHoveredStation(stationKeyValue, districtCode));
+    card.addEventListener("mouseleave", () => setHoveredStation(null, null));
+    card.addEventListener("click", () => {
+      if (!state.selectedDistrictCode && districtCode) {
+        openDistrictDetail(districtCode, stationKeyValue);
+        return;
+      }
+      focusStation(stationKeyValue);
+    });
+  });
+  syncRegionDetailHover();
+}
+
 function renderRegionDetailItems() {
   const input = document.getElementById("region-station-search");
   const query = input.value.trim().toLowerCase();
@@ -1375,14 +1537,13 @@ function renderRegionDetailItems() {
     return;
   }
 
-  const rows = baseStations()
-    .filter(stationInSelectedScope)
-    .filter((station) => stationMatches(station, query));
+  const rows = stationRowsForSelected(query);
 
   document.getElementById("region-station-count").textContent = `${rows.length.toLocaleString("ko-KR")}개`;
   document.getElementById("region-station-results").innerHTML = rows.length
-    ? rows.slice(0, 80).map((station) => stationCard(station)).join("")
+    ? rows.map((station) => stationCard(station)).join("")
     : `<div class="empty-state">해당 지역 주유소 데이터가 없습니다</div>`;
+  bindStationCards();
 }
 
 function filterOptions() {
@@ -1973,7 +2134,7 @@ function applyFixedSamplePrices() {
 
 function activatePanel(name) {
   document.querySelectorAll(".top-tab").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.panel === name);
+    button.classList.toggle("is-active", button.dataset.panel === name || (name === "region-detail" && button.dataset.panel === "map"));
   });
   document.querySelectorAll(".dashboard-panel").forEach((panel) => {
     panel.classList.toggle("is-visible", panel.id === `panel-${name}`);
@@ -1989,13 +2150,16 @@ function clearRegionHash() {
 function clearRegionSelection(updateUrl = true) {
   state.selectedRegion = null;
   state.selectedDistrictCode = null;
+  state.hoveredDistrictCode = null;
+  state.hoveredStationKey = null;
+  state.focusedStationKey = null;
   state.detailMode = "stations";
   state.regionDetailEnabled = false;
 
   const regionSearch = document.getElementById("region-station-search");
   if (regionSearch) regionSearch.value = "";
 
-  updateRegionDetailTab();
+  updateRegionMapBackButton();
   renderRegions();
   renderMap();
 
@@ -2006,11 +2170,13 @@ function openRegionDetail(region) {
   if (!region) return;
   state.selectedRegion = canonicalRegionName(region);
   state.selectedDistrictCode = null;
+  state.hoveredDistrictCode = null;
+  state.hoveredStationKey = null;
+  state.focusedStationKey = null;
   state.detailMode = "stations";
   state.regionDetailEnabled = true;
   const regionSearch = document.getElementById("region-station-search");
   if (regionSearch) regionSearch.value = "";
-  updateRegionDetailTab();
   renderRegions();
   renderMap();
   renderRegionDetail();
@@ -2018,12 +2184,32 @@ function openRegionDetail(region) {
   clearRegionHash();
 }
 
-function openDistrictDetail(code) {
+function openDistrictDetail(code, stationKeyToFocus = null) {
   if (!code) return;
   state.selectedDistrictCode = String(code);
+  state.hoveredDistrictCode = null;
+  state.hoveredStationKey = stationKeyToFocus ? String(stationKeyToFocus) : null;
+  state.focusedStationKey = stationKeyToFocus ? String(stationKeyToFocus) : null;
   const regionSearch = document.getElementById("region-station-search");
   if (regionSearch) regionSearch.value = "";
   renderRegionDetail();
+  if (stationKeyToFocus) requestAnimationFrame(() => scrollStationIntoView(stationKeyToFocus));
+}
+
+function backRegionDetailMap() {
+  if (state.selectedDistrictCode) {
+    state.selectedDistrictCode = null;
+    state.hoveredDistrictCode = null;
+    state.hoveredStationKey = null;
+    state.focusedStationKey = null;
+    const regionSearch = document.getElementById("region-station-search");
+    if (regionSearch) regionSearch.value = "";
+    renderRegionDetail();
+    return;
+  }
+  clearRegionSelection();
+  activatePanel("map");
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function render() {
@@ -2107,7 +2293,6 @@ async function boot() {
       } else if (button.dataset.panel === "region-detail") {
         state.regionDetailEnabled = Boolean(state.selectedRegion);
       }
-      updateRegionDetailTab();
       activatePanel(button.dataset.panel);
     });
   });
@@ -2119,9 +2304,12 @@ async function boot() {
   });
 
   document.getElementById("region-station-search")?.addEventListener("input", renderRegionDetailItems);
+  document.getElementById("region-map-back")?.addEventListener("click", backRegionDetailMap);
   document.querySelectorAll(".detail-mode-button").forEach((button) => {
     button.addEventListener("click", () => {
       state.detailMode = button.dataset.detailMode || "stations";
+      state.hoveredStationKey = null;
+      state.focusedStationKey = null;
       const regionSearch = document.getElementById("region-station-search");
       if (regionSearch) regionSearch.value = "";
       renderRegionDetail();
