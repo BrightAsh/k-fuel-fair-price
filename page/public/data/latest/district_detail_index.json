@@ -1,129 +1,129 @@
 {
   "schema_version": "district_detail_index_v1",
-  "generated_at": "2026-06-23T16:06:50+09:00",
-  "as_of_date": "2026-06-23",
+  "generated_at": "2026-06-24T08:45:23+09:00",
+  "as_of_date": "2026-06-24",
   "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
   "regions": [
     {
       "region": "서울",
       "file": "districts/서울.json",
       "district_count": 25,
-      "grid_count": 684,
-      "as_of_date": "2026-06-23"
+      "grid_count": 686,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "부산",
       "file": "districts/부산.json",
       "district_count": 16,
       "grid_count": 486,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "대구",
       "file": "districts/대구.json",
       "district_count": 8,
-      "grid_count": 476,
-      "as_of_date": "2026-06-23"
+      "grid_count": 475,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "인천",
       "file": "districts/인천.json",
       "district_count": 10,
-      "grid_count": 472,
-      "as_of_date": "2026-06-23"
+      "grid_count": 470,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "광주",
       "file": "districts/광주.json",
       "district_count": 5,
       "grid_count": 354,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "대전",
       "file": "districts/대전.json",
       "district_count": 5,
       "grid_count": 296,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "울산",
       "file": "districts/울산.json",
       "district_count": 5,
       "grid_count": 356,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "세종",
       "file": "districts/세종.json",
       "district_count": 1,
       "grid_count": 116,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "경기",
       "file": "districts/경기.json",
       "district_count": 44,
-      "grid_count": 3676,
-      "as_of_date": "2026-06-23"
+      "grid_count": 3683,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "강원",
       "file": "districts/강원.json",
       "district_count": 18,
       "grid_count": 1085,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "충북",
       "file": "districts/충북.json",
       "district_count": 13,
       "grid_count": 1139,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "충남",
       "file": "districts/충남.json",
       "district_count": 16,
       "grid_count": 1609,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "전북",
       "file": "districts/전북.json",
       "district_count": 15,
       "grid_count": 1366,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "전남",
       "file": "districts/전남.json",
       "district_count": 22,
-      "grid_count": 1390,
-      "as_of_date": "2026-06-23"
+      "grid_count": 1391,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "경북",
       "file": "districts/경북.json",
       "district_count": 24,
-      "grid_count": 1936,
-      "as_of_date": "2026-06-23"
+      "grid_count": 1935,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "경남",
       "file": "districts/경남.json",
       "district_count": 22,
-      "grid_count": 1670,
-      "as_of_date": "2026-06-23"
+      "grid_count": 1668,
+      "as_of_date": "2026-06-24"
     },
     {
       "region": "제주",
       "file": "districts/제주.json",
       "district_count": 2,
       "grid_count": 323,
-      "as_of_date": "2026-06-23"
+      "as_of_date": "2026-06-24"
     }
   ],
   "district_count": 251,
-  "grid_count": 17434
+  "grid_count": 17438
 }
