@@ -996,15 +996,15 @@ function drawTrendChart(rows) {
   svg.innerHTML = "";
 
   if (!rows.length) {
-    const text = makeSvgElement("text", { x: "460", y: "210", "text-anchor": "middle", class: "chart-empty" });
+    const text = makeSvgElement("text", { x: "460", y: "240", "text-anchor": "middle", class: "chart-empty" });
     text.textContent = "선택한 조건의 가격 데이터가 없습니다";
     svg.append(text);
     return;
   }
 
   const width = 920;
-  const height = 420;
-  const margin = { left: 74, right: 30, top: 48, bottom: 62 };
+  const height = 480;
+  const margin = { left: 74, right: 30, top: 70, bottom: 64 };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
   const values = rows.flatMap((row) => [
@@ -1014,7 +1014,7 @@ function drawTrendChart(rows) {
     numberValue(row.band_high_policy),
   ]).filter((value) => value !== null);
   if (!values.length) {
-    const text = makeSvgElement("text", { x: "460", y: "210", "text-anchor": "middle", class: "chart-empty" });
+    const text = makeSvgElement("text", { x: "460", y: "240", "text-anchor": "middle", class: "chart-empty" });
     text.textContent = "가격 숫자 데이터가 없습니다";
     svg.append(text);
     return;
@@ -1103,19 +1103,25 @@ function drawTrendChart(rows) {
   });
 
   [
-    { x: width - 365, y: 26, className: "chart-line-actual chart-line-actual-normal", text: "전일 실제가격" },
-    { x: width - 230, y: 26, className: "chart-line-fair", text: "오늘 적정가격" },
+    { type: "line", x: margin.left, y: 26, className: "chart-line-actual chart-line-actual-normal", text: "전일 실제가격" },
+    { type: "line", x: margin.left + 150, y: 26, className: "chart-line-fair", text: "오늘 적정가격" },
+    { type: "band", x: margin.left + 320, y: 26, text: "적정가격대" },
+    { type: "line", x: margin.left, y: 50, className: "chart-line-actual chart-line-actual-over", text: "빨강: 비쌈" },
+    { type: "line", x: margin.left + 150, y: 50, className: "chart-line-actual chart-line-actual-under", text: "파랑: 저렴" },
   ].forEach((item) => {
+    if (item.type === "band") {
+      svg.append(makeSvgElement("rect", { x: item.x, y: item.y - 12, width: "26", height: "12", rx: "3", class: "chart-legend-band" }));
+      const text = makeSvgElement("text", { x: item.x + 36, y: item.y, class: "chart-label" });
+      text.textContent = item.text;
+      svg.append(text);
+      return;
+    }
+
     svg.append(makeSvgElement("line", { x1: item.x, y1: item.y - 4, x2: item.x + 28, y2: item.y - 4, class: item.className }));
     const text = makeSvgElement("text", { x: item.x + 36, y: item.y, class: "chart-label" });
     text.textContent = item.text;
     svg.append(text);
   });
-
-  svg.append(makeSvgElement("rect", { x: width - 96, y: 14, width: "26", height: "12", rx: "3", class: "chart-legend-band" }));
-  const bandText = makeSvgElement("text", { x: width - 62, y: 26, class: "chart-label" });
-  bandText.textContent = "적정가격대";
-  svg.append(bandText);
 }
 
 function renderTrend() {
