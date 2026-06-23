@@ -508,6 +508,10 @@ function stationPrice(station) {
   return state.fuel === "gasoline" ? station.gasoline_price : station.diesel_price;
 }
 
+function hasStationPreviousPrice(station) {
+  return Number.isFinite(Number(stationPrice(station)));
+}
+
 function toIsoDate(value) {
   if (!value) return "";
   const text = String(value).slice(0, 10);
@@ -1526,6 +1530,7 @@ function stationFairMetric(station, districtCode) {
 function stationRowsForSelected(query = "") {
   return baseStations()
     .filter(stationInSelectedScope)
+    .filter(hasStationPreviousPrice)
     .filter((station) => stationMatches(station, query))
     .map((station) => {
       const district = stationDistrict(station);

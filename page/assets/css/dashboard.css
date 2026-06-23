@@ -1325,6 +1325,14 @@ tbody tr.is-selected td {
   min-width: 0;
 }
 
+.station-data-note {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .local-search {
   display: flex;
   align-items: center;
