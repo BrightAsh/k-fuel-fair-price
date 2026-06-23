@@ -1,0 +1,182 @@
+C:\Users\user\anaconda3\envs\k-fuel-stage3\python.exe C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\04_prediction_model_training.py 
+[CONFIG]
+REPO_ROOT                  = C:\Users\user\Desktop\산업부\k-fuel-fair-price
+TARGET_DATASET_PATH        = C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\03_target_dataset_build\outputs\grid_target.parquet
+OUTPUT_ROOT                = C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs
+TEST_START                 = 2026-01-01
+TEST_END                   = 2026-12-31
+PREDICTION_HORIZON_DAYS    = 1
+TARGET_COLUMN              = fair_price_delta_target
+RUN_FUELS                  = gasoline, diesel
+DEVICE                     = cuda
+SEQUENCE_CHANNELS          = ['spread_delta', 'actual_price_delta', 'national_price_delta']
+LATEST_FEATURE_COLUMNS     = ['actual_price_lag_1d', 'national_price_lag_1d', 'spread_lag_1d', 'station_weight_lag_1d']
+STATIC_FEATURE_COLUMNS     = ['cell_x', 'cell_y', 'center_lon', 'center_lat', 'station_count_total', 'gasoline_station_count', 'diesel_station_count', 'station_neighbor_influence', 'facility_count_total', 'facility_storage_count', 'facility_factory_count', 'facility_agency_count', 'storage_influence', 'agency_influence', 'factory_influence', 'is_sea', 'is_island', 'land_component_id', 'official_land_price', 'brand_count__SK에너지', 'brand_count__GS칼텍스', 'brand_count__HD현대오일뱅크', 'brand_count__S-OIL', 'brand_count__알뜰', 'brand_count__NH-OIL', 'brand_count__자가상표', 'brand_count__기타', 'self_count__셀프', 'self_count__일반', 'self_count__미상', 'official_price_age_days', 'official_price_source_year']
+TRAIN/VALID SAMPLE         = 200/1000, 200/1000
+MAX TRAIN/VALID ROWS       = 6,000,000, 2,500,000
+MAX FINAL TRAIN ROWS       = 8,000,000
+[PANEL OVERVIEW]
+    rows  unique_grid_count   date_min   date_max  test_2026_rows
+63800291              12338 2008-04-15 2026-06-11       1453015.0
+
+========================================================================================================================
+[START] gasoline model
+========================================================================================================================
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\eligible_daily_counts.parquet rows=3,951, write=0.1s
+[SPLIT] train=26,762,631 (70.13%) / validation=11,396,271 (29.87%), gap_rows=68,855
+[SPLIT] train dates=2009-10-27~2017-09-16, validation dates=2017-09-24~2021-11-11
+[SPLIT] train/validation/final_train exclude target policy dates and policy dates inside 29-day input history
+[SPLIT] final_train target_date < 2026-01-01 / test target_date = 2026-01-01 ~ 2026-12-31
+[LOAD] gasoline train: eligible=26,762,631, sample=200/1000, max_rows=6000000
+[LOAD DONE] gasoline train: rows=5,351,880/26,762,631 (20.00%), target_date=2009-10-27~2017-09-16
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\train.parquet rows=5,351,880, write=27.2s
+[LOAD] gasoline validation: eligible=11,396,271, sample=200/1000, max_rows=2500000
+[LOAD DONE] gasoline validation: rows=2,279,365/11,396,271 (20.00%), target_date=2017-09-24~2021-11-11
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\validation.parquet rows=2,279,365, write=10.4s
+[MODEL] gasoline: train_rows=5,351,880, valid_rows=2,279,365, device=cuda, seq_len=28, seq_channels=3, latest_features=4, static_features=32, epochs=20, batch=8192
+[CHECKPOINT] gasoline: saved best epoch 1 -> C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\model\checkpoints\gasoline_grid_fair_price_delta_best_latest.pt
+[EPOCH] gasoline 0001: train_loss=0.05001, valid_wmae=19.8857, best=19.8857@1, lr=0.0025, epoch=127.6m, total=127.6m, patience_left=5
+[EPOCH] gasoline 0002: train_loss=0.04077, valid_wmae=20.1731, best=19.8857@1, lr=0.0025, epoch=170.6m, total=298.2m, patience_left=4
+[EPOCH] gasoline 0003: train_loss=0.03995, valid_wmae=20.1649, best=19.8857@1, lr=0.0025, epoch=70.5m, total=368.7m, patience_left=3
+[CHECKPOINT] gasoline: saved best epoch 4 -> C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\model\checkpoints\gasoline_grid_fair_price_delta_best_latest.pt
+[EPOCH] gasoline 0004: train_loss=0.03962, valid_wmae=19.3180, best=19.3180@4, lr=0.0025, epoch=47.6m, total=416.3m, patience_left=5
+[EPOCH] gasoline 0005: train_loss=0.03952, valid_wmae=20.5659, best=19.3180@4, lr=0.0025, epoch=47.8m, total=464.2m, patience_left=4
+[EPOCH] gasoline 0006: train_loss=0.03907, valid_wmae=20.4943, best=19.3180@4, lr=0.0025, epoch=47.6m, total=511.8m, patience_left=3
+[EPOCH] gasoline 0007: train_loss=0.03889, valid_wmae=19.7185, best=19.3180@4, lr=0.00125, epoch=47.8m, total=559.5m, patience_left=2
+[EPOCH] gasoline 0008: train_loss=0.03847, valid_wmae=20.3667, best=19.3180@4, lr=0.00125, epoch=47.8m, total=607.3m, patience_left=1
+[EPOCH] gasoline 0009: train_loss=0.03832, valid_wmae=20.3881, best=19.3180@4, lr=0.00125, epoch=47.7m, total=655.0m, patience_left=0
+[EARLY STOP] gasoline: no improvement for 5 epochs
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_training_history.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_validation_scores.csv
+[VALIDATION RESTORED PRICE ERROR]
+                       model_name  price_weighted_mae
+  baseline_yesterday_actual_price           15.210578
+   baseline_train_mean_fair_delta           19.191725
+hybrid_grid_fair_price_delta_lstm           19.318023
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_validation_predictions.parquet
+[LOAD] gasoline final_train_gap: eligible=68,855, sample=200/1000, max_rows=8000000
+[LOAD DONE] gasoline final_train_gap: rows=13,651/68,855 (19.83%), target_date=2017-09-17~2017-09-23
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\final_train_gap.parquet rows=13,651, write=0.3s
+[FINAL FRAME] gasoline: reuse train=5,351,880, validation=2,279,365, gap=13,651, rows=7,644,896/7,644,896
+[FINAL TRAIN] gasoline: rows=7,644,896, epochs=4, source_best_epoch=4, device=cuda
+[FINAL EPOCH] gasoline 0001/4: train_loss=0.04594, epoch=17.2m, total=17.2m
+[FINAL EPOCH] gasoline 0002/4: train_loss=0.03798, epoch=17.2m, total=34.5m
+[FINAL EPOCH] gasoline 0003/4: train_loss=0.03729, epoch=17.2m, total=51.7m
+[FINAL EPOCH] gasoline 0004/4: train_loss=0.03703, epoch=17.2m, total=69.0m
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\model\gasoline_grid_fair_price_delta_lstm.pt
+[TEST] gasoline: full available 2026 range = 2026-01-01 ~ 2026-06-09
+[LOAD] gasoline test_202601: eligible=277,124, sample=1000/1000, max_rows=None
+[LOAD DONE] gasoline test_202601: rows=277,124/277,124 (100.00%), target_date=2026-01-01~2026-01-31
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\test_202601.parquet rows=277,124, write=1.5s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\test_predictions_by_month\202601.parquet rows=277,124
+[LOAD] gasoline test_202602: eligible=248,212, sample=1000/1000, max_rows=None
+[LOAD DONE] gasoline test_202602: rows=248,212/248,212 (100.00%), target_date=2026-02-01~2026-02-28
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\test_202602.parquet rows=248,212, write=1.4s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\test_predictions_by_month\202602.parquet rows=248,212
+[LOAD] gasoline test_202603: eligible=273,183, sample=1000/1000, max_rows=None
+[LOAD DONE] gasoline test_202603: rows=273,183/273,183 (100.00%), target_date=2026-03-01~2026-03-31
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\test_202603.parquet rows=273,183, write=1.8s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\test_predictions_by_month\202603.parquet rows=273,183
+[LOAD] gasoline test_202604: eligible=266,484, sample=1000/1000, max_rows=None
+[LOAD DONE] gasoline test_202604: rows=266,484/266,484 (100.00%), target_date=2026-04-01~2026-04-30
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\test_202604.parquet rows=266,484, write=1.5s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\test_predictions_by_month\202604.parquet rows=266,484
+[LOAD] gasoline test_202605: eligible=270,939, sample=1000/1000, max_rows=None
+[LOAD DONE] gasoline test_202605: rows=270,939/270,939 (100.00%), target_date=2026-05-01~2026-05-31
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\test_202605.parquet rows=270,939, write=1.4s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\test_predictions_by_month\202605.parquet rows=270,939
+[LOAD] gasoline test_202606: eligible=79,180, sample=1000/1000, max_rows=None
+[LOAD DONE] gasoline test_202606: rows=79,180/79,180 (100.00%), target_date=2026-06-01~2026-06-09
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\gasoline\test_202606.parquet rows=79,180, write=0.5s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\test_predictions_by_month\202606.parquet rows=79,180
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_test_predictions_2026.parquet
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_test_daily_summary_2026.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_test_grid_summary_2026.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_test_metrics_2026.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_model_metadata.json
+
+========================================================================================================================
+[START] diesel model
+========================================================================================================================
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\eligible_daily_counts.parquet rows=2,659, write=0.0s
+[SPLIT] train=18,158,724 (70.21%) / validation=7,703,397 (29.79%), gap_rows=67,200
+[SPLIT] train dates=2013-09-08~2018-09-28, validation dates=2018-10-06~2021-11-11
+[SPLIT] train/validation/final_train exclude target policy dates and policy dates inside 29-day input history
+[SPLIT] final_train target_date < 2026-01-01 / test target_date = 2026-01-01 ~ 2026-12-31
+[LOAD] diesel train: eligible=18,158,724, sample=200/1000, max_rows=6000000
+[LOAD DONE] diesel train: rows=3,633,409/18,158,724 (20.01%), target_date=2013-09-08~2018-09-28
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\train.parquet rows=3,633,409, write=20.3s
+[LOAD] diesel validation: eligible=7,703,397, sample=200/1000, max_rows=2500000
+[LOAD DONE] diesel validation: rows=1,539,406/7,703,397 (19.98%), target_date=2018-10-06~2021-11-11
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\validation.parquet rows=1,539,406, write=8.2s
+[MODEL] diesel: train_rows=3,633,409, valid_rows=1,539,406, device=cuda, seq_len=28, seq_channels=3, latest_features=4, static_features=32, epochs=20, batch=8192
+[CHECKPOINT] diesel: saved best epoch 1 -> C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\checkpoints\diesel_grid_fair_price_delta_best_latest.pt
+[EPOCH] diesel 0001: train_loss=0.05913, valid_wmae=20.3848, best=20.3848@1, lr=0.0025, epoch=9.7m, total=9.7m, patience_left=5
+[CHECKPOINT] diesel: saved best epoch 2 -> C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\checkpoints\diesel_grid_fair_price_delta_best_latest.pt
+[EPOCH] diesel 0002: train_loss=0.04196, valid_wmae=20.3327, best=20.3327@2, lr=0.0025, epoch=9.7m, total=19.4m, patience_left=5
+[CHECKPOINT] diesel: saved best epoch 3 -> C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\checkpoints\diesel_grid_fair_price_delta_best_latest.pt
+[EPOCH] diesel 0003: train_loss=0.04084, valid_wmae=19.6095, best=19.6095@3, lr=0.0025, epoch=9.7m, total=29.1m, patience_left=5
+[CHECKPOINT] diesel: saved best epoch 4 -> C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\checkpoints\diesel_grid_fair_price_delta_best_latest.pt
+[EPOCH] diesel 0004: train_loss=0.04035, valid_wmae=19.4215, best=19.4215@4, lr=0.0025, epoch=9.7m, total=38.8m, patience_left=5
+[EPOCH] diesel 0005: train_loss=0.04010, valid_wmae=19.6943, best=19.4215@4, lr=0.0025, epoch=9.7m, total=48.4m, patience_left=4
+[EPOCH] diesel 0006: train_loss=0.03983, valid_wmae=20.4132, best=19.4215@4, lr=0.0025, epoch=9.7m, total=58.1m, patience_left=3
+[EPOCH] diesel 0007: train_loss=0.03952, valid_wmae=19.8282, best=19.4215@4, lr=0.00125, epoch=9.7m, total=67.8m, patience_left=2
+[EPOCH] diesel 0008: train_loss=0.03897, valid_wmae=19.9749, best=19.4215@4, lr=0.00125, epoch=9.7m, total=77.5m, patience_left=1
+[EPOCH] diesel 0009: train_loss=0.03884, valid_wmae=20.1231, best=19.4215@4, lr=0.00125, epoch=9.7m, total=87.2m, patience_left=0
+[EARLY STOP] diesel: no improvement for 5 epochs
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_training_history.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_validation_scores.csv
+[VALIDATION RESTORED PRICE ERROR]
+                       model_name  price_weighted_mae
+  baseline_yesterday_actual_price           14.806532
+   baseline_train_mean_fair_delta           16.469453
+hybrid_grid_fair_price_delta_lstm           19.421520
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_validation_predictions.parquet
+[LOAD] diesel final_train_gap: eligible=67,200, sample=200/1000, max_rows=8000000
+[LOAD DONE] diesel final_train_gap: rows=13,506/67,200 (20.10%), target_date=2018-09-29~2018-10-05
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\final_train_gap.parquet rows=13,506, write=0.2s
+[FINAL FRAME] diesel: reuse train=3,633,409, validation=1,539,406, gap=13,506, rows=5,186,321/5,186,321
+[FINAL TRAIN] diesel: rows=5,186,321, epochs=4, source_best_epoch=4, device=cuda
+[FINAL EPOCH] diesel 0001/4: train_loss=0.05612, epoch=11.7m, total=11.7m
+[FINAL EPOCH] diesel 0002/4: train_loss=0.04079, epoch=11.6m, total=23.3m
+[FINAL EPOCH] diesel 0003/4: train_loss=0.03980, epoch=11.7m, total=35.0m
+[FINAL EPOCH] diesel 0004/4: train_loss=0.03930, epoch=11.6m, total=46.6m
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\diesel_grid_fair_price_delta_lstm.pt
+[TEST] diesel: full available 2026 range = 2026-01-01 ~ 2026-06-09
+[LOAD] diesel test_202601: eligible=277,124, sample=1000/1000, max_rows=None
+[LOAD DONE] diesel test_202601: rows=277,124/277,124 (100.00%), target_date=2026-01-01~2026-01-31
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\test_202601.parquet rows=277,124, write=1.6s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\test_predictions_by_month\202601.parquet rows=277,124
+[LOAD] diesel test_202602: eligible=248,212, sample=1000/1000, max_rows=None
+[LOAD DONE] diesel test_202602: rows=248,212/248,212 (100.00%), target_date=2026-02-01~2026-02-28
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\test_202602.parquet rows=248,212, write=1.4s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\test_predictions_by_month\202602.parquet rows=248,212
+[LOAD] diesel test_202603: eligible=273,183, sample=1000/1000, max_rows=None
+[LOAD DONE] diesel test_202603: rows=273,183/273,183 (100.00%), target_date=2026-03-01~2026-03-31
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\test_202603.parquet rows=273,183, write=1.6s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\test_predictions_by_month\202603.parquet rows=273,183
+[LOAD] diesel test_202604: eligible=266,484, sample=1000/1000, max_rows=None
+[LOAD DONE] diesel test_202604: rows=266,484/266,484 (100.00%), target_date=2026-04-01~2026-04-30
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\test_202604.parquet rows=266,484, write=1.5s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\test_predictions_by_month\202604.parquet rows=266,484
+[LOAD] diesel test_202605: eligible=270,939, sample=1000/1000, max_rows=None
+[LOAD DONE] diesel test_202605: rows=270,939/270,939 (100.00%), target_date=2026-05-01~2026-05-31
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\test_202605.parquet rows=270,939, write=1.5s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\test_predictions_by_month\202605.parquet rows=270,939
+[LOAD] diesel test_202606: eligible=79,180, sample=1000/1000, max_rows=None
+[LOAD DONE] diesel test_202606: rows=79,180/79,180 (100.00%), target_date=2026-06-01~2026-06-09
+[CACHE SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\intermediate_data\diesel\test_202606.parquet rows=79,180, write=0.6s
+[SAVE PART] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\test_predictions_by_month\202606.parquet rows=79,180
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_test_predictions_2026.parquet
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_test_daily_summary_2026.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_test_grid_summary_2026.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_test_metrics_2026.csv
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_model_metadata.json
+
+[SUMMARY]
+    fuel    label  best_epoch                                                                                                                                      model_path                                                                                                                   metadata_path  validation_best_price_weighted_mae  test_2026_price_weighted_mae
+gasoline gasoline           4 C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\model\gasoline_grid_fair_price_delta_lstm.pt C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\gasoline\gasoline_model_metadata.json                           19.318023                    231.790408
+  diesel   diesel           4     C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\model\diesel_grid_fair_price_delta_lstm.pt     C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\diesel\diesel_model_metadata.json                           19.421520                    518.133275
+[SAVE] C:\Users\user\Desktop\산업부\k-fuel-fair-price\ai-model\04_prediction_model_training\outputs\model_run_summary.csv
+
+종료 코드 -1073740791 (0xC0000409)(으)로 완료된 프로세스
