@@ -1,12 +1,12 @@
 {
   "schema_version": "page_data_v1",
   "as_of_date": "2026-06-23",
-  "generated_at": "2026-06-23T14:00:54+09:00",
+  "generated_at": "2026-06-23T14:19:01+09:00",
   "freshness": "fresh",
   "files": [
     "national_today.json",
     "region_today.json",
-    "district_detail.json",
+    "district_detail_index.json",
     "station_search_index.json",
     "price_history.json",
     "training_data_coverage.json",

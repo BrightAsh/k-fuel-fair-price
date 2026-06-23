@@ -33,6 +33,7 @@ AI_WEB_OUTPUT_DIRS = [
     Path("ai-model/05_full_grid_prediction_for_web/outputs"),
 ]
 DISTRICT_ASSET_PATH = Path("page/public/assets/korea-districts.geojson")
+DISTRICT_DETAIL_DIR = Path("districts")
 DISTRICT_REGION_BY_PREFIX = {
     "11": "\uc11c\uc6b8",
     "21": "\ubd80\uc0b0",
@@ -1002,7 +1003,7 @@ def build_external_data_status(
                 "rows": len(district_detail.get("districts", [])),
                 "date_min": district_detail.get("as_of_date"),
                 "date_max": district_detail.get("as_of_date"),
-                "path": "page/public/data/latest/district_detail.json",
+                "path": "page/public/data/latest/district_detail_index.json + page/public/data/latest/districts/*.json",
                 "note": "시도 클릭 후 시군구 경계, 가격 요약, 격자 상세를 표시하는 데이터입니다.",
             },
             {
@@ -1095,6 +1096,66 @@ def write_json(path: Path, obj: Any) -> None:
     )
 
 
+def sorted_district_regions(regions: set[str]) -> list[str]:
+    order = list(DISTRICT_REGION_BY_PREFIX.values())
+    return sorted(regions, key=lambda region: (order.index(region) if region in order else len(order), region))
+
+
+def build_region_district_detail(district_detail: dict[str, Any], region: str) -> dict[str, Any]:
+    districts = [row for row in district_detail.get("districts", []) if row.get("region") == region]
+    grids = [row for row in district_detail.get("grids", []) if row.get("region") == region]
+    return {
+        "schema_version": district_detail.get("schema_version"),
+        "generated_at": district_detail.get("generated_at"),
+        "as_of_date": district_detail.get("as_of_date"),
+        "source": district_detail.get("source"),
+        "region": region,
+        "districts": districts,
+        "grids": grids,
+    }
+
+
+def write_district_detail_outputs(output_dir: Path, district_detail: dict[str, Any]) -> dict[str, Any]:
+    detail_dir = output_dir / DISTRICT_DETAIL_DIR
+    detail_dir.mkdir(parents=True, exist_ok=True)
+    for old_file in detail_dir.glob("*.json"):
+        old_file.unlink()
+
+    regions = {
+        str(row.get("region"))
+        for row in district_detail.get("districts", [])
+        if row.get("region")
+    }
+    regions.update(
+        str(row.get("region"))
+        for row in district_detail.get("grids", [])
+        if row.get("region")
+    )
+
+    index_rows = []
+    for region in sorted_district_regions(regions):
+        region_detail = build_region_district_detail(district_detail, region)
+        file_name = f"{region}.json"
+        write_json(detail_dir / file_name, region_detail)
+        index_rows.append({
+            "region": region,
+            "file": f"{DISTRICT_DETAIL_DIR.as_posix()}/{file_name}",
+            "district_count": len(region_detail["districts"]),
+            "grid_count": len(region_detail["grids"]),
+            "as_of_date": region_detail.get("as_of_date"),
+        })
+
+    return {
+        "schema_version": "district_detail_index_v1",
+        "generated_at": district_detail.get("generated_at"),
+        "as_of_date": district_detail.get("as_of_date"),
+        "source": district_detail.get("source"),
+        "regions": index_rows,
+        "district_count": sum(row["district_count"] for row in index_rows),
+        "grid_count": sum(row["grid_count"] for row in index_rows),
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", default=Path(__file__).resolve().parents[2])
@@ -1111,6 +1172,7 @@ def main() -> None:
     region = build_region(repo_root)
     stations = build_station_index(repo_root)
     district_detail = build_district_detail(repo_root, resolved_as_of_date)
+    district_detail_index = write_district_detail_outputs(output_dir, district_detail)
     history = build_price_history(repo_root, resolved_as_of_date)
     existing_history_path = output_dir / "price_history.json"
     ai_history_path = ai_web_path(repo_root, "web_price_history_region.csv")
@@ -1135,7 +1197,7 @@ def main() -> None:
         "files": [
             "national_today.json",
             "region_today.json",
-            "district_detail.json",
+            "district_detail_index.json",
             "station_search_index.json",
             "price_history.json",
             "training_data_coverage.json",
@@ -1154,7 +1216,7 @@ def main() -> None:
 
     write_json(output_dir / "national_today.json", national)
     write_json(output_dir / "region_today.json", region)
-    write_json(output_dir / "district_detail.json", district_detail)
+    write_json(output_dir / "district_detail_index.json", district_detail_index)
     write_json(output_dir / "station_search_index.json", stations)
     write_json(output_dir / "price_history.json", history)
     write_json(output_dir / "training_data_coverage.json", training_coverage)
@@ -1164,7 +1226,7 @@ def main() -> None:
     print(f"[SAVE] {output_dir}")
     print(f"[INFO] as_of_date={manifest['as_of_date']} freshness={manifest['freshness']}")
     print(f"[INFO] regions={len(region):,} stations={len(stations):,}")
-    print(f"[INFO] districts={len(district_detail.get('districts', [])):,} district_grids={len(district_detail.get('grids', [])):,}")
+    print(f"[INFO] districts={district_detail_index.get('district_count', 0):,} district_grids={district_detail_index.get('grid_count', 0):,}")
     print(f"[INFO] history={len(history):,}")
 
 

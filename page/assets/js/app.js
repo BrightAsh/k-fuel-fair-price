@@ -12,13 +12,14 @@ const state = {
   trainingCoverage: null,
   geojson: null,
   districtGeojson: null,
-  districtDetail: null,
+  districtDetailIndex: null,
+  districtDetails: {},
+  districtLoadingRegions: {},
   historyLoading: true,
   stationsLoading: true,
   trainingCoverageLoading: true,
   geojsonLoading: true,
   districtGeojsonLoading: true,
-  districtDataLoading: true,
   selectedRegion: null,
   selectedDistrictCode: null,
   detailMode: "stations",
@@ -414,8 +415,12 @@ function metricFor(row) {
   return row?.[state.fuel] || {};
 }
 
-function districtData() {
-  const data = state.districtDetail || DISTRICT_DETAIL_FALLBACK;
+function districtDetailPath(region) {
+  return `./public/data/latest/districts/${encodeURIComponent(region)}.json`;
+}
+
+function districtData(region = state.selectedRegion) {
+  const data = state.districtDetails[region] || DISTRICT_DETAIL_FALLBACK;
   return {
     ...DISTRICT_DETAIL_FALLBACK,
     ...data,
@@ -425,7 +430,7 @@ function districtData() {
 }
 
 function districtRowsForRegion(region = state.selectedRegion) {
-  return districtData().districts
+  return districtData(region).districts
     .filter((row) => row.region === region)
     .sort((a, b) => String(a.district_name || "").localeCompare(String(b.district_name || ""), "ko-KR"));
 }
@@ -436,7 +441,7 @@ function districtRowForCode(code = state.selectedDistrictCode) {
 }
 
 function selectedDistrictName() {
-  return districtRowForCode()?.district_name || "";
+  return districtRowForCode()?.district_name || districtFeatureByCode()?.properties?.name || "";
 }
 
 function districtFeaturesForRegion(region = state.selectedRegion) {
@@ -451,7 +456,8 @@ function districtFeatureByCode(code = state.selectedDistrictCode) {
 }
 
 function activeDetailRow() {
-  return districtRowForCode() || rowForRegion(state.selectedRegion);
+  if (state.selectedDistrictCode) return districtRowForCode() || {};
+  return rowForRegion(state.selectedRegion);
 }
 
 function activeDetailMetric() {
@@ -1055,11 +1061,32 @@ function updateRegionDetailTab() {
   tab.classList.toggle("has-region", Boolean(state.regionDetailEnabled && state.selectedRegion));
 }
 
+function isDistrictDataLoading(region = state.selectedRegion) {
+  return Boolean(region && state.districtLoadingRegions[region]);
+}
+
+async function ensureDistrictData(region = state.selectedRegion) {
+  if (!region || state.districtDetails[region] || state.districtLoadingRegions[region]) return;
+  state.districtLoadingRegions[region] = true;
+  renderRegionDetailMap();
+  renderRegionDetailItems();
+
+  try {
+    const detail = await loadJson(districtDetailPath(region), DISTRICT_DETAIL_FALLBACK);
+    state.districtDetails[region] = detail;
+  } finally {
+    delete state.districtLoadingRegions[region];
+    renderRegionDetail();
+  }
+}
+
 function renderRegionDetail() {
   if (!state.selectedRegion) {
     updateRegionDetailTab();
     return;
   }
+
+  ensureDistrictData(state.selectedRegion);
 
   const row = activeDetailRow();
   const metric = metricFor(row);
@@ -1141,7 +1168,7 @@ function renderRegionDetailItems() {
   const query = input.value.trim().toLowerCase();
 
   if (state.detailMode === "grids") {
-    if (state.districtDataLoading && !districtData().grids.length) {
+    if (isDistrictDataLoading(state.selectedRegion) && !districtData().grids.length) {
       document.getElementById("region-station-count").textContent = "불러오는 중";
       document.getElementById("region-station-results").innerHTML = `<div class="empty-state">격자 데이터를 불러오는 중입니다</div>`;
       return;
@@ -1829,9 +1856,8 @@ async function loadDeferredData() {
     renderRegionDetail();
   });
 
-  loadJson("./public/data/latest/district_detail.json", DISTRICT_DETAIL_FALLBACK).then((districtDetail) => {
-    state.districtDetail = districtDetail;
-    state.districtDataLoading = false;
+  loadJson("./public/data/latest/district_detail_index.json", { regions: [] }).then((districtDetailIndex) => {
+    state.districtDetailIndex = districtDetailIndex;
     renderRegionDetail();
   });
 
