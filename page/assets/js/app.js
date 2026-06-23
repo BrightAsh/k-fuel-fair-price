@@ -1489,14 +1489,50 @@ function stationSortValue(station) {
   return Number.isFinite(price) ? price : Number.POSITIVE_INFINITY;
 }
 
+function stationFairMetric(station, districtCode) {
+  const lon = Number(station.lon);
+  const lat = Number(station.lat);
+  if (!Number.isFinite(lon) || !Number.isFinite(lat)) return {};
+
+  const rows = districtData().grids
+    .filter((row) => row.region === state.selectedRegion)
+    .filter((row) => row.fuel === state.fuel)
+    .filter((row) => !districtCode || String(row.district_code) === String(districtCode))
+    .filter((row) => Number.isFinite(Number(row.center_lon)) && Number.isFinite(Number(row.center_lat)));
+
+  let best = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  rows.forEach((row) => {
+    const dx = Number(row.center_lon) - lon;
+    const dy = Number(row.center_lat) - lat;
+    const distance = dx * dx + dy * dy;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = row;
+    }
+  });
+
+  if (!best) return {};
+  const actual = Number(stationPrice(station));
+  const fair = Number(best.fair_price_policy);
+  return {
+    _fair_price_policy: Number.isFinite(fair) ? fair : null,
+    _fair_gap_policy: Number.isFinite(actual) && Number.isFinite(fair) ? actual - fair : null,
+    _fair_grid_id: best.grid_id || "",
+    _fair_judge_policy: best.judge_policy || "",
+  };
+}
+
 function stationRowsForSelected(query = "") {
   return baseStations()
     .filter(stationInSelectedScope)
     .filter((station) => stationMatches(station, query))
     .map((station) => {
       const district = stationDistrict(station);
+      const fairMetric = stationFairMetric(station, district.code);
       return {
         ...station,
+        ...fairMetric,
         _station_key: stationKey(station),
         _district_code: district.code,
         _district_name: district.name,
@@ -1507,7 +1543,10 @@ function stationRowsForSelected(query = "") {
 
 function stationCard(station) {
   const price = stationPrice(station);
-  const klass = judgeClass(station.judge_policy);
+  const fairPrice = station._fair_price_policy;
+  const fairGap = station._fair_gap_policy;
+  const klass = judgeClass(station.judge_policy, fairGap);
+  const gapClass = gapToneClass(fairGap);
   const districtName = station._district_name ? `${canonicalRegionName(station.region)} ${station._district_name}` : canonicalRegionName(station.region);
   const focused = state.focusedStationKey === station._station_key;
   return `
@@ -1515,7 +1554,9 @@ function stationCard(station) {
       <strong>${escapeHtml(station.name || station.station_id)}</strong>
       <span>${escapeHtml(station.brand || "-")} · ${escapeHtml(districtName || "-")}</span>
       <span>${escapeHtml(station.address || "")}</span>
-      <span>${state.fuel === "gasoline" ? "휘발유" : "경유"} ${won(price)} · <b class="${klass}">${escapeHtml(station.judge_policy || "-")}</b></span>
+      <span>${fuelLabel()} 현재가(전일가) ${won(price)}</span>
+      <span>적정가 ${won(fairPrice)}</span>
+      <span>차이 <b class="${gapClass}">${signedWon(fairGap)}</b> · <b class="${klass}">${escapeHtml(judgeLabel(station.judge_policy))}</b></span>
     </article>
   `;
 }

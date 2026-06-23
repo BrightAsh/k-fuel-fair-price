@@ -987,7 +987,7 @@ tbody tr.is-selected td {
 }
 
 .station-card {
-  min-height: 140px;
+  min-height: 168px;
   padding: 15px;
   background: var(--soft);
   border: 1px solid var(--line);
@@ -1033,6 +1033,18 @@ tbody tr.is-selected td {
 
 .station-card b.low {
   color: var(--teal);
+}
+
+.station-card b.gap-high {
+  color: var(--red);
+}
+
+.station-card b.gap-low {
+  color: var(--blue);
+}
+
+.station-card b.gap-good {
+  color: var(--green);
 }
 
 .region-detail-grid {
