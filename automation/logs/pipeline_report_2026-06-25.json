@@ -1,7 +1,7 @@
 {
   "schema_version": "daily_pipeline_report_v1",
-  "generated_at": "2026-06-26T05:50:51+09:00",
-  "start_date": "2026-06-25",
+  "generated_at": "2026-06-26T08:08:45+09:00",
+  "start_date": "2026-06-26",
   "end_date": "2026-06-25",
   "steps": [
     {
@@ -20,10 +20,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080415_20260624.csv",
+        "path": "data-analysis/00_data_collection/outputs/retail_avg/retail_avg_20080415_20260625.csv",
         "date_min": "2008-04-15",
-        "date_max": "2026-06-24",
-        "dated_rows": 6644
+        "date_max": "2026-06-25",
+        "dated_rows": 6645
       }
     },
     {
@@ -31,10 +31,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080415_20260624.csv",
+        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_gasoline_20080415_20260625.csv",
         "date_min": "2008-04-15",
-        "date_max": "2026-06-24",
-        "dated_rows": 6644
+        "date_max": "2026-06-25",
+        "dated_rows": 6645
       }
     },
     {
@@ -42,10 +42,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080415_20260624.csv",
+        "path": "data-analysis/00_data_collection/outputs/brand_price/brand_diesel_20080415_20260625.csv",
         "date_min": "2008-04-15",
-        "date_max": "2026-06-24",
-        "dated_rows": 6644
+        "date_max": "2026-06-25",
+        "dated_rows": 6645
       }
     },
     {
@@ -53,10 +53,10 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/fx_usdkrw/fx_usdkrw_20080102_20260624.csv",
+        "path": "data-analysis/00_data_collection/outputs/fx_usdkrw/fx_usdkrw_20080102_20260625.csv",
         "date_min": "2008-01-02",
-        "date_max": "2026-06-24",
-        "dated_rows": 4574
+        "date_max": "2026-06-25",
+        "dated_rows": 4575
       }
     },
     {
@@ -64,7 +64,7 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260624.csv",
+        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_products_20080101_20260625.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -75,7 +75,7 @@
       "status": "available",
       "detail": "",
       "data": {
-        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260624.csv",
+        "path": "data-analysis/00_data_collection/outputs/intl_products/intl_product_diesel(0.001)_20080101_20260625.csv",
         "date_min": null,
         "date_max": null,
         "dated_rows": 0
@@ -121,11 +121,11 @@
     },
     {
       "name": "collect",
-      "status": "completed",
-      "detail": "",
+      "status": "skipped",
+      "detail": "already up to date",
       "data": {
-        "returncode": 0,
-        "output_tail": "[completed] fx_usdkrw rows=1 \n[completed] crude rows=0 \n[completed] intl_products rows=1 \n[completed] retail_avg rows=2 \n[completed] brand_price rows=2 \n[completed] fuel_tax_trend rows=66 \n[completed] refinery_weekly_supply rows=0 \n"
+        "start_date": "2026-06-26",
+        "end_date": "2026-06-25"
       }
     },
     {
@@ -136,25 +136,10 @@
     },
     {
       "name": "collect_station_prices",
-      "status": "completed",
-      "detail": "",
+      "status": "skipped",
+      "detail": "already up to date",
       "data": {
-        "returncode": 0,
-        "output_tail": " 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/김천시: rows=66\n[DOWNLOAD] 경북/문경시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/문경시: rows=38\n[DOWNLOAD] 경북/봉화군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/봉화군: rows=22\n[DOWNLOAD] 경북/상주시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/상주시: rows=60\n[DOWNLOAD] 경북/성주군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/성주군: rows=29\n[DOWNLOAD] 경북/안동시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/안동시: rows=60\n[DOWNLOAD] 경북/영덕군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/영덕군: rows=22\n[DOWNLOAD] 경북/영양군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/영양군: rows=8\n[DOWNLOAD] 경북/영주시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/영주시: rows=45\n[DOWNLOAD] 경북/영천시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/영천시: rows=71\n[DOWNLOAD] 경북/예천군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/예천군: rows=28\n[DOWNLOAD] 경북/울릉군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/울릉군: rows=3\n[DOWNLOAD] 경북/울진군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/울진군: rows=24\n[DOWNLOAD] 경북/의성군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/의성군: rows=41\n[DOWNLOAD] 경북/청도군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/청도군: rows=26\n[DOWNLOAD] 경북/청송군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/청송군: rows=21\n[DOWNLOAD] 경북/칠곡군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/칠곡군: rows=80\n[DOWNLOAD] 경북/포항시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경북/포항시: rows=145\n[DONE] 경북: status=completed, rows=1,120, gasoline_max=2026-06-25, diesel_max=2026-06-25\n====================================================================================================\n[START] 경남\n[REGION] 경남: sigun_count=18\n[DOWNLOAD] 경남/거제시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/거제시: rows=46\n[DOWNLOAD] 경남/거창군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/거창군: rows=27\n[DOWNLOAD] 경남/고성군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/고성군: rows=28\n[DOWNLOAD] 경남/김해시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/김해시: rows=166\n[DOWNLOAD] 경남/남해군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/남해군: rows=22\n[DOWNLOAD] 경남/밀양시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/밀양시: rows=59\n[DOWNLOAD] 경남/사천시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/사천시: rows=47\n[DOWNLOAD] 경남/산청군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/산청군: rows=33\n[DOWNLOAD] 경남/양산시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/양산시: rows=69\n[DOWNLOAD] 경남/의령군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/의령군: rows=17\n[DOWNLOAD] 경남/진주시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/진주시: rows=87\n[DOWNLOAD] 경남/창녕군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/창녕군: rows=49\n[DOWNLOAD] 경남/창원시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/창원시: rows=155\n[DOWNLOAD] 경남/통영시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/통영시: rows=29\n[DOWNLOAD] 경남/하동군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/하동군: rows=31\n[DOWNLOAD] 경남/함안군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/함안군: rows=53\n[DOWNLOAD] 경남/함양군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/함양군: rows=26\n[DOWNLOAD] 경남/합천군 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 경남/합천군: rows=30\n[DONE] 경남: status=completed, rows=974, gasoline_max=2026-06-25, diesel_max=2026-06-25\n====================================================================================================\n[START] 제주\n[REGION] 제주: sigun_count=2\n[DOWNLOAD] 제주/서귀포시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 제주/서귀포시: rows=64\n[DOWNLOAD] 제주/제주시 2026-06-25~2026-06-25\n[confirm] 주유소 과거 가격 정보를 다운 받습니다.\n조회 기간에 따라 수 분의 처리 시간이 발생할 수 있습니다.\n계속 진행 하시겠습니까?\n[OK] 제주/제주시: rows=126\n[DONE] 제주: status=completed, rows=190, gasoline_max=2026-06-25, diesel_max=2026-06-25\n[REPORT] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/automation/logs/latest_station_price_collection_report.json\n[RESULT] station collection completed\n",
-        "station_report": {
-          "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/automation/logs/latest_station_price_collection_report.json",
-          "exists": true,
-          "size": 83588,
-          "mtime": "2026-06-26T05:49:09+09:00"
-        },
-        "station_output_root": {
-          "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/gas_station_prices_by_region",
-          "exists": true,
-          "size": 4096,
-          "mtime": "2026-06-26T05:06:37+09:00"
-        },
-        "requested_start_date": "2026-06-25",
-        "effective_start_date": "2026-06-25",
+        "start_date": "2026-06-26",
         "end_date": "2026-06-25"
       }
     },
@@ -185,30 +170,30 @@
       "detail": "",
       "data": {
         "returncode": 0,
-        "output_tail": "[CONFIG]\nrepo_root          = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price\nstate_path         = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet\nweb_dir            = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web\nstation_price_root = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/gas_station_prices_by_region\nsource_date_filter = None ~ 2026-06-25\ntarget_date_filter = None ~ None\nfuels              = gasoline, diesel\ndevice             = cpu\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet rows=403,495 size=9,308,203\n[STATE] appended_grid_days=-37, new_source_rows=8,945\n[PREDICT] gasoline: rows=8,783, target=2026-06-26~2026-06-26, device=cpu\n[PREDICT] diesel: rows=8,812, target=2026-06-26~2026-06-26, device=cpu\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv rows=131,508 size=19,409,267\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv rows=36 size=3,005\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv rows=2 size=248\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv rows=17,595 size=2,557,666\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input_manifest.json size=2,266\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/operational_dataset_manifest.json size=4,744\n[DONE] status=completed, predictions=17,595, state=403,532->403,495, elapsed=38.2s\n",
+        "output_tail": "[CONFIG]\nrepo_root          = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price\nstate_path         = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet\nweb_dir            = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web\nstation_price_root = /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/data-analysis/00_data_collection/outputs/gas_station_prices_by_region\nsource_date_filter = None ~ 2026-06-25\ntarget_date_filter = None ~ None\nfuels              = gasoline, diesel\ndevice             = cpu\n[STATE] no station price rows from 2026-06-26 to update\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input_manifest.json size=2,266\n[SAVE] /home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/operational_dataset_manifest.json size=4,359\n[DONE] status=no_new_target_dates, predictions=0, state=403,495->403,495, elapsed=17.8s\n",
         "recent_model_input": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
           "exists": true,
           "size": 9308203,
-          "mtime": "2026-06-26T05:49:36+09:00"
+          "mtime": "2026-06-26T08:05:15+09:00"
         },
         "web_region_today": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
           "exists": true,
           "size": 3005,
-          "mtime": "2026-06-26T05:49:51+09:00"
+          "mtime": "2026-06-26T08:05:15+09:00"
         },
         "web_price_history_region": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
           "exists": true,
           "size": 19409267,
-          "mtime": "2026-06-26T05:49:51+09:00"
+          "mtime": "2026-06-26T08:05:15+09:00"
         },
         "manifest": {
           "path": "/home/runner/work/k-fuel-fair-price/k-fuel-fair-price/ai-model/06_web_operational_dataset_build/outputs/operational_dataset_manifest.json",
           "exists": true,
-          "size": 4744,
-          "mtime": "2026-06-26T05:49:51+09:00"
+          "size": 4359,
+          "mtime": "2026-06-26T08:07:31+09:00"
         }
       }
     },
