@@ -1,0 +1,1254 @@
+
+
+
+
+
+
+
+
+	
+	
+	
+
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<title>싼 주유소 찾기 오피넷</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
+<meta http-equiv="X-UA-Compatible" content="IE=edge" >
+
+	
+	
+	
+	
+	
+		<link rel="stylesheet" type="text/css" href="/css/user/layout-2.0.css"  media="screen" />
+		<link rel="stylesheet" type="text/css" href="/css/user/popup.css"  media="screen" />
+		<link rel="stylesheet" type="text/css" href="/css/user/layout-2.0.css"  media="print" />
+		<link rel="stylesheet" type="text/css" href="/css/user/popup_print.css"  media="print" />
+		
+		<script type="text/javascript" src="/js/user/jquery-1.11.1.min.js"></script>
+		
+			<script type="text/javascript" src="/js/user/jquery-ui-1.10.4.custom.min.js"></script>
+		
+		<script type="text/javascript" src="/js/netfunnel.js"></script>
+		<script type="text/javascript" src="/js/user/OpinetUICommon.js?20260403"></script>
+		
+			<script type="text/javascript" src="/js/com/common-ajax.js"></script>
+		
+		<script type="text/javascript" src="/js/com/common.js"></script>
+	
+	
+	
+
+
+<script type="text/javascript">
+	$().ready(function(){
+		var p_mnbSelectId = [3, 3];//국제유가=>원유
+		createMenu (_GnbData,p_mnbSelectId);
+		
+		$("input[name='TERM']").change(function() {
+			// 기간영역 활성화/ 비활성화
+			fnSetDisplayTerm();
+		});
+		
+		fnSetDisplayTerm();
+		
+		$("#btn_print").click(function(){
+			window.print();
+		});
+	
+	});
+	
+	function fnSetDisplayTerm() {
+		var term = $("input[name='TERM']:checked").val();
+		
+		if(term == "T") {
+			$("#time_area").attr('style', 'display:block');
+			$("#time_area1").attr('style', 'display:block');
+			$("#time_area2").attr('style', 'display:block');
+			$("#time_area3").attr('style', 'display:block');
+			$("#time_area4").attr('style', 'display:block');
+			$("#time_area5").attr('style', 'display:block');
+			$("#product_area").attr('style', 'display:none');
+			$("#product_area1").attr('style', 'display:none');
+			$("#product_area2").attr('style', 'display:none');
+			$("#product_area3").attr('style', 'display:none');
+			$("#product_area4").attr('style', 'display:none');
+			$("#product_area5").attr('style', 'display:none');
+		}
+		
+		else if(term == "C") {
+			$("#time_area").attr('style', 'display:none');
+			$("#time_area1").attr('style', 'display:none');
+			$("#time_area2").attr('style', 'display:none');
+			$("#time_area3").attr('style', 'display:none');
+			$("#time_area4").attr('style', 'display:none');
+			$("#time_area5").attr('style', 'display:none');
+			$("#product_area").attr('style', 'display:block');
+			$("#product_area1").attr('style', 'display:block');
+			$("#product_area2").attr('style', 'display:block');
+			$("#product_area3").attr('style', 'display:block');
+			$("#product_area4").attr('style', 'display:block');
+			$("#product_area5").attr('style', 'display:block');
+		}
+	}
+	
+</script>
+
+</head>
+<body class="pc_none">
+
+<div class="popup_print"> 
+	<div class="popup_box">
+	<form id="oftvatVo" name="frm" action="/user/oftvat/getOfttexPrintTime.do" method="post">
+		<div class="p_title"> 
+			<h1>유류세</h1>
+			<span>제품별 유류세금 항목의 세금 및 비율</span>
+		</div> 
+		
+		<div class="data_area">
+			<div class="search_form mgt_20">
+				<dl>
+					<dt  class="fir"><span class="tt">구분</span></dt>
+					<dd  class="fir">
+						<ul class="radio_type1">
+							<li>
+							기간별
+							
+							</li>
+						</ul>
+					</dd>
+					
+					<dt id="time_area"><span class="tt">기간</span></dt>
+					<dd class="input calendar" id="time_area1">
+					
+						
+                              	<span class="hidden">시작일</span>
+			           		1997<span class="se_tt">년</span>
+			           		01<span class="se_tt">월</span>
+			           		01<span class="se_tt">일</span>
+			           		<span class="se_hip">~</span>
+			           		<span class="hidden">종료일</span>
+			           		2026<span class="se_tt">년</span>
+			           		06<span class="se_tt">월</span>
+			           		26<span class="se_tt">일</span>
+			            
+			            
+			            
+					</dd>
+					
+					<dt id="time_area2"><span class="tt">제품</span></dt>
+					<dd id="time_area3">
+						<ul class="radio_type1">
+							<li>
+							
+							
+							자동차용경유
+							
+							
+							
+							
+							
+							
+							
+							</li>									
+						</ul>
+					</dd>
+				</dl>
+			</div>
+			
+			<div class="desc_box mgt_15">
+				<div class="d_left pdt_5">
+					<span class="result_date">
+						1997년01월01일~
+						2026년06월26일
+					</span>(원/리터. 단, 일반프로판 및 부탄: 원/kg)					
+				</div>
+				<div class="d_right mgt_5">
+					
+				</div>
+			</div>
+			
+			
+			<div>
+				<table class="tbl_type10" >
+					<caption>유종별 세율 : 제품, 유류세(개별소비세, 교통에너지환경세, 교육세, 주행세, 합계), 판매부과금을 확인 할 수 있습니다</caption>
+					<colgroup>
+						<col style="width:200px;" />
+						<col />
+						<col />
+						<col />
+						<col />
+						<col />
+						<col />
+					</colgroup>
+					<thead>
+						<tr>
+							<th class="nobd_l" scope="col" rowspan="2">변동일자</th>
+							<th scope="col" colspan="5">유류세</th>
+							<th scope="col" rowspan="2">판매부과금</th>
+						</tr>
+						<tr>
+							<th scope="col">개별소비세</th>
+							<th scope="col">교통에너지환경세</th>
+							<th scope="col">교육세</th>
+							<th scope="col">주행세</th>
+							<th scope="col">합계</th>
+						</tr>
+					</thead>
+					<tbody>
+						
+						<tr>
+							<td class="nobd_l" >
+								1997년01월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">48.00</td>
+							
+							
+							
+							<td style="text-align: center">7.20</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">55.20</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								1998년01월09일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">85.00</td>
+							
+							
+							
+							<td style="text-align: center">12.75</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">97.75</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								1998년05월03일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">110.00</td>
+							
+							
+							
+							<td style="text-align: center">16.50</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">126.50</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								1998년09월17일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">160.00</td>
+							
+							
+							
+							<td style="text-align: center">24.00</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">184.00</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2000년01월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">155.00</td>
+							
+							
+							
+							<td style="text-align: center">23.25</td>
+							
+							
+							
+							<td style="text-align: center">4.96</td>
+							
+							
+							
+							<td style="text-align: center">183.21</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2000년03월02일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">137.00</td>
+							
+							
+							
+							<td style="text-align: center">20.55</td>
+							
+							
+							
+							<td style="text-align: center">4.38</td>
+							
+							
+							
+							<td style="text-align: center">161.93</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2000년05월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">155.00</td>
+							
+							
+							
+							<td style="text-align: center">23.25</td>
+							
+							
+							
+							<td style="text-align: center">4.96</td>
+							
+							
+							
+							<td style="text-align: center">183.21</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2001년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">185.00</td>
+							
+							
+							
+							<td style="text-align: center">27.75</td>
+							
+							
+							
+							<td style="text-align: center">21.28</td>
+							
+							
+							
+							<td style="text-align: center">234.03</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2002년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">232.00</td>
+							
+							
+							
+							<td style="text-align: center">34.80</td>
+							
+							
+							
+							<td style="text-align: center">27.84</td>
+							
+							
+							
+							<td style="text-align: center">294.64</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2003년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">261.00</td>
+							
+							
+							
+							<td style="text-align: center">39.15</td>
+							
+							
+							
+							<td style="text-align: center">39.02</td>
+							
+							
+							
+							<td style="text-align: center">339.17</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2004년03월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">255.00</td>
+							
+							
+							
+							<td style="text-align: center">38.25</td>
+							
+							
+							
+							<td style="text-align: center">45.90</td>
+							
+							
+							
+							<td style="text-align: center">339.15</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2004년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">287.00</td>
+							
+							
+							
+							<td style="text-align: center">43.05</td>
+							
+							
+							
+							<td style="text-align: center">61.70</td>
+							
+							
+							
+							<td style="text-align: center">391.75</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2005년07월08일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">323.00</td>
+							
+							
+							
+							<td style="text-align: center">48.45</td>
+							
+							
+							
+							<td style="text-align: center">77.52</td>
+							
+							
+							
+							<td style="text-align: center">448.97</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2006년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">349.25</td>
+							
+							
+							
+							<td style="text-align: center">52.39</td>
+							
+							
+							
+							<td style="text-align: center">92.55</td>
+							
+							
+							
+							<td style="text-align: center">494.19</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2007년07월23일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">354.42</td>
+							
+							
+							
+							<td style="text-align: center">53.16</td>
+							
+							
+							
+							<td style="text-align: center">115.19</td>
+							
+							
+							
+							<td style="text-align: center">522.77</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2008년03월10일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">331.65</td>
+							
+							
+							
+							<td style="text-align: center">49.75</td>
+							
+							
+							
+							<td style="text-align: center">89.55</td>
+							
+							
+							
+							<td style="text-align: center">470.95</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2008년10월07일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">324.72</td>
+							
+							
+							
+							<td style="text-align: center">48.71</td>
+							
+							
+							
+							<td style="text-align: center">97.42</td>
+							
+							
+							
+							<td style="text-align: center">470.85</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2009년01월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">358.54</td>
+							
+							
+							
+							<td style="text-align: center">53.78</td>
+							
+							
+							
+							<td style="text-align: center">107.56</td>
+							
+							
+							
+							<td style="text-align: center">519.88</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2009년05월21일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">369.38</td>
+							
+							
+							
+							<td style="text-align: center">55.41</td>
+							
+							
+							
+							<td style="text-align: center">96.04</td>
+							
+							
+							
+							<td style="text-align: center">520.83</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2009년11월19일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">369.38</td>
+							
+							
+							
+							<td style="text-align: center">55.41</td>
+							
+							
+							
+							<td style="text-align: center">96.04</td>
+							
+							
+							
+							<td style="text-align: center">520.83</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2010년01월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">367.50</td>
+							
+							
+							
+							<td style="text-align: center">55.13</td>
+							
+							
+							
+							<td style="text-align: center">95.55</td>
+							
+							
+							
+							<td style="text-align: center">518.18</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2012년01월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">375.00</td>
+							
+							
+							
+							<td style="text-align: center">56.25</td>
+							
+							
+							
+							<td style="text-align: center">97.50</td>
+							
+							
+							
+							<td style="text-align: center">528.75</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2018년11월06일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">319.00</td>
+							
+							
+							
+							<td style="text-align: center">47.85</td>
+							
+							
+							
+							<td style="text-align: center">82.94</td>
+							
+							
+							
+							<td style="text-align: center">449.79</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2019년05월07일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">349.00</td>
+							
+							
+							
+							<td style="text-align: center">52.35</td>
+							
+							
+							
+							<td style="text-align: center">90.74</td>
+							
+							
+							
+							<td style="text-align: center">492.09</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2019년09월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">375.00</td>
+							
+							
+							
+							<td style="text-align: center">56.25</td>
+							
+							
+							
+							<td style="text-align: center">97.50</td>
+							
+							
+							
+							<td style="text-align: center">528.75</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2021년11월12일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">300.00</td>
+							
+							
+							
+							<td style="text-align: center">45.00</td>
+							
+							
+							
+							<td style="text-align: center">78.00</td>
+							
+							
+							
+							<td style="text-align: center">423.00</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2022년05월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">263.00</td>
+							
+							
+							
+							<td style="text-align: center">39.45</td>
+							
+							
+							
+							<td style="text-align: center">68.38</td>
+							
+							
+							
+							<td style="text-align: center">370.83</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2022년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">238.00</td>
+							
+							
+							
+							<td style="text-align: center">35.70</td>
+							
+							
+							
+							<td style="text-align: center">61.88</td>
+							
+							
+							
+							<td style="text-align: center">335.58</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2024년07월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">263.00</td>
+							
+							
+							
+							<td style="text-align: center">39.45</td>
+							
+							
+							
+							<td style="text-align: center">68.38</td>
+							
+							
+							
+							<td style="text-align: center">370.83</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2024년11월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">289.00</td>
+							
+							
+							
+							<td style="text-align: center">43.35</td>
+							
+							
+							
+							<td style="text-align: center">75.14</td>
+							
+							
+							
+							<td style="text-align: center">407.49</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2025년05월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">319.00</td>
+							
+							
+							
+							<td style="text-align: center">47.85</td>
+							
+							
+							
+							<td style="text-align: center">82.94</td>
+							
+							
+							
+							<td style="text-align: center">449.79</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2025년11월01일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">337.50</td>
+							
+							
+							
+							<td style="text-align: center">50.63</td>
+							
+							
+							
+							<td style="text-align: center">87.75</td>
+							
+							
+							
+							<td style="text-align: center">475.88</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+						<tr>
+							<td class="nobd_l" >
+								2026년03월27일
+								
+							</td>
+							
+							<td style="text-align: center">-</td>
+							
+							
+							
+							
+							<td style="text-align: center">281.00</td>
+							
+							
+							
+							<td style="text-align: center">42.15</td>
+							
+							
+							
+							<td style="text-align: center">73.06</td>
+							
+							
+							
+							<td style="text-align: center">396.21</td>
+							
+							
+							<td style="text-align: center">-</td>
+							
+							
+						</tr>
+						
+					</tbody>
+				</table>
+			</div>
+		
+		</div><!-- //data_area-->
+		
+		<!-- 하단 로고 --> 
+		<div class="print_bottom_box"> 
+			<span class="span_1"> 
+				<img src="/images/user/com/popup_footer_logo_01.gif" alt="한국석유공사" /> 
+			</span> 
+			<span class="span_2"> 
+				<img src="/images/user/main/foot_logo_2.gif" alt="산업통상부" /> 
+			</span> 
+		</div> 
+		
+		
+		<div class="p_logo"><img src="/images/user/com/logo_bg_tran.png" class="png24" alt="KNOC" /></div>
+		
+		<div class="p_close_btn">
+			<a href="javascript:window.print()" title="인쇄" id="btn_print" class="btn_type22_oran" ><span>인쇄</span></a>
+			<a href="javascript:window.close();" title="닫기" class="btn_type22" ><span>닫기</span></a>
+		</div>
+	</form>
+	</div>
+</div>
+
+</body>
+</html>
