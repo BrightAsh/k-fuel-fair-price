@@ -8,7 +8,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import escape
 from pathlib import Path
 from typing import Any
@@ -278,48 +278,95 @@ class Collector:
         if not api_key:
             return CollectResult("fx_usdkrw", "failed", detail="BOK_ECOS_API_KEY is missing")
 
-        start_ymd = yyyymmdd(self.start_date)
-        end_ymd = yyyymmdd(self.end_date)
         stat_code = "731Y001"
         item_code = "0000001"
         page_size = 1000
 
-        first_url = (
-            f"https://ecos.bok.or.kr/api/StatisticSearch/{api_key}/json/kr/"
-            f"1/{page_size}/{stat_code}/D/{start_ymd}/{end_ymd}/{item_code}"
-        )
-        first = request_json(first_url)
-        if "RESULT" in first and "StatisticSearch" not in first:
-            raise RuntimeError(f"ECOS error: {first}")
-        total = int(first.get("StatisticSearch", {}).get("list_total_count", 0))
-        rows: list[dict[str, Any]] = []
-        for start_idx in range(1, total + 1, page_size):
-            end_idx = min(start_idx + page_size - 1, total)
-            url = (
-                f"https://ecos.bok.or.kr/api/StatisticSearch/{api_key}/json/kr/"
-                f"{start_idx}/{end_idx}/{stat_code}/D/{start_ymd}/{end_ymd}/{item_code}"
-            )
-            data = request_json(url)
-            rows.extend(data.get("StatisticSearch", {}).get("row", []))
-            time.sleep(REQUEST_SLEEP_SEC)
+        def fetch_rows(start_value: Any, end_value: Any) -> list[dict[str, Any]]:
+            start_ymd = yyyymmdd(start_value)
+            end_ymd = yyyymmdd(end_value)
 
-        raw = pd.DataFrame(rows)
-        final = pd.DataFrame(columns=[COL_DATE_FX, COL_VALUE_FX])
-        if not raw.empty:
-            final = pd.DataFrame(
+            first_url = (
+                f"https://ecos.bok.or.kr/api/StatisticSearch/{api_key}/json/kr/"
+                f"1/{page_size}/{stat_code}/D/{start_ymd}/{end_ymd}/{item_code}"
+            )
+            first = request_json(first_url)
+            if "RESULT" in first and "StatisticSearch" not in first:
+                result = first.get("RESULT", {})
+                if result.get("CODE") == "INFO-200":
+                    return []
+                raise RuntimeError(f"ECOS error: {first}")
+            total = int(first.get("StatisticSearch", {}).get("list_total_count", 0))
+            out: list[dict[str, Any]] = []
+            for start_idx in range(1, total + 1, page_size):
+                end_idx = min(start_idx + page_size - 1, total)
+                url = (
+                    f"https://ecos.bok.or.kr/api/StatisticSearch/{api_key}/json/kr/"
+                    f"{start_idx}/{end_idx}/{stat_code}/D/{start_ymd}/{end_ymd}/{item_code}"
+                )
+                data = request_json(url)
+                out.extend(data.get("StatisticSearch", {}).get("row", []))
+                time.sleep(REQUEST_SLEEP_SEC)
+            return out
+
+        def raw_rows_to_final(rows: list[dict[str, Any]]) -> pd.DataFrame:
+            raw_frame = pd.DataFrame(rows)
+            if raw_frame.empty:
+                return pd.DataFrame(columns=[COL_DATE_FX, COL_VALUE_FX])
+            out = pd.DataFrame(
                 {
-                    COL_DATE_FX: pd.to_datetime(raw["TIME"], format="%Y%m%d", errors="coerce").dt.strftime("%Y/%m/%d"),
-                    COL_VALUE_FX: numeric_series(raw["DATA_VALUE"]),
+                    COL_DATE_FX: pd.to_datetime(raw_frame["TIME"], format="%Y%m%d", errors="coerce"),
+                    COL_VALUE_FX: numeric_series(raw_frame["DATA_VALUE"]),
                 }
             ).dropna(subset=[COL_DATE_FX, COL_VALUE_FX])
-            final = final.drop_duplicates(COL_DATE_FX, keep="last").sort_values(COL_DATE_FX)
+            return out.drop_duplicates(COL_DATE_FX, keep="last").sort_values(COL_DATE_FX)
+
+        target_start = pd.Timestamp(self.start_date).normalize()
+        target_end = pd.Timestamp(self.end_date).normalize()
+        lookback_days = int(os.getenv("KFF_FX_LOOKBACK_DAYS", "14"))
+        lookback_start = target_start - timedelta(days=lookback_days)
+
+        rows = fetch_rows(lookback_start, target_end)
+        raw = pd.DataFrame(rows)
+        observed = raw_rows_to_final(rows)
+
+        calendar_frame = pd.DataFrame({COL_DATE_FX: pd.date_range(target_start, target_end, freq="D")})
+        source = observed[[COL_DATE_FX, COL_VALUE_FX]].copy()
+
+        if source.empty:
+            existing_path = latest_file(dataset, "fx_usdkrw_*.csv")
+            if existing_path is not None:
+                existing = pd.read_csv(existing_path, encoding="utf-8-sig")
+                if COL_DATE_FX in existing.columns and COL_VALUE_FX in existing.columns:
+                    existing_source = existing[[COL_DATE_FX, COL_VALUE_FX]].copy()
+                    existing_source[COL_DATE_FX] = existing_source[COL_DATE_FX].apply(parse_kor_date)
+                    existing_source[COL_VALUE_FX] = numeric_series(existing_source[COL_VALUE_FX])
+                    existing_source = existing_source.dropna(subset=[COL_DATE_FX, COL_VALUE_FX])
+                    existing_source = existing_source[existing_source[COL_DATE_FX] <= target_end]
+                    if not existing_source.empty:
+                        source = existing_source.sort_values(COL_DATE_FX).tail(1)
+
+        final = (
+            pd.concat([source, calendar_frame], ignore_index=True)
+            .drop_duplicates(COL_DATE_FX, keep="first")
+            .sort_values(COL_DATE_FX)
+        )
+        final[COL_VALUE_FX] = final[COL_VALUE_FX].ffill()
+        final = final[(final[COL_DATE_FX] >= target_start) & (final[COL_DATE_FX] <= target_end)]
+        final = final.dropna(subset=[COL_DATE_FX, COL_VALUE_FX])
+        final[COL_DATE_FX] = final[COL_DATE_FX].dt.strftime("%Y/%m/%d")
 
         raw_path = raw_dir / f"ecos_fx_usdkrw_raw_{self.stamp()}.csv"
         final_path = final_dir / f"fx_usdkrw_{self.stamp()}.csv"
         save_raw(raw_path, raw)
         write_csv(final_path, final)
         latest = merge_csv_latest(dataset, "fx_usdkrw_*.csv", "fx_usdkrw", final, COL_DATE_FX, parse_kor_date)
-        return CollectResult("fx_usdkrw", "completed", len(final), files={"raw": str(raw_path), "snapshot": str(final_path), "latest": str(latest)})
+        detail = ""
+        if raw.empty:
+            detail = "ECOS returned no rows; filled target dates from latest available USD/KRW value"
+        elif len(final) > len(observed[(observed[COL_DATE_FX] >= target_start) & (observed[COL_DATE_FX] <= target_end)]):
+            detail = "filled missing target dates from latest available USD/KRW value"
+        return CollectResult("fx_usdkrw", "completed", len(final), detail=detail, files={"raw": str(raw_path), "snapshot": str(final_path), "latest": str(latest)})
 
     def collect_crude(self) -> CollectResult:
         dataset, raw_dir, final_dir = self.dataset_dirs("crude")
