@@ -1,6 +1,6 @@
 {
   "schema_version": "district_detail_v1",
-  "generated_at": "2026-07-01T05:48:38+09:00",
+  "generated_at": "2026-07-01T08:05:12+09:00",
   "as_of_date": "2026-07-01",
   "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
   "region": "대구",
