@@ -1868,9 +1868,9 @@ function drawTrendChart(rows) {
     class: "chart-hit-area",
   });
   const updateHover = (event) => {
-    const rect = svg.getBoundingClientRect();
-    const pointerX = ((event.clientX - rect.left) / Math.max(1, rect.width)) * width;
-    const index = Math.max(0, Math.min(rows.length - 1, Math.round(((pointerX - margin.left) / chartWidth) * (rows.length - 1))));
+    const rect = hitArea.getBoundingClientRect();
+    const pointerRatio = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+    const index = Math.max(0, Math.min(rows.length - 1, Math.round(pointerRatio * (rows.length - 1))));
     const row = rows[index];
     const x = xFor(index);
     hoverLine.setAttribute("x1", x);
