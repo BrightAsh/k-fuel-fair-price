@@ -1,44 +1,44 @@
 {
   "schema_version": "web_operational_dataset_v2",
-  "created_at": "2026-07-06T08:39:44+09:00",
-  "as_of_date": "2026-07-06",
+  "created_at": "2026-07-07T05:49:10+09:00",
+  "as_of_date": "2026-07-07",
   "source": "ai-model/06_web_operational_dataset_build/daily_operational_prediction.py",
   "status": "completed",
   "daily_prediction": {
-    "state_rows_before": 399521,
-    "state_rows_after": 398547,
+    "state_rows_before": 398547,
+    "state_rows_after": 397573,
     "appended_state_rows": 0,
-    "prediction_rows": 15793,
-    "target_date_min": "2026-07-06",
-    "target_date_max": "2026-07-06",
-    "latest_feature_date": "2026-07-05",
+    "prediction_rows": 15804,
+    "target_date_min": "2026-07-07",
+    "target_date_max": "2026-07-07",
+    "latest_feature_date": "2026-07-06",
     "model_meta": {
       "status": "completed",
-      "target_start": "2026-07-06",
-      "target_end": "2026-07-06",
+      "target_start": "2026-07-07",
+      "target_end": "2026-07-07",
       "device": "cpu",
       "coverage": {
-        "latest_raw_feature_date": "2026-07-05",
-        "latest_complete_feature_date": "2026-07-05",
+        "latest_raw_feature_date": "2026-07-06",
+        "latest_complete_feature_date": "2026-07-06",
         "latest_raw_grid_rows": 8010,
-        "recent_median_grid_rows": 8938.0,
+        "recent_median_grid_rows": 8934.0,
         "min_coverage_ratio": 0.8,
-        "min_required_grid_rows": 7150.400000000001,
-        "safe_target_end": "2026-07-06",
+        "min_required_grid_rows": 7147.200000000001,
+        "safe_target_end": "2026-07-07",
         "complete_feature_date_count": 45
       },
       "fuels": {
         "gasoline": {
-          "feature_rows": 7883,
-          "prediction_rows": 7883,
-          "target_date_min": "2026-07-06",
-          "target_date_max": "2026-07-06"
+          "feature_rows": 7888,
+          "prediction_rows": 7888,
+          "target_date_min": "2026-07-07",
+          "target_date_max": "2026-07-07"
         },
         "diesel": {
-          "feature_rows": 7910,
-          "prediction_rows": 7910,
-          "target_date_min": "2026-07-06",
-          "target_date_max": "2026-07-06"
+          "feature_rows": 7916,
+          "prediction_rows": 7916,
+          "target_date_min": "2026-07-07",
+          "target_date_max": "2026-07-07"
         }
       }
     },
@@ -48,44 +48,44 @@
     "web_price_history_region": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
       "exists": true,
-      "bytes": 19408477,
+      "bytes": 19408246,
       "mb": 18.509,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "modified_at": "2026-07-07T05:49:09+09:00"
     },
     "web_region_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
       "exists": true,
-      "bytes": 2826,
+      "bytes": 2824,
       "mb": 0.003,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "modified_at": "2026-07-07T05:49:09+09:00"
     },
     "web_national_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv",
       "exists": true,
-      "bytes": 248,
+      "bytes": 246,
       "mb": 0.0,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "modified_at": "2026-07-07T05:49:09+09:00"
     },
     "web_latest_grid_predictions": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
       "exists": true,
-      "bytes": 2288413,
-      "mb": 2.182,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "bytes": 2289060,
+      "mb": 2.183,
+      "modified_at": "2026-07-07T05:49:10+09:00"
     },
     "grid_region_lookup": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/grid_region_lookup.csv",
       "exists": true,
       "bytes": 271154,
       "mb": 0.259,
-      "modified_at": "2026-07-06T07:46:51+09:00"
+      "modified_at": "2026-07-07T05:02:48+09:00"
     },
     "station_grid_lookup": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/station_grid_lookup.csv",
       "exists": true,
       "bytes": 1912779,
       "mb": 1.824,
-      "modified_at": "2026-07-06T07:46:51+09:00"
+      "modified_at": "2026-07-07T05:02:48+09:00"
     },
     "inference_state": {
       "manifest": {
@@ -93,14 +93,14 @@
         "exists": true,
         "bytes": 2266,
         "mb": 0.002,
-        "modified_at": "2026-07-06T08:39:44+09:00"
+        "modified_at": "2026-07-07T05:49:10+09:00"
       },
       "data": {
         "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
         "exists": true,
-        "bytes": 8211659,
-        "mb": 7.831,
-        "modified_at": "2026-07-06T08:39:31+09:00"
+        "bytes": 8257949,
+        "mb": 7.875,
+        "modified_at": "2026-07-07T05:48:56+09:00"
       }
     }
   },
@@ -108,30 +108,30 @@
     "web_price_history_region": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_price_history_region.csv",
       "exists": true,
-      "bytes": 19408477,
+      "bytes": 19408246,
       "mb": 18.509,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "modified_at": "2026-07-07T05:49:09+09:00"
     },
     "web_region_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_region_today.csv",
       "exists": true,
-      "bytes": 2826,
+      "bytes": 2824,
       "mb": 0.003,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "modified_at": "2026-07-07T05:49:09+09:00"
     },
     "web_national_today": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_national_today.csv",
       "exists": true,
-      "bytes": 248,
+      "bytes": 246,
       "mb": 0.0,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "modified_at": "2026-07-07T05:49:09+09:00"
     },
     "web_latest_grid_predictions": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
       "exists": true,
-      "bytes": 2288413,
-      "mb": 2.182,
-      "modified_at": "2026-07-06T08:39:44+09:00"
+      "bytes": 2289060,
+      "mb": 2.183,
+      "modified_at": "2026-07-07T05:49:10+09:00"
     }
   }
 }
