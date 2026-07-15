@@ -1,12 +1,12 @@
 {
   "schema_version": "recent_model_input_state_v2",
   "status": "ready",
-  "created_at": "2026-07-15T07:46:39+09:00",
+  "created_at": "2026-07-16T08:35:50+09:00",
   "source": "operational rolling inference state",
   "state_days": 45,
-  "date_min": "2026-05-31",
-  "date_max": "2026-07-14",
-  "rows": 389801,
+  "date_min": "2026-06-01",
+  "date_max": "2026-07-15",
+  "rows": 388838,
   "columns": [
     "agency_influence",
     "brand_count__GS칼텍스",
@@ -59,16 +59,16 @@
       "exists": true,
       "bytes": 1912779,
       "mb": 1.824,
-      "modified_at": "2026-07-15T07:44:54+09:00"
+      "modified_at": "2026-07-16T07:46:23+09:00"
     }
   },
   "files": {
     "recent_model_input": {
       "path": "ai-model/06_web_operational_dataset_build/outputs/inference_state/recent_model_input.parquet",
       "exists": true,
-      "bytes": 7610181,
-      "mb": 7.258,
-      "modified_at": "2026-07-15T07:44:54+09:00"
+      "bytes": 7440948,
+      "mb": 7.096,
+      "modified_at": "2026-07-16T08:35:42+09:00"
     }
   },
   "use": "Rolling 500m-grid model input state used by daily_operational_prediction.py. It intentionally replaces the local-only full grid_target.parquet in GitHub Actions."
