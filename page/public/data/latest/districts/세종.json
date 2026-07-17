@@ -1,6 +1,6 @@
 {
   "schema_version": "district_detail_v1",
-  "generated_at": "2026-07-18T05:02:09+09:00",
+  "generated_at": "2026-07-18T07:39:38+09:00",
   "as_of_date": "2026-07-18",
   "source": "ai-model/06_web_operational_dataset_build/outputs/web/web_latest_grid_predictions.csv",
   "region": "세종",
